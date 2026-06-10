@@ -23,22 +23,39 @@ async function sendViaResend({ to, subject, html, text }: EmailOptions): Promise
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return false;
 
+  // IMPORTANT: Resend requires domain verification to send from custom domains.
+  // Until RESEND_DOMAIN_VERIFIED=true is set, always use onboarding@resend.dev.
+  // This ensures emails work during testing without a purchased/verified domain.
+  const domainVerified = process.env.RESEND_DOMAIN_VERIFIED === 'true';
+  const fromAddress = domainVerified
+    ? (process.env.RESEND_FROM || 'Valtriox <onboarding@resend.dev>')
+    : 'Valtriox <onboarding@resend.dev>';
+
   try {
     const { Resend } = await import('resend');
     const resend = new Resend(apiKey);
 
-    await resend.emails.send({
-      from: process.env.RESEND_FROM || 'Valtriox <onboarding@resend.dev>',
+    const result = await resend.emails.send({
+      from: fromAddress,
       to,
       subject,
       html,
       text: text || html.replace(/<[^>]*>/g, ''),
     });
 
-    console.log(`[Email/Resend] Sent to ${to}`);
+    // Log detailed result for debugging
+    if (result.error) {
+      console.error(`[Email/Resend] API returned error for ${to}:`, result.error);
+      return false;
+    }
+
+    console.log(`[Email/Resend] Sent to ${to} (from: ${fromAddress})`);
     return true;
   } catch (error: any) {
     console.error(`[Email/Resend] Failed to send to ${to}:`, error?.message);
+    if (error?.statusCode === 403) {
+      console.error(`[Email/Resend] 403 Forbidden — likely the sender domain is not verified in Resend. Use onboarding@resend.dev for testing.`);
+    }
     return false;
   }
 }

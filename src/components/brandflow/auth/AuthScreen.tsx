@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ForgotPasswordFlow } from "./ForgotPasswordFlow";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import { Loader2, Eye, EyeOff, Sparkles, Shield, ArrowRight, ArrowLeft } from "lucide-react";
+import { Loader2, Eye, EyeOff, Sparkles, Shield, ArrowRight, ArrowLeft, KeyRound } from "lucide-react";
 
 export function AuthScreen() {
   const { setView, setUser, setOrganization, setBrandName, setBrandConfigured, brandConfigured, brandLogo, brandName, brandTagline, authModalMode } = useValtrioxStore();
@@ -219,7 +219,12 @@ export function AuthScreen() {
               </div>
 
               {showForgotPassword ? (
-                <ForgotPasswordFlow onBack={() => setShowForgotPassword(false)} />
+                <ForgotPasswordFlow
+                  onBack={() => setShowForgotPassword(false)}
+                  onAutoLogin={async (loginEmail, loginPassword) => {
+                    await doLogin(loginEmail, loginPassword);
+                  }}
+                />
               ) : (
               <>
                 <Tabs value={defaultTab} onValueChange={setDefaultTab} className="w-full">
@@ -285,13 +290,14 @@ export function AuthScreen() {
                           Sign In
                         </Button>
                       </motion.div>
-                      <div className="pt-3">
+                      <div className="pt-2">
                         <button
                           type="button"
                           onClick={() => setShowForgotPassword(true)}
-                          className="text-xs text-amber-400/70 hover:text-amber-400 transition-colors"
+                          className="flex items-center justify-center gap-2 w-full py-2.5 text-xs font-medium text-amber-400/80 hover:text-amber-400 bg-amber-500/[0.04] hover:bg-amber-500/[0.08] border border-amber-500/10 hover:border-amber-500/20 rounded-xl transition-all duration-200"
                         >
-                          Forgot Password?
+                          <KeyRound className="h-3.5 w-3.5" />
+                          Forgot Password
                         </button>
                       </div>
                     </form>

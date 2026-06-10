@@ -16,11 +16,12 @@ interface ForgotPasswordFlowProps {
   onBack: () => void;
   onSuccess?: () => void;
   isModal?: boolean;
+  onAutoLogin?: (email: string, password: string) => Promise<void>;
 }
 
 type Step = "email" | "otp" | "new-password" | "success";
 
-export function ForgotPasswordFlow({ onBack, onSuccess, isModal = false }: ForgotPasswordFlowProps) {
+export function ForgotPasswordFlow({ onBack, onSuccess, isModal = false, onAutoLogin }: ForgotPasswordFlowProps) {
   const [step, setStep] = useState<Step>("email");
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
@@ -32,6 +33,7 @@ export function ForgotPasswordFlow({ onBack, onSuccess, isModal = false }: Forgo
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [maskedEmail, setMaskedEmail] = useState("");
+  const [autoLoggingIn, setAutoLoggingIn] = useState(false);
 
   const otpRef = useRef<HTMLInputElement>(null);
 
@@ -206,6 +208,28 @@ export function ForgotPasswordFlow({ onBack, onSuccess, isModal = false }: Forgo
 
   const strength = getPasswordStrength(newPassword);
 
+  // ── Auto-login after password reset ──
+  const handleAutoLogin = async () => {
+    if (!onAutoLogin || !email || !newPassword) return;
+    setAutoLoggingIn(true);
+    try {
+      await onAutoLogin(email.toLowerCase(), newPassword);
+      toast.success("Password reset successful! Logged in automatically.");
+    } catch {
+      // If auto-login fails, just go back to sign in
+      toast.info("Password reset successful! Please sign in with your new password.");
+      onBack();
+    }
+  };
+
+  // Trigger auto-login when reaching success step
+  useEffect(() => {
+    if (step === "success" && onAutoLogin) {
+      const timer = setTimeout(handleAutoLogin, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [step]);
+
   const slideVariants = {
     enter: { opacity: 0, x: 30 },
     center: { opacity: 1, x: 0 },
@@ -299,7 +323,7 @@ export function ForgotPasswordFlow({ onBack, onSuccess, isModal = false }: Forgo
                 Enter Verification Code
               </h2>
               <p className="text-sm text-slate-400 leading-relaxed">
-                We sent a 6-digit code to <span className="text-amber-400 font-medium">{maskedEmail}</span>
+                A 6-digit OTP has been sent to <span className="text-amber-400 font-medium">{maskedEmail}</span> by <span className="text-amber-400 font-semibold">Valtriox</span>
               </p>
             </div>
 
@@ -467,7 +491,7 @@ export function ForgotPasswordFlow({ onBack, onSuccess, isModal = false }: Forgo
           </motion.div>
         )}
 
-        {/* ════════════ STEP 4: SUCCESS ════════════ */}
+        {/* ════════════ STEP 4: SUCCESS + AUTO-LOGIN ════════════ */}
         {step === "success" && (
           <motion.div
             key="success"
@@ -482,29 +506,38 @@ export function ForgotPasswordFlow({ onBack, onSuccess, isModal = false }: Forgo
               animate={{ scale: 1 }}
               transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
             >
-              <CheckCircle2 className="h-8 w-8 text-green-400" />
+              {autoLoggingIn ? (
+                <Loader2 className="h-8 w-8 text-amber-400 animate-spin" />
+              ) : (
+                <CheckCircle2 className="h-8 w-8 text-green-400" />
+              )}
             </motion.div>
             <h2 className="text-xl font-semibold text-white mb-2" style={{ fontFamily: "'Cinzel', serif" }}>
-              Password Reset Complete
+              {autoLoggingIn ? "Signing You In..." : "Password Reset Complete"}
             </h2>
             <p className="text-sm text-slate-400 leading-relaxed mb-6">
-              Your password has been successfully updated. You can now sign in with your new password.
+              {autoLoggingIn
+                ? "Securely logging you in with your new password."
+                : "Your password has been successfully updated. Redirecting to your dashboard..."
+              }
             </p>
-            <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
-              <Button
-                onClick={() => {
-                  if (onSuccess) {
-                    onSuccess();
-                  } else {
-                    onBack();
-                  }
-                }}
-                className="btn-gold h-11 rounded-xl text-sm shadow-[0_0_30px_rgba(212,160,23,0.25)] flex items-center justify-center gap-2 px-8 mx-auto"
-              >
-                <ArrowRight className="h-4 w-4" />
-                Back to Sign In
-              </Button>
-            </motion.div>
+            {!onAutoLogin && (
+              <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
+                <Button
+                  onClick={() => {
+                    if (onSuccess) {
+                      onSuccess();
+                    } else {
+                      onBack();
+                    }
+                  }}
+                  className="btn-gold h-11 rounded-xl text-sm shadow-[0_0_30px_rgba(212,160,23,0.25)] flex items-center justify-center gap-2 px-8 mx-auto"
+                >
+                  <ArrowRight className="h-4 w-4" />
+                  Back to Sign In
+                </Button>
+              </motion.div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

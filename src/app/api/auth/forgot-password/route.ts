@@ -69,7 +69,7 @@ export const POST = withRateLimit(async (req: NextRequest) => {
 
       await sendEmail({
         to: email,
-        subject: `Password Reset Code: ${otp} — ${platformName}`,
+        subject: `Password Reset Verification — ${platformName}`,
         html,
         text: `Your password reset code is: ${otp}\n\nThis code expires in ${OTP_EXPIRY_MINUTES} minutes.\n\nIf you did not request this, please ignore this email.`,
       });
