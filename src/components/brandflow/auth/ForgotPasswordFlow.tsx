@@ -33,6 +33,7 @@ export function ForgotPasswordFlow({ onBack, onSuccess, isModal = false, onAutoL
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [maskedEmail, setMaskedEmail] = useState("");
+  const [testingOtp, setTestingOtp] = useState("");
   const [autoLoggingIn, setAutoLoggingIn] = useState(false);
 
   const otpRef = useRef<HTMLInputElement>(null);
@@ -75,14 +76,16 @@ export function ForgotPasswordFlow({ onBack, onSuccess, isModal = false, onAutoL
       }
 
       setMaskedEmail(maskEmail(email.toLowerCase()));
-      setStep("otp");
       setResendCooldown(60);
 
-      // Testing mode: auto-fill OTP from API response when email not configured
+      // Testing mode: when email not configured, API returns OTP directly
       if (data._testingOtp) {
+        setTestingOtp(data._testingOtp);
         setOtp(data._testingOtp);
-        toast.success(`Testing mode — Your OTP is: ${data._testingOtp}`, { duration: 10000 });
+        setStep("otp");
       } else {
+        setTestingOtp("");
+        setStep("otp");
         toast.success("Verification code sent to your email");
       }
     } catch {
@@ -103,8 +106,13 @@ export function ForgotPasswordFlow({ onBack, onSuccess, isModal = false, onAutoL
         body: JSON.stringify({ email: email.toLowerCase() }),
       });
       if (res.ok) {
+        const resendData = await res.json();
         setResendCooldown(60);
-        toast.success("New code sent to your email");
+        if (resendData._testingOtp) {
+          setTestingOtp(resendData._testingOtp);
+          setOtp(resendData._testingOtp);
+        }
+        toast.success(resendData._testingOtp ? `New OTP: ${resendData._testingOtp}` : "New code sent to your email");
       } else {
         toast.error("Failed to resend. Please try again.");
       }
@@ -333,6 +341,15 @@ export function ForgotPasswordFlow({ onBack, onSuccess, isModal = false, onAutoL
                 A 6-digit OTP has been sent to <span className="text-amber-400 font-medium">{maskedEmail}</span> by <span className="text-amber-400 font-semibold">Valtriox</span>
               </p>
             </div>
+
+            {/* Testing mode OTP banner — only shows when email not configured */}
+            {testingOtp && (
+              <div className="mb-5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 text-center">
+                <p className="text-[11px] text-amber-400/70 uppercase tracking-wider font-medium mb-1">Testing Mode — Your OTP</p>
+                <p className="text-2xl font-mono font-bold text-amber-400 tracking-[0.3em]">{testingOtp}</p>
+                <p className="text-[10px] text-slate-500 mt-1">Auto-filled above. Click Verify Code to continue.</p>
+              </div>
+            )}
 
             <form onSubmit={handleVerifyOtp} className="space-y-5">
               <div className="flex justify-center py-2">
