@@ -77,7 +77,14 @@ export function ForgotPasswordFlow({ onBack, onSuccess, isModal = false, onAutoL
       setMaskedEmail(maskEmail(email.toLowerCase()));
       setStep("otp");
       setResendCooldown(60);
-      toast.success("Verification code sent to your email");
+
+      // Testing mode: auto-fill OTP from API response when email not configured
+      if (data._testingOtp) {
+        setOtp(data._testingOtp);
+        toast.success(`Testing mode — Your OTP is: ${data._testingOtp}`, { duration: 10000 });
+      } else {
+        toast.success("Verification code sent to your email");
+      }
     } catch {
       toast.error("Network error. Please try again.");
     } finally {

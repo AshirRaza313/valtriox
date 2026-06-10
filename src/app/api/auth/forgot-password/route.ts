@@ -77,6 +77,18 @@ export const POST = withRateLimit(async (req: NextRequest) => {
 
     console.log(`[ForgotPassword] OTP generated for ${email}${emailConfigured ? ' (email sent)' : ' (email NOT configured - check RESEND_API_KEY)'}`);
 
+    // When email is not configured (testing/development), return OTP in response
+    // so the flow can be tested end-to-end without email provider setup.
+    // SECURITY: This only activates when NO email provider is configured at all.
+    if (!emailConfigured) {
+      console.log(`[ForgotPassword/TESTING] OTP for ${email}: ${otp}`);
+      return NextResponse.json({
+        success: true,
+        message: "If an account exists with this email, a verification code has been sent.",
+        _testingOtp: otp,
+      });
+    }
+
     return NextResponse.json({
       success: true,
       message: "If an account exists with this email, a verification code has been sent.",
