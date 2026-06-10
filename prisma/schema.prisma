@@ -1,0 +1,821 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ── Production: PostgreSQL (Supabase) ──
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_DATABASE_URL")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model User {
+  id                  String               @id @default(cuid())
+  name                String
+  email               String               @unique
+  emailVerified       DateTime?
+  password            String?
+  image               String?
+  role                String               @default("owner")
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  accounts            Account[]
+  sessions            Session[]
+  organization        OrganizationMember[]
+  attendance          Attendance[]
+  sentInvitations     TeamInvitation[]     @relation("Inviter")
+  notifications       Notification[]
+  assignedTasks       TeamTask[]
+  valtrioxTeamMembers ValtrioxTeamMember[]
+
+  @@index([role])
+}
+
+model Organization {
+  id                    String               @id @default(cuid())
+  name                  String
+  slug                  String               @unique
+  logo                  String? // Base64 or URL
+  website               String?
+  phone                 String?
+  email                 String?
+  currency              String               @default("USD")
+  timezone              String               @default("UTC")
+  plan                  String               @default("starter")
+  workingHoursStart     String               @default("09:00") // e.g. "09:00"
+  workingHoursEnd       String               @default("18:00") // e.g. "18:00"
+  isActive              Boolean              @default(true)
+  // ── Brand Settings (persisted to DB) ──
+  country               String?
+  religion              String?
+  brandTagline          String?
+  brandColor            String? // Primary brand color hex
+  secondaryBrandColor   String? // Secondary brand color hex
+  brandDescription      String?
+  industry              String? // Industry/niche: E-Commerce, Fashion, Tech, Food, Services, Education, Healthcare, Real Estate, Other
+  address               String?
+  taxId                 String?
+  favicon               String? // Base64 or URL
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+  members               OrganizationMember[]
+  invitations           TeamInvitation[]
+  products              Product[]
+  orders                Order[]
+  customers             Customer[]
+  expenses              Expense[]
+  coupons               Coupon[]
+  teamTasks             TeamTask[]
+  subscription          Subscription?
+  notifications         Notification[]
+  paymentProofs         PaymentProof[]
+  invoices              Invoice[]
+  attendance            Attendance[]
+  integrations          IntegrationConnection[]
+  feedbacks            Feedback[]
+  // ── Billing Security ──
+  paymentRejectionCount Int                  @default(0) // Track fake payment rejections
+  isBanned              Boolean              @default(false)
+  banReason             String?
+  bannedAt              DateTime?
+  // ── Usage Tracking (for plan limits) ──
+  usageOrdersCount      Int                  @default(0)
+  usageProductsCount    Int                  @default(0)
+  usageCustomersCount   Int                  @default(0)
+  usageStorageMb        Int                  @default(0)
+  usageInvoicesCount    Int                  @default(0)
+  usageCouponsCount     Int                  @default(0)
+  usageTasksCount       Int                  @default(0)
+  usageTeamChatsCount   Int                  @default(0)
+  usageBroadcastsCount  Int                  @default(0)
+  usageLastResetAt      DateTime?
+
+  @@index([plan])
+  @@index([isActive])
+}
+
+model OrganizationMember {
+  id             String       @id @default(cuid())
+  organizationId String
+  userId         String
+  role           String       @default("member")
+  roleId         String?
+  pin            String? // Team member login PIN (6-digit, bcrypt hashed)
+  pinCreatedAt   DateTime? // When PIN was generated
+  absenceCount   Int          @default(0) // Consecutive absences for penalty
+  penaltyUntil   DateTime? // If penalized, access restricted until this date
+  joinedAt       DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roleDef        Role?        @relation(fields: [roleId], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, userId])
+  @@index([organizationId, role])
+}
+
+model Product {
+  id             String       @id @default(cuid())
+  organizationId String
+  name           String
+  description    String?
+  sku            String?
+  price          Decimal      @default(0) @db.Decimal(10, 2)
+  costPrice      Decimal?     @db.Decimal(10, 2)
+  stock          Int          @default(0)
+  category       String?
+  status         String       @default("active")
+  imageUrl       String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  orderItems     OrderItem[]
+
+  @@index([organizationId, status])
+  @@index([organizationId, category])
+  @@index([organizationId, createdAt])
+  @@index([organizationId, stock])
+}
+
+model Customer {
+  id             String       @id @default(cuid())
+  organizationId String
+  name           String
+  email          String?
+  phone          String?
+  city           String?
+  address        String?
+  loyaltyTier    String       @default("new")
+  totalSpent     Decimal      @default(0) @db.Decimal(10, 2)
+  orderCount     Int          @default(0)
+  notes          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  orders         Order[]
+
+  @@index([organizationId, loyaltyTier])
+  @@index([organizationId, totalSpent])
+  @@index([organizationId, createdAt])
+}
+
+model Order {
+  id             String       @id @default(cuid())
+  orderNumber    String
+  organizationId String
+  customerId     String?
+  status         String       @default("pending")
+  subtotal       Decimal      @default(0) @db.Decimal(10, 2)
+  discount       Decimal      @default(0) @db.Decimal(10, 2)
+  total          Decimal      @default(0) @db.Decimal(10, 2)
+  channel        String       @default("manual")
+  courier        String?
+  trackingNumber String?
+  notes          String?
+  priority       Int          @default(50)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  customer       Customer?    @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  items          OrderItem[]
+
+  @@unique([organizationId, orderNumber])
+  @@index([organizationId, status])
+  @@index([organizationId, createdAt])
+  @@index([organizationId, customerId])
+  @@index([channel])
+  @@index([orderNumber])
+}
+
+model OrderItem {
+  id          String  @id @default(cuid())
+  orderId     String
+  productId   String
+  productName String
+  quantity    Int
+  price       Decimal @db.Decimal(10, 2)
+  total       Decimal @db.Decimal(10, 2)
+  order       Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product     Product @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model Expense {
+  id             String       @id @default(cuid())
+  organizationId String
+  title          String
+  amount         Decimal      @db.Decimal(10, 2)
+  category       String
+  date           DateTime
+  description    String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, date])
+  @@index([organizationId, category])
+}
+
+model Coupon {
+  id             String       @id @default(cuid())
+  organizationId String
+  code           String
+  type           String       @default("percentage")
+  value          Decimal      @db.Decimal(10, 2)
+  minOrder       Decimal?     @db.Decimal(10, 2)
+  usageLimit     Int?
+  usageCount     Int          @default(0)
+  expiresAt      DateTime?
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, code])
+  @@index([organizationId, isActive])
+  @@index([organizationId, expiresAt])
+}
+
+model TeamTask {
+  id             String       @id @default(cuid())
+  organizationId String
+  assignedTo     String?
+  title          String
+  description    String?
+  status         String       @default("todo")
+  priority       String       @default("medium")
+  dueDate        DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  assignedToUser User?        @relation(fields: [assignedTo], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, status])
+  @@index([organizationId, priority])
+  @@index([assignedTo])
+  @@index([organizationId, dueDate])
+}
+
+model Attendance {
+  id             String       @id @default(cuid())
+  userId         String
+  organizationId String
+  date           DateTime
+  clockIn        DateTime?
+  clockOut       DateTime?
+  totalHours     Float?
+  status         String       @default("present")
+  lateReason     String? // Required if clocked in late
+  leaveReason    String? // Required if on leave
+  markedBy       String? // "self" or "admin"
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId, date])
+  @@index([organizationId, date])
+  @@index([organizationId, status])
+  @@index([userId, date])
+}
+
+// ── Subscription Plans ──
+model SubscriptionPlan {
+  id             String         @id @default(cuid())
+  name           String         @unique
+  price          Decimal        @db.Decimal(10, 2)
+  annualPrice    Decimal        @default(0) @db.Decimal(10, 2) // Annual pricing (0 = no annual discount)
+  quarterlyPrice Decimal        @default(0) @db.Decimal(10, 2) // Quarterly pricing (0 = no quarterly discount)
+  period         String         @default("monthly")
+  features       String         @default("[]")
+  teamLimit      Int            @default(3)
+  orderLimit     Int            @default(100)
+  productLimit   Int            @default(50)
+  isActive       Boolean        @default(true)
+  trialDays      Int            @default(14)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  subscriptions  Subscription[]
+  paymentProofs  PaymentProof[]
+}
+
+// ── Organization Subscription ──
+model Subscription {
+  id               String           @id @default(cuid())
+  organizationId   String           @unique
+  planId           String
+  status           String           @default("trial") // trial, active, pending_payment, expired, cancelled
+  billingCycle     String           @default("monthly") // monthly, annually
+  trialStartsAt    DateTime         @default(now())
+  trialEndsAt      DateTime
+  currentPeriodEnd DateTime?
+  // ── Renewal Reminder Tracking ──
+  lastReminderAt   DateTime?
+  reminderCount    Int              @default(0)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  organization     Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  plan             SubscriptionPlan @relation(fields: [planId], references: [id])
+  payments         PaymentProof[]
+  invoices         Invoice[]
+
+  @@index([status])
+}
+
+// ── Invoices (PDF trackable records) ──
+model Invoice {
+  id             String        @id @default(cuid())
+  invoiceNumber  String        @unique
+  organizationId String
+  subscriptionId String?
+  paymentProofId String?
+  planName       String
+  amount         Decimal       @db.Decimal(10, 2)
+  billingCycle   String        @default("monthly")
+  status         String        @default("pending") // pending, paid, approved, cancelled, refunded
+  type           String        @default("subscription") // subscription, order, custom
+  currencyCode   String        @default("PKR")
+  currencySymbol String        @default("Rs.")
+  issuedAt       DateTime      @default(now())
+  dueDate        DateTime?
+  paidAt         DateTime?
+  periodStart    DateTime?
+  periodEnd      DateTime?
+  notes          String?
+  pdfUrl         String? // stored PDF path if generated
+  orgName        String?
+  orgEmail       String?
+  orgPhone       String?
+  orgAddress     String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  subscription   Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  paymentProof   PaymentProof? @relation(fields: [paymentProofId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([status])
+  @@index([invoiceNumber])
+}
+
+// ── Payment Proofs ──
+model PaymentProof {
+  id             String            @id @default(cuid())
+  subscriptionId String
+  organizationId String
+  planId         String? // FK to SubscriptionPlan (for robustness)
+  planName       String
+  amount         Decimal           @db.Decimal(10, 2)
+  billingCycle   String            @default("monthly") // monthly, annually
+  transactionId  String // app-level uniqueness enforced in payment route transaction
+  paymentMethod  String            @default("bank_transfer")
+  screenshotUrl  String?
+  status         String            @default("pending")
+  adminNote      String?
+  reviewedBy     String?
+  reviewedAt     DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  subscription   Subscription      @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  plan           SubscriptionPlan? @relation(fields: [planId], references: [id], onDelete: SetNull)
+  invoices       Invoice[]
+
+  @@index([organizationId])
+  @@index([status])
+}
+
+// ── Notification (Push + In-App) ──
+model Notification {
+  id        String   @id @default(cuid())
+  orgId     String?
+  userId    String?
+  title     String
+  message   String
+  type      String   @default("info") // info, success, warning, error, order, team, marketing
+  actionUrl String? // optional link to navigate to
+  icon      String? // optional icon name
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  organization Organization? @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user         User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([orgId])
+  @@index([read])
+  @@index([type])
+  @@index([createdAt])
+}
+
+// ── Lead Capture (Contact Form Submissions) ──
+model Lead {
+  id                  String    @id @default(cuid())
+  fullName            String
+  email               String
+  phone               String?
+  company             String?
+  companySize         String?
+  industry            String?
+  interest            String?
+  message             String?
+  // ── Consultation Scheduling ──
+  consultationType    String? // video_call, phone_call, in_person
+  preferredDate       String? // e.g. "2026-06-15"
+  preferredTime       String? // e.g. "09:00-12:00", "12:00-15:00", "15:00-18:00", "18:00-21:00"
+  timezone            String? // e.g. "Asia/Karachi"
+  availabilityNote    String? // Additional availability notes
+  calendlyBookingLink String? // Calendly scheduled meeting URI
+  // ── Status & Source ──
+  status              String    @default("new") // new, contacted, qualified, consultation_scheduled, proposal_sent, converted, archived
+  source              String    @default("website") // website, referral, social, ads
+  notes               String?
+  // ── Follow-Up Tracking ──
+  lastFollowUpAt      DateTime?
+  followUpCount       Int       @default(0)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  proposals Proposal[]
+
+  @@index([status])
+  @@index([email])
+  @@index([createdAt])
+}
+
+// ── Proposals (Post-Consultation Client Deliverables) ──
+model Proposal {
+  id             String    @id @default(cuid())
+  leadId         String?
+  clientName     String
+  clientEmail    String
+  clientCompany  String?
+  clientPhone    String?
+  type           String // brand_management, digital_marketing, tech_integration, e_commerce, enterprise, monthly_retainer
+  title          String
+  status         String    @default("draft") // draft, sent, viewed, accepted, rejected, expired, revised
+  totalCost      Decimal?  @db.Decimal(10, 2)
+  currency       String    @default("PKR")
+  currencySymbol String    @default("Rs.")
+  validUntil     DateTime?
+  content        String    @default("{}") // JSON: proposal-specific data
+  notes          String?
+  sentAt         DateTime?
+  viewedAt       DateTime?
+  respondedAt    DateTime?
+  // ── PayPro Payment Integration ──
+  payproOrderId  String?
+  paymentStatus  String    @default("unpaid") // unpaid, pending, paid, failed, refunded
+  paidAt         DateTime?
+  paymentAmount  Decimal?  @db.Decimal(10, 2)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  lead           Lead?     @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
+  @@index([leadId])
+  @@index([status])
+  @@index([type])
+  @@index([clientEmail])
+  @@index([createdAt])
+  @@index([paymentStatus])
+}
+
+// ── Admin Settings (Platform Owner) ──
+model PlatformSettings {
+  id                  String   @id @default(cuid())
+  companyName         String   @default("Valtriox")
+  companyEmail        String
+  companyPhone        String?
+  companyWebsite      String?
+  companyAddress      String?
+  supportHours        String   @default("Mon-Fri: 9AM-6PM PKT")
+  whatsappNumber      String?
+  instagramUrl        String?
+  facebookUrl         String?
+  twitterUrl          String?
+  linkedinUrl         String?
+  discordUrl          String?
+  redditUrl           String?
+  youtubeUrl          String?
+  tiktokUrl           String?
+  socialLinksVisible  String   @default("true")
+  // ── Individual Platform Visibility Toggles ──
+  showInstagram       Boolean  @default(false)
+  showFacebook        Boolean  @default(false)
+  showTwitter         Boolean  @default(false)
+  showLinkedin        Boolean  @default(false)
+  showDiscord         Boolean  @default(false)
+  showReddit          Boolean  @default(false)
+  showYoutube         Boolean  @default(false)
+  showTiktok          Boolean  @default(false)
+  showWhatsApp        Boolean  @default(false)
+  paymentMethods      String   @default("[]")
+  currency            String   @default("PKR")
+  logoUrl             String?
+  faviconUrl          String?
+  primaryBrandColor   String   @default("#059669")
+  secondaryBrandColor String   @default("#d97706")
+  currencySymbol      String   @default("Rs.")
+  customCss           String   @default("")
+  tagline             String   @default("Premium Brand Management Portal")
+  emailFooterText     String?
+  invoiceHeaderText   String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+// ── Role Definitions ──
+model Role {
+  id          String               @id @default(cuid())
+  name        String               @unique
+  label       String
+  description String?
+  permissions String               @default("{}")
+  level       Int                  @default(0)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  members     OrganizationMember[]
+}
+
+// ── Team Invitations ──
+model TeamInvitation {
+  id             String       @id @default(cuid())
+  organizationId String
+  inviterId      String
+  inviteeEmail   String
+  inviteeName    String
+  role           String       @default("member")
+  roleId         String?
+  pin            String // 6-digit login PIN (bcrypt hashed)
+  status         String       @default("pending") // pending, accepted, expired, revoked
+  invitedAt      DateTime     @default(now())
+  acceptedAt     DateTime?
+  expiresAt      DateTime
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  inviter        User         @relation("Inviter", fields: [inviterId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([inviteeEmail])
+  @@index([status])
+}
+
+// ── System Settings (Key-Value Store) ──
+model SystemSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  category  String   @default("system")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ── Legal Page Content ──
+model LegalPage {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  title     String
+  content   String   @default("")
+  isActive  Boolean  @default(true)
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+}
+
+// ── Platform Documents (Uploaded Files - PDFs, Images, etc.) ──
+// Stores metadata for files uploaded by platform admin (Cloudinary-backed).
+// Text-based documents are stored in SystemSetting (category: "documents").
+// This model is for binary/file uploads that go to Cloudinary storage.
+model PlatformDocument {
+  id                String   @id @default(cuid())
+  title             String
+  description       String?  @db.Text
+  fileName          String
+  fileSize          Int      // bytes
+  mimeType          String
+  fileType          String   @default("document") // pdf, image, spreadsheet, document, archive
+  cloudinaryUrl     String?  // Full CDN URL
+  cloudinaryPublicId String? // For deletion
+  category          String   @default("uploaded") // uploaded, lead-magnet, proposal-export, invoice-template
+  isActive          Boolean  @default(true)
+  uploadedBy        String?  // userId
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([category])
+  @@index([isActive])
+  @@index([fileType])
+}
+
+// ── Valtriox Team (Platform-level team, separate from brand teams) ──
+model ValtrioxTeamMember {
+  id              String                   @id @default(cuid())
+  userId          String                   @unique
+  email           String
+  name            String
+  role            String                   @default("platform_admin")
+  department      String?
+  status          String                   @default("active")
+  invitedBy       String?
+  joinedAt        DateTime                 @default(now())
+  lastActive      DateTime?
+  visibleSections String                   @default("[]")
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+  user            User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sentInvitations ValtrioxTeamInvitation[]
+
+  @@index([status])
+  @@index([department])
+}
+
+model ValtrioxTeamInvitation {
+  id         String              @id @default(cuid())
+  email      String
+  name       String
+  role       String              @default("platform_admin")
+  department String?
+  invitedBy  String?
+  token      String              @unique
+  status     String              @default("pending")
+  expiresAt  DateTime
+  createdAt  DateTime            @default(now())
+  acceptedAt DateTime?
+  inviter    ValtrioxTeamMember? @relation(fields: [invitedBy], references: [id], onDelete: SetNull)
+
+  @@index([email])
+  @@index([status])
+}
+
+// ── Support Chat: Client Conversations ──
+// Tracks which organizations have active support conversations
+model SupportConversation {
+  id             String   @id @default(cuid())
+  organizationId String   @unique // One conversation per organization
+  orgName        String // Cached org name for admin display
+  lastMessage    String   @default("")
+  lastMessageAt  DateTime @default(now())
+  unreadAdmin    Int      @default(0) // Unread count for admin (messages from client)
+  unreadClient   Int      @default(0) // Unread count for client (messages from admin)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  messages SupportMessage[]
+
+  @@index([lastMessageAt])
+}
+
+// ── Support Chat: Messages ──
+model SupportMessage {
+  id             String   @id @default(cuid())
+  conversationId String
+  senderId       String // User ID or "system" / "admin-valtriox"
+  senderName     String
+  senderAvatar   String?
+  senderRole     String   @default("member")
+  content        String   @default("")
+  messageType    String   @default("text") // text, system, attachment, voice, call
+  attachmentData String? // JSON: { id, name, type, size, url }
+  voiceNoteData  String? // JSON: { id, url, duration }
+  callInfoData   String? // JSON: { duration, type }
+  createdAt      DateTime @default(now())
+
+  conversation SupportConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+}
+
+// ── Email Templates (editable auto-email templates) ──
+model EmailTemplate {
+  id          String   @id @default(cuid())
+  type        String   @unique // lead_welcome, lead_follow_up, consultation_reminder, proposal_sent, thank_you, custom
+  name        String // Human-readable name
+  subject     String // Email subject line
+  htmlContent String // Full HTML email template
+  textContent String   @default("") // Plain text fallback
+  variables   String   @default("[]") // JSON: available variables e.g. ["{{leadName}}", "{{companyName}}"]
+  isActive    Boolean  @default(true)
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+
+  automations Automation[]
+}
+
+// ── Automations (auto-email triggers & scheduling) ──
+model Automation {
+  id            String         @id @default(cuid())
+  name          String
+  description   String?
+  trigger       String // lead_created, consultation_scheduled, proposal_sent, status_changed, manual
+  triggerConfig String         @default("{}") // JSON: trigger-specific config
+  templateId    String? // FK to EmailTemplate
+  template      EmailTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  action        String         @default("send_email") // send_email, send_whatsapp, notify_admin
+  actionConfig  String         @default("{}") // JSON: action-specific config
+  delayMinutes  Int            @default(0) // Delay before action (0 = immediate)
+  enabled       Boolean        @default(true)
+  lastRunAt     DateTime?
+  runCount      Int            @default(0)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([enabled])
+  @@index([trigger])
+}
+
+// ── Integration Connections ──
+// Stores real third-party integration configs per organization.
+// Each org can have one connection per integration type (e.g., one Shopify, one Stripe).
+model IntegrationConnection {
+  id             String    @id @default(cuid())
+  organizationId String
+  type           String    // e.g., "mailchimp", "shopify", "stripe", "whatsapp-api"
+  provider       String    // e.g., "email_marketing", "ecommerce", "payments", "communication"
+  name           String    // Human-readable: "Shopify Store", "Stripe Payments"
+  status         String    @default("disconnected") // connected, disconnected, error, pending
+  config         String?   @db.Text // JSON string: API keys, webhook URLs, tokens (encrypted at rest via DB SSL)
+  metadata       String?   @db.Text // JSON string: extra data (webhook id, sync cursor, etc.)
+  connectedAt    DateTime?
+  lastSyncedAt   DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, type])
+  @@index([organizationId])
+  @@index([type])
+  @@index([status])
+}
+
+// ── Feedback & Testimonials Collection ──
+model Feedback {
+  id             String   @id @default(cuid())
+  organizationId String
+  type           String   // "feedback" | "testimonial" | "review" | "video"
+  rating         Int?     // 1-5 for reviews/testimonials
+  content        String   // The feedback/review text
+  authorName     String?  // Name of the person giving feedback
+  authorCompany  String?  // Their company/brand name
+  videoUrl       String?  // URL for video testimonials
+  isFeatured     Boolean  @default(false) // For landing page display
+  status         String   @default("pending") // pending | approved | rejected
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, type])
+  @@index([status])
+}
+
+// ── Beta Invites (Platform Admin) ──
+model BetaInvite {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  token          String   @unique // 8-char alphanumeric code for secure claim URL
+  plan           String   @default("enterprise") // "enterprise" | "professional" | "growth" | "starter"
+  invitedBy      String   // platform_owner user id
+  status         String   @default("sent") // sent | accepted | expired | revoked
+  trialDays      Int      @default(14)
+  expiresAt      DateTime?
+  acceptedAt     DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([status])
+  @@index([invitedBy])
+}

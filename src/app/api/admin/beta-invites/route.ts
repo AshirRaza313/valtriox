@@ -1,0 +1,311 @@
+import { NextRequest, NextResponse } from "next/server";
+import { withAuth } from "@/lib/auth-middleware";
+import { db, withRetry } from "@/lib/db";
+import { sendEmail, isEmailConfigured } from "@/lib/email";
+import {
+  getUltraPremiumInviteHtml,
+  getUltraPremiumWhatsAppMessage,
+  generateUltraPremiumWhatsAppLink,
+  getPrintableInvitationHtml,
+  type UltraPremiumInviteData,
+} from "@/lib/invitation-document";
+
+// ═══════════════════════════════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════════════════════════════
+
+function generateToken(): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const bytes = new Uint8Array(8);
+  if (typeof crypto !== "undefined" && crypto.getRandomValues) {
+    crypto.getRandomValues(bytes);
+    return Array.from(bytes, (b) => chars[b % chars.length]).join("");
+  }
+  return Array.from({ length: 8 }, () =>
+    chars[Math.floor(Math.random() * chars.length)]
+  ).join("");
+}
+
+async function getPlatformSettings() {
+  let platformName = "Valtriox",
+    platformWebsite = "https://valtriox.pk",
+    companyEmail = "support@valtriox.pk",
+    companyPhone: string | null = null,
+    companyAddress: string | null = null;
+  try {
+    const s: any = await db.platformSettings.findFirst();
+    if (s) {
+      platformName = s.companyName || platformName;
+      platformWebsite = s.companyWebsite || platformWebsite;
+      companyEmail = s.companyEmail || companyEmail;
+      companyPhone = s.companyPhone;
+      companyAddress = s.companyAddress;
+    }
+  } catch {
+    /* non-critical */
+  }
+  return { platformName, platformWebsite, companyEmail, companyPhone, companyAddress };
+}
+
+const VALID_PLANS = ["enterprise", "professional", "growth", "starter"] as const;
+const VALID_STATUSES = ["sent", "accepted", "expired", "revoked"] as const;
+
+// ═══════════════════════════════════════════════════════════════════════
+//  GET — List invites or preview invitation document
+// ═══════════════════════════════════════════════════════════════════════
+
+export const GET = withAuth(async (req, _ctx) => {
+  try {
+    const url = new URL(req.url);
+
+    // ── Document preview (HTML) ──
+    const documentId = url.searchParams.get("document");
+    if (documentId) {
+      const invite = await withRetry(() =>
+        db.betaInvite.findUnique({ where: { id: documentId } })
+      );
+      if (!invite) {
+        return NextResponse.json({ error: "Invite not found" }, { status: 404 });
+      }
+      const settings = await getPlatformSettings();
+      const baseUrl =
+        process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || "";
+      const data: UltraPremiumInviteData = {
+        email: invite.email,
+        token: invite.token || "N/A",
+        plan: invite.plan,
+        trialDays: invite.trialDays,
+        claimUrl: `${baseUrl}/beta-claim?email=${encodeURIComponent(invite.email)}&code=${invite.token}`,
+        ...settings,
+      };
+      const html = getPrintableInvitationHtml(data);
+      return new NextResponse(html, {
+        headers: { "Content-Type": "text/html; charset=utf-8" },
+      });
+    }
+
+    // ── List invites (with optional status filter) ──
+    const status = url.searchParams.get("status");
+    const where: any = {};
+    if (status) where.status = status;
+
+    const invites = await withRetry(() =>
+      db.betaInvite.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          email: true,
+          token: true,
+          plan: true,
+          invitedBy: true,
+          status: true,
+          trialDays: true,
+          expiresAt: true,
+          acceptedAt: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      })
+    );
+
+    return NextResponse.json({ invites });
+  } catch (error: any) {
+    console.error("[BetaInvite GET]", error?.message);
+    return NextResponse.json(
+      { error: "Failed to fetch invites", detail: error?.message },
+      { status: 500 }
+    );
+  }
+}, { requireRole: ["platform_owner", "platform_admin"] });
+
+// ═══════════════════════════════════════════════════════════════════════
+//  POST — Create invite
+//
+//  Flow: Validate → Generate token → Create record → Send notifications
+//  NOTE: BetaInvite table is created via `prisma db push` at build time.
+//  No runtime DDL is performed here.
+// ═══════════════════════════════════════════════════════════════════════
+
+export const POST = withAuth(async (req, ctx) => {
+  try {
+    const body = await req.json();
+    const { email, plan, trialDays, sendVia, phone } = body;
+
+    // ── Validate ──
+    if (!email?.trim()) {
+      return NextResponse.json({ error: "Email is required" }, { status: 400 });
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      return NextResponse.json(
+        { error: "Invalid email format" },
+        { status: 400 }
+      );
+    }
+    if (plan && !VALID_PLANS.includes(plan)) {
+      return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
+    }
+
+    // ── Create invite ──
+    const token = generateToken();
+    const days = trialDays || 14;
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + days);
+
+    const invite = await withRetry(() =>
+      db.betaInvite.create({
+        data: {
+          email: email.trim().toLowerCase(),
+          token,
+          plan: plan || "enterprise",
+          invitedBy: ctx.userId,
+          trialDays: days,
+          expiresAt,
+        },
+      })
+    );
+
+    // ── Send notifications ──
+    const baseUrl =
+      process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || "";
+    const claimUrl = `${baseUrl}/beta-claim?email=${encodeURIComponent(invite.email)}&code=${invite.token}`;
+    const settings = await getPlatformSettings();
+    const sendResults: { email?: boolean; whatsapp?: string } = {};
+
+    const inviteData: UltraPremiumInviteData = {
+      email: invite.email,
+      token: invite.token,
+      plan: invite.plan,
+      trialDays: invite.trialDays,
+      claimUrl,
+      ...settings,
+    };
+
+    // Email
+    if (!sendVia || sendVia === "email" || sendVia === "both") {
+      try {
+        const html = getUltraPremiumInviteHtml(inviteData);
+        const textPlain = getUltraPremiumWhatsAppMessage(inviteData);
+        sendResults.email = await sendEmail({
+          to: invite.email,
+          subject: `Exclusive Beta Access - ${settings.platformName}`,
+          html,
+          text: textPlain,
+        });
+      } catch (e: any) {
+        console.error("[BetaInvite] Email send failed:", e?.message);
+        sendResults.email = false;
+      }
+    }
+
+    // WhatsApp
+    if (
+      (!sendVia || sendVia === "whatsapp" || sendVia === "both") &&
+      phone
+    ) {
+      sendResults.whatsapp = generateUltraPremiumWhatsAppLink(
+        phone,
+        inviteData
+      );
+    }
+
+    return NextResponse.json(
+      {
+        invite,
+        claimUrl,
+        sendResults,
+        emailConfigured: isEmailConfigured(),
+      },
+      { status: 201 }
+    );
+  } catch (error: any) {
+    console.error("[BetaInvite POST]", error?.code, error?.message);
+
+    // Unique constraint — invite already exists
+    if (error?.code === "P2002") {
+      return NextResponse.json(
+        { error: "An invite for this email already exists" },
+        { status: 409 }
+      );
+    }
+
+    // Table doesn't exist — Prisma returns P2021
+    const msg = (error?.message || "").toLowerCase();
+    if (
+      msg.includes("does not exist") ||
+      error?.code === "P2021"
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "BetaInvite table not found. Please run `prisma db push` or create the table in Supabase SQL Editor.",
+        },
+        { status: 503 }
+      );
+    }
+
+    return NextResponse.json(
+      { error: "Failed to create invite", detail: error?.message },
+      { status: 500 }
+    );
+  }
+}, { requireRole: ["platform_owner", "platform_admin"] });
+
+// ═══════════════════════════════════════════════════════════════════════
+//  DELETE — Remove an invite
+// ═══════════════════════════════════════════════════════════════════════
+
+export const DELETE = withAuth(async (req, _ctx) => {
+  try {
+    const id = new URL(req.url).searchParams.get("id");
+    if (!id) {
+      return NextResponse.json(
+        { error: "Invite ID required" },
+        { status: 400 }
+      );
+    }
+    await withRetry(() => db.betaInvite.delete({ where: { id } }));
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error("[BetaInvite DELETE]", error?.message);
+    return NextResponse.json(
+      { error: "Failed to delete invite" },
+      { status: 500 }
+    );
+  }
+}, { requireRole: ["platform_owner", "platform_admin"] });
+
+// ═══════════════════════════════════════════════════════════════════════
+//  PATCH — Update invite status
+// ═══════════════════════════════════════════════════════════════════════
+
+export const PATCH = withAuth(async (req, _ctx) => {
+  try {
+    const { id, status } = await req.json();
+    if (!id) {
+      return NextResponse.json(
+        { error: "Invite ID required" },
+        { status: 400 }
+      );
+    }
+    if (!status || !VALID_STATUSES.includes(status)) {
+      return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+    }
+
+    const updateData: any = { status };
+    if (status === "accepted") updateData.acceptedAt = new Date();
+
+    const invite = await withRetry(() =>
+      db.betaInvite.update({ where: { id }, data: updateData })
+    );
+
+    return NextResponse.json({ invite });
+  } catch (error: any) {
+    console.error("[BetaInvite PATCH]", error?.message);
+    return NextResponse.json(
+      { error: "Failed to update invite" },
+      { status: 500 }
+    );
+  }
+}, { requireRole: ["platform_owner", "platform_admin"] });
