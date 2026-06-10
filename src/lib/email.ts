@@ -28,7 +28,7 @@ async function sendViaResend({ to, subject, html, text }: EmailOptions): Promise
     const resend = new Resend(apiKey);
 
     await resend.emails.send({
-      from: process.env.RESEND_FROM || 'Valtriox <noreply@valtriox.pk>',
+      from: process.env.RESEND_FROM || 'Valtriox <onboarding@resend.dev>',
       to,
       subject,
       html,
@@ -52,7 +52,7 @@ async function sendViaSmtp({ to, subject, html, text }: EmailOptions): Promise<b
   const port = parseInt(process.env.SMTP_PORT || '587');
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS;
-  const from = process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@valtriox.pk';
+  const from = process.env.SMTP_FROM || process.env.SMTP_USER || 'Valtriox <onboarding@resend.dev>';
 
   if (!host || !user || !pass) {
     console.warn('[Email/SMTP] SMTP not configured. Set SMTP_HOST, SMTP_USER, SMTP_PASS.');

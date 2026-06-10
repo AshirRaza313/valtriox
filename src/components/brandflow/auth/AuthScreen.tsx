@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ForgotPasswordFlow } from "./ForgotPasswordFlow";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { Loader2, Eye, EyeOff, Sparkles, Shield, ArrowRight, ArrowLeft } from "lucide-react";
@@ -23,6 +24,7 @@ export function AuthScreen() {
   }, [authModalMode]);
   const { identity } = usePlatformIdentity();
   const [showPassword, setShowPassword] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [loginData, setLoginData] = useState({ email: "", password: "" });
   const [pinLoginData, setPinLoginData] = useState({ email: "", pin: "" });
 
@@ -216,119 +218,134 @@ export function AuthScreen() {
                 </div>
               </div>
 
-              <Tabs value={defaultTab} onValueChange={setDefaultTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-2 mb-5 sm:mb-7 bg-white/[0.04] border border-white/[0.06] rounded-xl h-10 sm:h-11 p-1">
-                  <TabsTrigger
-                    value="login"
-                    className="text-slate-500 data-[state=active]:text-amber-300 data-[state=active]:bg-amber-500/10 data-[state=active]:shadow-[0_0_15px_rgba(212,160,23,0.1)] rounded-lg transition-all text-[10px] sm:text-xs font-medium"
-                  >
-                    Sign In
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="pin-login"
-                    className="text-slate-500 data-[state=active]:text-amber-300 data-[state=active]:bg-amber-500/10 data-[state=active]:shadow-[0_0_15px_rgba(212,160,23,0.1)] rounded-lg transition-all text-[10px] sm:text-xs font-medium"
-                  >
-                    Team Login
-                  </TabsTrigger>
-                </TabsList>
+              {showForgotPassword ? (
+                <ForgotPasswordFlow onBack={() => setShowForgotPassword(false)} />
+              ) : (
+              <>
+                <Tabs value={defaultTab} onValueChange={setDefaultTab} className="w-full">
+                  <TabsList className="grid w-full grid-cols-2 mb-5 sm:mb-7 bg-white/[0.04] border border-white/[0.06] rounded-xl h-10 sm:h-11 p-1">
+                    <TabsTrigger
+                      value="login"
+                      className="text-slate-500 data-[state=active]:text-amber-300 data-[state=active]:bg-amber-500/10 data-[state=active]:shadow-[0_0_15px_rgba(212,160,23,0.1)] rounded-lg transition-all text-[10px] sm:text-xs font-medium"
+                    >
+                      Sign In
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="pin-login"
+                      className="text-slate-500 data-[state=active]:text-amber-300 data-[state=active]:bg-amber-500/10 data-[state=active]:shadow-[0_0_15px_rgba(212,160,23,0.1)] rounded-lg transition-all text-[10px] sm:text-xs font-medium"
+                    >
+                      Team Login
+                    </TabsTrigger>
+                  </TabsList>
 
-                <TabsContent value="login" forceMount={true} hidden={defaultTab !== "login"}>
-                  <form onSubmit={onLoginSubmit} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="login-email" className="text-slate-400 text-xs font-medium uppercase tracking-wider">Email</Label>
-                      <Input
-                        id="login-email"
-                        name="email"
-                        type="email"
-                        autoComplete="email"
-                        placeholder="you@example.com"
-                        value={loginData.email}
-                        onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
-                        className="premium-input h-11 rounded-xl"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="login-password" className="text-slate-400 text-xs font-medium uppercase tracking-wider">Password</Label>
-                      <div className="relative">
+                  <TabsContent value="login" forceMount={true} hidden={defaultTab !== "login"}>
+                    <form onSubmit={onLoginSubmit} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="login-email" className="text-slate-400 text-xs font-medium uppercase tracking-wider">Email</Label>
                         <Input
-                          id="login-password"
-                          name="password"
-                          type={showPassword ? "text" : "password"}
-                          autoComplete="current-password"
-                          placeholder="Enter your password"
-                          value={loginData.password}
-                          onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
-                          className="premium-input h-11 rounded-xl pr-10"
+                          id="login-email"
+                          name="email"
+                          type="email"
+                          autoComplete="email"
+                          placeholder="you@example.com"
+                          value={loginData.email}
+                          onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
+                          className="premium-input h-11 rounded-xl"
                         />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="login-password" className="text-slate-400 text-xs font-medium uppercase tracking-wider">Password</Label>
+                        <div className="relative">
+                          <Input
+                            id="login-password"
+                            name="password"
+                            type={showPassword ? "text" : "password"}
+                            autoComplete="current-password"
+                            placeholder="Enter your password"
+                            value={loginData.password}
+                            onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
+                            className="premium-input h-11 rounded-xl pr-10"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-amber-400 transition-colors"
+                          >
+                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
+                      </div>
+                      <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
+                        <Button
+                          type="submit"
+                          className="btn-gold w-full h-11 rounded-xl text-sm shadow-[0_0_30px_rgba(212,160,23,0.25)] flex items-center justify-center gap-2"
+                          disabled={loading}
+                        >
+                          {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
+                          Sign In
+                        </Button>
+                      </motion.div>
+                      <div className="pt-3">
                         <button
                           type="button"
-                          onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-amber-400 transition-colors"
+                          onClick={() => setShowForgotPassword(true)}
+                          className="text-xs text-amber-400/70 hover:text-amber-400 transition-colors"
                         >
-                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          Forgot Password?
                         </button>
                       </div>
-                    </div>
-                    <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
-                      <Button
-                        type="submit"
-                        className="btn-gold w-full h-11 rounded-xl text-sm shadow-[0_0_30px_rgba(212,160,23,0.25)] flex items-center justify-center gap-2"
-                        disabled={loading}
-                      >
-                        {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
-                        Sign In
-                      </Button>
-                    </motion.div>
-                  </form>
-                </TabsContent>
+                    </form>
+                  </TabsContent>
 
-                <TabsContent value="pin-login" forceMount={true} hidden={defaultTab !== "pin-login"}>
-                  <form onSubmit={onPinLoginSubmit} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="pin-email" className="text-slate-400 text-xs font-medium uppercase tracking-wider">Email</Label>
-                      <Input
-                        id="pin-email"
-                        name="email"
-                        type="email"
-                        autoComplete="email"
-                        placeholder="team@company.com"
-                        value={pinLoginData.email}
-                        onChange={(e) => setPinLoginData({ ...pinLoginData, email: e.target.value })}
-                        className="premium-input h-11 rounded-xl"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Label htmlFor="pin-code" className="text-slate-400 text-xs font-medium uppercase tracking-wider">6-Digit PIN</Label>
-                        <Shield className="h-3 w-3 text-amber-500/50" />
+                  <TabsContent value="pin-login" forceMount={true} hidden={defaultTab !== "pin-login"}>
+                    <form onSubmit={onPinLoginSubmit} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="pin-email" className="text-slate-400 text-xs font-medium uppercase tracking-wider">Email</Label>
+                        <Input
+                          id="pin-email"
+                          name="email"
+                          type="email"
+                          autoComplete="email"
+                          placeholder="team@company.com"
+                          value={pinLoginData.email}
+                          onChange={(e) => setPinLoginData({ ...pinLoginData, email: e.target.value })}
+                          className="premium-input h-11 rounded-xl"
+                        />
                       </div>
-                      <Input
-                        id="pin-code"
-                        name="pin"
-                        type="text"
-                        inputMode="numeric"
-                        autoComplete="off"
-                        maxLength={6}
-                        placeholder="Enter your 6-digit PIN"
-                        value={pinLoginData.pin}
-                        onChange={(e) => setPinLoginData({ ...pinLoginData, pin: e.target.value.replace(/\D/g, "").slice(0, 6) })}
-                        className="premium-input h-11 rounded-xl text-center text-xl tracking-[0.5em] font-mono"
-                      />
-                      <p className="text-[11px] text-slate-500 mt-1">Your PIN was provided by your team admin when you were added.</p>
-                    </div>
-                    <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
-                      <Button
-                        type="submit"
-                        className="btn-gold w-full h-11 rounded-xl text-sm shadow-[0_0_30px_rgba(212,160,23,0.25)] flex items-center justify-center gap-2"
-                        disabled={loading}
-                      >
-                        {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Shield className="h-4 w-4" />}
-                        Sign In with PIN
-                      </Button>
-                    </motion.div>
-                  </form>
-                </TabsContent>
-              </Tabs>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Label htmlFor="pin-code" className="text-slate-400 text-xs font-medium uppercase tracking-wider">6-Digit PIN</Label>
+                          <Shield className="h-3 w-3 text-amber-500/50" />
+                        </div>
+                        <Input
+                          id="pin-code"
+                          name="pin"
+                          type="text"
+                          inputMode="numeric"
+                          autoComplete="off"
+                          maxLength={6}
+                          placeholder="Enter your 6-digit PIN"
+                          value={pinLoginData.pin}
+                          onChange={(e) => setPinLoginData({ ...pinLoginData, pin: e.target.value.replace(/\D/g, "").slice(0, 6) })}
+                          className="premium-input h-11 rounded-xl text-center text-xl tracking-[0.5em] font-mono"
+                        />
+                        <p className="text-[11px] text-slate-500 mt-1">Your PIN was provided by your team admin when you were added.</p>
+                      </div>
+                      <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
+                        <Button
+                          type="submit"
+                          className="btn-gold w-full h-11 rounded-xl text-sm shadow-[0_0_30px_rgba(212,160,23,0.25)] flex items-center justify-center gap-2"
+                          disabled={loading}
+                        >
+                          {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Shield className="h-4 w-4" />}
+                          Sign In with PIN
+                        </Button>
+                      </motion.div>
+                    </form>
+                  </TabsContent>
+                </Tabs>
+              </>
+              )}
             </div>
 
             {/* Bottom gold shimmer line */}

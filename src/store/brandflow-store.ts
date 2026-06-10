@@ -585,8 +585,8 @@ interface ValtrioxStore {
   // Auth Modal (shown from landing page)
   authModalOpen: boolean;
   setAuthModalOpen: (open: boolean) => void;
-  authModalMode: "login" | "signup" | null;
-  setAuthModalMode: (mode: "login" | "signup" | null) => void;
+  authModalMode: "login" | "signup" | "forgot-password" | null;
+  setAuthModalMode: (mode: "login" | "signup" | "forgot-password" | null) => void;
 
   // Logout
   logout: () => Promise<void>;
@@ -831,7 +831,7 @@ export const useValtrioxStore = create<ValtrioxStore>((set, get) => ({
   // Auth Modal (shown from landing page)
   authModalOpen: false,
   setAuthModalOpen: (open) => set({ authModalOpen: open, authModalMode: open ? (get().authModalMode || "login") : null }),
-  authModalMode: null as "login" | "signup" | null,
+  authModalMode: null as "login" | "signup" | "forgot-password" | null,
   setAuthModalMode: (mode) => set({ authModalMode: mode, authModalOpen: mode !== null }),
 
   // Logout - clear persisted auth, clear httpOnly cookies via API

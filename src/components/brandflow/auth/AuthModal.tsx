@@ -19,6 +19,7 @@ import { KeyRound, Users, ArrowLeft, Sparkles, Shield, ArrowRight } from "lucide
 import { toast } from "sonner";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { motion } from "framer-motion";
+import { ForgotPasswordFlow } from "./ForgotPasswordFlow";
 
 export function AuthModal() {
   const {
@@ -42,6 +43,7 @@ export function AuthModal() {
   const [loginData, setLoginData] = useState({ email: "", password: "" });
   const [pinLoginData, setPinLoginData] = useState({ email: "", pin: "" });
   const [showTeamLogin, setShowTeamLogin] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
 
   const { identity: platformIdentity } = usePlatformIdentity();
 
@@ -58,6 +60,7 @@ export function AuthModal() {
       setShowPassword(false);
       setShowPin(false);
       setShowTeamLogin(false);
+      setShowForgotPassword(false);
     }
   }, [authModalOpen]);
 
@@ -156,8 +159,10 @@ export function AuthModal() {
                 </p>
               </div>
 
-              {/* ── Team Login View (PIN) ── */}
-              {showTeamLogin ? (
+              {/* ── Forgot Password / Team Login / Login Views ── */}
+              {showForgotPassword ? (
+                <ForgotPasswordFlow onBack={() => setShowForgotPassword(false)} isModal />
+              ) : showTeamLogin ? (
                 <>
                   <DialogHeader className="mb-5">
                     <DialogTitle className="text-xl font-semibold text-white text-center flex items-center justify-center gap-2" style={{ fontFamily: "'Cinzel', serif" }}>
@@ -306,8 +311,19 @@ export function AuthModal() {
                       </form>
                   </div>
 
+                  {/* Forgot Password Link */}
+                  <div className="pt-3">
+                    <button
+                      type="button"
+                      onClick={() => setShowForgotPassword(true)}
+                      className="text-xs text-amber-400/70 hover:text-amber-400 transition-colors"
+                    >
+                      Forgot Password?
+                    </button>
+                  </div>
+
                   {/* ── Team Member Login Link ── */}
-                  <div className="mt-5 pt-4 border-t border-white/[0.06]">
+                  <div className="mt-4 pt-4 border-t border-white/[0.06]">
                     <button
                       type="button"
                       onClick={() => setShowTeamLogin(true)}

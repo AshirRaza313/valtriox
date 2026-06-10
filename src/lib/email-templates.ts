@@ -2400,3 +2400,121 @@ export function generateBetaInviteWhatsAppLink(phone: string, data: {
   const cleanPhone = phone.replace(/[^0-9]/g, '');
   return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  PASSWORD RESET OTP EMAIL
+// ═══════════════════════════════════════════════════════════════════════════
+
+export interface PasswordResetOtpEmailData {
+  otp: string;
+  userEmail: string;
+  userName: string;
+  expiresMinutes: number;
+  platformName: string;
+  platformWebsite: string;
+  supportEmail: string;
+}
+
+export function getPasswordResetOtpEmailHtml(data: PasswordResetOtpEmailData): string {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Password Reset OTP - ${data.platformName}</title>
+</head>
+<body style="margin:0;padding:0;background:#0a0a0f;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;">
+
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0a0a0f;min-height:100vh;padding:40px 16px;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#12121a;border:1px solid rgba(255,255,255,0.06);border-radius:16px;overflow:hidden;">
+
+          <tr>
+            <td style="background:linear-gradient(135deg,#1a1508 0%,#12121a 100%);padding:32px 32px 24px;border-bottom:1px solid rgba(201,162,39,0.15);">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td>
+                    <div style="font-size:24px;font-weight:700;color:#C9A227;letter-spacing:-0.5px;margin-bottom:4px;">${data.platformName}</div>
+                    <div style="font-size:12px;color:#6b6b7b;text-transform:uppercase;letter-spacing:1.5px;">Password Reset</div>
+                  </td>
+                  <td align="right">
+                    <div style="display:inline-block;width:40px;height:40px;background:rgba(201,162,39,0.1);border:1px solid rgba(201,162,39,0.2);border-radius:10px;text-align:center;line-height:40px;font-size:20px;">&#128274;</div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:32px 32px 0;">
+              <p style="margin:0;font-size:18px;color:#ffffff;font-weight:600;margin-bottom:16px;">Hi ${data.userName},</p>
+              <p style="margin:0;font-size:15px;color:#9ca3af;line-height:1.6;">
+                We received a request to reset your password for your <strong style="color:#C9A227;">${data.platformName}</strong> account. Use the verification code below to proceed. This code will expire in <strong style="color:#ffffff;">${data.expiresMinutes} minutes</strong>.
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:28px 32px 0;" align="center">
+              <div style="display:inline-block;background:#0a0a0f;border:2px solid rgba(201,162,39,0.3);border-radius:16px;padding:20px 40px;letter-spacing:12px;font-size:36px;font-weight:800;color:#C9A227;font-family:monospace;">
+                ${data.otp}
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:24px 32px 0;">
+              <div style="background:rgba(201,162,39,0.06);border:1px solid rgba(201,162,39,0.12);border-radius:10px;padding:16px 20px;">
+                <p style="margin:0;font-size:13px;color:#9ca3af;line-height:1.6;">
+                  <strong style="color:#C9A227;">Security Notice:</strong> If you did not request a password reset, please ignore this email. Your account remains secure. Do not share this code with anyone.
+                </p>
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:28px 32px 0;">
+              <p style="margin:0;font-size:14px;color:#9ca3af;font-weight:600;margin-bottom:10px;">How to reset your password:</p>
+              <ol style="margin:0;padding-left:20px;color:#9ca3af;font-size:14px;line-height:2;">
+                <li>Enter the 6-digit code on the password reset page</li>
+                <li>Create a new password (min 8 characters, 1 uppercase, 1 number)</li>
+                <li>Sign in with your new password</li>
+              </ol>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:28px 32px 8px;">
+              <p style="margin:0;font-size:15px;color:#ffffff;">
+                Stay secure,<br>
+                <strong style="color:#C9A227;">${data.platformName} Team</strong><br>
+                <span style="font-size:13px;color:#6b6b7b;">${data.supportEmail} | ${data.platformWebsite}</span>
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:24px 32px;border-top:1px solid rgba(255,255,255,0.06);">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="font-size:12px;color:#4b4b5b;line-height:1.5;">
+                    &copy; ${new Date().getFullYear()} ${data.platformName}. All rights reserved.<br>
+                    <a href="${data.platformWebsite}" style="color:#C9A227;text-decoration:none;">${data.platformWebsite}</a>
+                  </td>
+                  <td align="right" style="font-size:11px;color:#4b4b5b;">
+                    Security
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>`;
+}
