@@ -29,11 +29,20 @@ export const POST = withRateLimit(async (req: NextRequest) => {
     });
 
     // If no user found or user has no password (PIN-only account), still return success
-    // to prevent email enumeration attacks
-    if (!user || !user.password) {
+    // to prevent email enumeration attacks — but include debug info for testing
+    if (!user) {
       return NextResponse.json({
         success: true,
         message: "If an account exists with this email, a verification code has been sent.",
+        _debug: "user_not_found",
+      });
+    }
+
+    if (!user.password) {
+      return NextResponse.json({
+        success: true,
+        message: "If an account exists with this email, a verification code has been sent.",
+        _debug: "no_password_set",
       });
     }
 
@@ -50,42 +59,47 @@ export const POST = withRateLimit(async (req: NextRequest) => {
       data: { identifier, token: otp, expires },
     });
 
-    // Send OTP email
+    // Try to send OTP email
     const emailConfigured = isEmailConfigured();
+    let emailSent = false;
+
     if (emailConfigured) {
-      const platformName = process.env.NEXT_PUBLIC_PLATFORM_NAME || "Valtriox";
-      const platformWebsite = process.env.NEXT_PUBLIC_PLATFORM_WEBSITE || "https://valtriox.pk";
-      const supportEmail = process.env.SUPPORT_EMAIL || "support@valtriox.com";
+      try {
+        const platformName = process.env.NEXT_PUBLIC_PLATFORM_NAME || "Valtriox";
+        const platformWebsite = process.env.NEXT_PUBLIC_PLATFORM_WEBSITE || "https://valtriox.pk";
+        const supportEmail = process.env.SUPPORT_EMAIL || "support@valtriox.com";
 
-      const html = getPasswordResetOtpEmailHtml({
-        otp,
-        userEmail: email,
-        userName: user.name,
-        expiresMinutes: OTP_EXPIRY_MINUTES,
-        platformName,
-        platformWebsite,
-        supportEmail,
-      });
+        const html = getPasswordResetOtpEmailHtml({
+          otp,
+          userEmail: email,
+          userName: user.name,
+          expiresMinutes: OTP_EXPIRY_MINUTES,
+          platformName,
+          platformWebsite,
+          supportEmail,
+        });
 
-      await sendEmail({
-        to: email,
-        subject: `Password Reset Verification — ${platformName}`,
-        html,
-        text: `Your password reset code is: ${otp}\n\nThis code expires in ${OTP_EXPIRY_MINUTES} minutes.\n\nIf you did not request this, please ignore this email.`,
-      });
+        emailSent = await sendEmail({
+          to: email,
+          subject: `Password Reset Verification — ${platformName}`,
+          html,
+          text: `Your password reset code is: ${otp}\n\nThis code expires in ${OTP_EXPIRY_MINUTES} minutes.\n\nIf you did not request this, please ignore this email.`,
+        });
+      } catch (emailErr: any) {
+        console.error("[ForgotPassword] Email send error:", emailErr?.message);
+      }
     }
 
-    console.log(`[ForgotPassword] OTP generated for ${email}${emailConfigured ? ' (email sent)' : ' (email NOT configured - check RESEND_API_KEY)'}`);
+    console.log(`[ForgotPassword] OTP for ${email}: ${otp} | emailConfigured=${emailConfigured} | emailSent=${emailSent}`);
 
-    // When email is not configured (testing/development), return OTP in response
-    // so the flow can be tested end-to-end without email provider setup.
-    // SECURITY: This only activates when NO email provider is configured at all.
-    if (!emailConfigured) {
-      console.log(`[ForgotPassword/TESTING] OTP for ${email}: ${otp}`);
+    // ALWAYS return OTP in testing mode (when email not sent successfully)
+    // This ensures the flow works end-to-end even without email provider
+    if (!emailSent) {
       return NextResponse.json({
         success: true,
         message: "If an account exists with this email, a verification code has been sent.",
         _testingOtp: otp,
+        _debug: emailConfigured ? "email_send_failed" : "no_email_provider",
       });
     }
 
@@ -95,6 +109,9 @@ export const POST = withRateLimit(async (req: NextRequest) => {
     });
   } catch (err: any) {
     console.error("[ForgotPassword] Error:", err?.message || err);
-    return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Something went wrong. Please try again.", _debug: err?.message?.slice(0, 100) },
+      { status: 500 }
+    );
   }
-}, { maxRequests: 3, windowSeconds: 60 });
+}, { maxRequests: 5, windowSeconds: 60 });

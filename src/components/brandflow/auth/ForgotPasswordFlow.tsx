@@ -68,6 +68,15 @@ export function ForgotPasswordFlow({ onBack, onSuccess, isModal = false, onAutoL
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.toLowerCase() }),
       });
+
+      // Handle non-JSON responses (e.g. Vercel auth page, HTML error)
+      const contentType = res.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        toast.error("Server error: Received non-JSON response. Please try again.");
+        console.error("[ForgotPassword] Non-JSON response:", res.status, contentType);
+        return;
+      }
+
       const data = await res.json();
 
       if (!res.ok) {
@@ -78,7 +87,7 @@ export function ForgotPasswordFlow({ onBack, onSuccess, isModal = false, onAutoL
       setMaskedEmail(maskEmail(email.toLowerCase()));
       setResendCooldown(60);
 
-      // Testing mode: when email not configured, API returns OTP directly
+      // Testing mode: when email not sent, API returns OTP directly
       if (data._testingOtp) {
         setTestingOtp(data._testingOtp);
         setOtp(data._testingOtp);
@@ -88,8 +97,9 @@ export function ForgotPasswordFlow({ onBack, onSuccess, isModal = false, onAutoL
         setStep("otp");
         toast.success("Verification code sent to your email");
       }
-    } catch {
-      toast.error("Network error. Please try again.");
+    } catch (err: any) {
+      toast.error("Network error: " + (err?.message || "Please try again."));
+      console.error("[ForgotPassword] Fetch error:", err);
     } finally {
       setLoading(false);
     }
