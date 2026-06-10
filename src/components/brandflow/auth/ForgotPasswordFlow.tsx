@@ -343,8 +343,8 @@ export function ForgotPasswordFlow({ onBack, onSuccess, isModal = false, onAutoL
                   disabled={loading}
                   onComplete={() => {
                     // Auto-submit when all 6 digits entered
-                    const form = document.getElementById("otp-form") as HTMLFormElement;
-                    if (form) form.requestSubmit();
+                    const btn = document.getElementById("otp-verify-btn") as HTMLButtonElement;
+                    if (btn) btn.click();
                   }}
                 >
                   <InputOTPGroup>
@@ -366,7 +366,7 @@ export function ForgotPasswordFlow({ onBack, onSuccess, isModal = false, onAutoL
                   type="submit"
                   className="btn-gold w-full h-11 rounded-xl text-sm shadow-[0_0_30px_rgba(212,160,23,0.25)] flex items-center justify-center gap-2"
                   disabled={loading || otp.length !== 6}
-                  id="otp-form"
+                  id="otp-verify-btn"
                 >
                   {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
                   Verify Code
