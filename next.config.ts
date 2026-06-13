@@ -2,7 +2,9 @@ import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
-  /* Vercel handles output automatically - no "standalone" needed */
+  // "standalone" output for Railway/self-hosted deployment
+  // Vercel ignores this flag and uses its own output mode
+  output: "standalone",
   typescript: {
     // NOTE: TypeScript 6.0.2 has a known stack overflow issue with large projects
     // (collectLinkedAliases exceeds max call stack). Keep ignoreBuildErrors enabled
