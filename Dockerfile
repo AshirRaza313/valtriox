@@ -23,6 +23,9 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
+# Prevent SIGSEGV/OOM on Railway's resource-constrained builders
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+
 # Generate Prisma client and build Next.js
 RUN bunx prisma generate && bun run build
 
