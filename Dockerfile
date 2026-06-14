@@ -17,7 +17,8 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/package.json ./
 COPY . .
 ENV NODE_OPTIONS="--max-old-space-size=4096"
-RUN ./node_modules/.bin/prisma generate && ./node_modules/.bin/next build
+# Use --webpack: Turbopack doesn't support output:"standalone"
+RUN ./node_modules/.bin/prisma generate && ./node_modules/.bin/next build --webpack
 
 # Stage 3: Production — minimal Node.js image
 FROM node:22-slim AS runner
