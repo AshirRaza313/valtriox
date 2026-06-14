@@ -19,6 +19,8 @@ COPY . .
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 # Use --webpack: Turbopack doesn't support output:"standalone"
 RUN ./node_modules/.bin/prisma generate && ./node_modules/.bin/next build --webpack
+# Debug: check what next build actually output
+RUN echo "=== .next/ contents ===" && ls -la .next/ && echo "=== standalone ===" && ls -la .next/standalone/ 2>/dev/null || echo "NO standalone dir"
 
 # Stage 3: Production — minimal Node.js image
 FROM node:22-slim AS runner
