@@ -1,9 +1,12 @@
 # ==========================================================================
 # BrandFlow Portal — Production Dockerfile for Railway
-# Uses bun for fast installs, Next.js standalone output
+# Node.js 22 base (for stable build + runtime), bun for fast installs
 # ==========================================================================
 
-FROM oven/bun:1 AS base
+FROM node:22-slim AS base
+
+# Install bun for dependency installation (handles peer dep conflicts)
+RUN npm install -g bun
 
 # Install dependencies only when needed
 FROM base AS deps
@@ -26,9 +29,8 @@ COPY . .
 # Prevent OOM on Railway's resource-constrained builders
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 
-# Generate Prisma client with bun, then build Next.js with Node.js
-# (bun's runtime SIGSEGVs with Next.js 16 + Turbopack, Node.js is stable)
-RUN bunx prisma generate && npx next build
+# Generate Prisma client and build Next.js (Node.js runtime, not bun)
+RUN npx prisma generate && npx next build
 
 # Production image — minimal
 FROM base AS runner
@@ -36,7 +38,7 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Run as non-root user (Debian uses groupadd/useradd, not Alpine's addgroup/adduser)
+# Run as non-root user
 RUN groupadd --system --gid 1001 nodejs && \
     useradd --system --uid 1001 --gid nodejs --no-create-home nextjs
 
