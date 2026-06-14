@@ -1,13 +1,24 @@
+import { Resend } from 'resend';
 import nodemailer from 'nodemailer';
 
-/**
- * Send an email using Resend (if RESEND_API_KEY is set) or SMTP fallback.
- *
- * Resend: Just set RESEND_API_KEY in env vars. Free tier = 100 emails/day.
- * SMTP: Set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM.
- *
- * If neither is configured, logs a warning and returns false (never throws).
- */
+// ============================================================================
+// Resend SDK — Initialized once, reused across requests
+// ============================================================================
+let _resendInstance: Resend | null = null;
+
+function getResendClient(): Resend | null {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return null;
+
+  if (!_resendInstance) {
+    _resendInstance = new Resend(apiKey);
+  }
+  return _resendInstance;
+}
+
+// ============================================================================
+// Email Options Interface
+// ============================================================================
 interface EmailOptions {
   to: string;
   subject: string;
@@ -15,55 +26,48 @@ interface EmailOptions {
   text?: string;
 }
 
-/**
- * Try sending via Resend API.
- * Returns true if sent, false if Resend not configured or error occurred.
- */
+// ============================================================================
+// Resend Sender — Uses official SDK with domain verification check
+// ============================================================================
 async function sendViaResend({ to, subject, html, text }: EmailOptions): Promise<boolean> {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) return false;
+  const resend = getResendClient();
+  if (!resend) return false;
 
-  // IMPORTANT: Resend requires domain verification to send from custom domains.
-  // Until RESEND_DOMAIN_VERIFIED=true is set, always use onboarding@resend.dev.
-  // This ensures emails work during testing without a purchased/verified domain.
+  // When RESEND_DOMAIN_VERIFIED=true, use custom domain sender (noreply@valtriox.com)
+  // Otherwise fall back to onboarding@resend.dev for testing
   const domainVerified = process.env.RESEND_DOMAIN_VERIFIED === 'true';
   const fromAddress = domainVerified
     ? (process.env.RESEND_FROM || 'Valtriox <onboarding@resend.dev>')
     : 'Valtriox <onboarding@resend.dev>';
 
   try {
-    const { Resend } = await import('resend');
-    const resend = new Resend(apiKey);
-
-    const result = await resend.emails.send({
+    const data = await resend.emails.send({
       from: fromAddress,
-      to,
-      subject,
-      html,
+      to: [to],
+      subject: subject,
+      html: html,
       text: text || html.replace(/<[^>]*>/g, ''),
     });
 
-    // Log detailed result for debugging
-    if (result.error) {
-      console.error(`[Email/Resend] API returned error for ${to}:`, result.error);
+    if (data.error) {
+      console.error(`[Email/Resend] API error for ${to}:`, data.error);
       return false;
     }
 
-    console.log(`[Email/Resend] Sent to ${to} (from: ${fromAddress})`);
+    console.log(`[Email/Resend] Email sent successfully: ${data.id} → ${to} (from: ${fromAddress})`);
     return true;
   } catch (error: any) {
-    console.error(`[Email/Resend] Failed to send to ${to}:`, error?.message);
+    console.error(`[Email/Resend] Error sending email to ${to}:`, error?.message);
     if (error?.statusCode === 403) {
-      console.error(`[Email/Resend] 403 Forbidden — likely the sender domain is not verified in Resend. Use onboarding@resend.dev for testing.`);
+      console.error(`[Email/Resend] 403 Forbidden — domain not verified in Resend dashboard.`);
     }
     return false;
   }
 }
 
-/**
- * Try sending via nodemailer SMTP.
- * Returns true if sent, false if SMTP not configured or error occurred.
- */
+// ============================================================================
+// SMTP Fallback (Zoho / Gmail / any SMTP server)
+// ============================================================================
 async function sendViaSmtp({ to, subject, html, text }: EmailOptions): Promise<boolean> {
   const host = process.env.SMTP_HOST;
   const port = parseInt(process.env.SMTP_PORT || '587');
@@ -99,26 +103,26 @@ async function sendViaSmtp({ to, subject, html, text }: EmailOptions): Promise<b
   }
 }
 
-/**
- * Send email - tries Resend first, then SMTP. Returns true if either succeeded.
- */
+// ============================================================================
+// Public API — sendEmail() tries Resend first, then SMTP fallback
+// ============================================================================
 export async function sendEmail(options: EmailOptions): Promise<boolean> {
-  // Try Resend first (simpler setup, modern API)
+  // Try Resend first (official SDK, modern API, better deliverability)
   const resendResult = await sendViaResend(options);
   if (resendResult) return true;
 
-  // Fallback to SMTP
+  // Fallback to SMTP (Zoho, Gmail, etc.)
   const smtpResult = await sendViaSmtp(options);
   if (smtpResult) return true;
 
-  // Neither worked
+  // Neither worked — testing mode will handle this in API routes
   console.warn('[Email] No email provider configured. Set RESEND_API_KEY or SMTP_* env vars.');
   return false;
 }
 
-/**
- * Check if any email provider is configured.
- */
+// ============================================================================
+// Utility — Check if any email provider is configured
+// ============================================================================
 export function isEmailConfigured(): boolean {
   return !!(process.env.RESEND_API_KEY || process.env.SMTP_HOST);
 }
