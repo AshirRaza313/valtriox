@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3000",
-    "build": "prisma generate && prisma db push --skip-generate --accept-data-loss 2>/dev/null || true && next build",
-    "start": "next start",
+    "build": "prisma generate && next build",
+    "start": "node .next/standalone/server.js",
     "lint": "eslint .",
     "postinstall": "prisma generate",
     "db:push": "prisma db push",
