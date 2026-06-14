@@ -9,14 +9,12 @@ FROM oven/bun:1 AS base
 FROM base AS deps
 WORKDIR /app
 
-# Copy lockfile and package.json first (better cache)
+# Copy lockfile, package.json, and prisma schema (needed by postinstall)
 COPY bun.lock package.json ./
+COPY prisma ./prisma/
 
 # Install dependencies (bun handles peer dep conflicts gracefully)
 RUN bun install --frozen-lockfile
-
-# Generate Prisma Client
-RUN bunx prisma generate
 
 # Build the application
 FROM base AS builder
