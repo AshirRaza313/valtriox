@@ -31,6 +31,9 @@ RUN groupadd --system --gid 1001 nodejs && \
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
+# Debug: verify static files exist
+RUN ls -la .next/static/chunks/ 2>/dev/null | head -5 || echo "NO_CHUNKS" && \
+    ls -la .next/static/css/ 2>/dev/null | head -5 || echo "NO_CSS"
 COPY --from=builder --chown=nextjs:nodejs /app/fonts ./fonts
 COPY --from=builder --chown=nextjs:nodejs /app/package.json ./
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
