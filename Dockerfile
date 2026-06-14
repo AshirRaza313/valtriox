@@ -34,9 +34,9 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Run as non-root user
-RUN addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1001 nextjs
+# Run as non-root user (Debian uses groupadd/useradd, not Alpine's addgroup/adduser)
+RUN groupadd --system --gid 1001 nodejs && \
+    useradd --system --uid 1001 --gid nodejs --no-create-home nextjs
 
 # Copy standalone output
 COPY --from=builder /app/public ./public
