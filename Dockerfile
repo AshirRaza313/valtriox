@@ -6,7 +6,11 @@
 FROM node:22-slim AS base
 
 # Install bun for dependency installation (handles peer dep conflicts)
-RUN npm install -g bun
+# Use official script — npm package shadows node/npx with broken symlinks
+RUN apt-get update && apt-get install -y --no-install-recommends unzip && \
+    curl -fsSL https://bun.sh/install | bash && \
+    rm -rf /var/lib/apt/lists/*
+ENV PATH="/root/.bun/bin:${PATH}"
 
 # Install dependencies only when needed
 FROM base AS deps
@@ -30,7 +34,7 @@ COPY . .
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 
 # Generate Prisma client and build Next.js (Node.js runtime, not bun)
-RUN npx prisma generate && npx next build
+RUN ./node_modules/.bin/prisma generate && ./node_modules/.bin/next build
 
 # Production image — minimal
 FROM base AS runner
