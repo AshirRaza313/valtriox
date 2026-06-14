@@ -2,9 +2,8 @@ import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
-  // No "standalone" output — Dockerfile uses full .next + node_modules + npx next start
-  // (standalone is unreliable with Next.js 16 Turbopack)
-  // output: "standalone",
+  // "standalone" output for Railway deployment
+  output: "standalone",
   typescript: {
     // NOTE: TypeScript 6.0.2 has a known stack overflow issue with large projects
     // (collectLinkedAliases exceeds max call stack). Keep ignoreBuildErrors enabled
