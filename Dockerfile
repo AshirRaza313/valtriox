@@ -1,43 +1,40 @@
 # ==========================================================================
 # BrandFlow Portal — Production Dockerfile for Railway
-# Uses Next.js standalone output for minimal image size
+# Uses bun for fast installs, Next.js standalone output
 # ==========================================================================
 
-FROM node:22-alpine AS base
+FROM oven/bun:1 AS base
 
 # Install dependencies only when needed
 FROM base AS deps
-RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-COPY package.json package-lock.json* yarn.lock* pnpm-lock.yaml* ./
-RUN npm ci
+# Copy lockfile and package.json first (better cache)
+COPY bun.lock package.json ./
+
+# Install dependencies (bun handles peer dep conflicts gracefully)
+RUN bun install --frozen-lockfile
 
 # Generate Prisma Client
-RUN npx prisma generate
+RUN bunx prisma generate
 
 # Build the application
 FROM base AS builder
 WORKDIR /app
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Generate Prisma client (ensures it's available for build)
-RUN npx prisma generate
+# Generate Prisma client and build Next.js
+RUN bunx prisma generate && bun run build
 
-# Build Next.js (standalone output configured in next.config.ts)
-# Skip db push during build — database connection not available at build time
-RUN npm run build 2>&1 || \
-    (echo "Standard build failed, trying with skip-db..." && \
-     npx prisma generate && npx next build)
-
-# Production image
+# Production image — minimal
 FROM base AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Run as non-root user for security
+# Run as non-root user
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
@@ -46,7 +43,7 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Copy fonts (used by PDF invoice generation)
+# Copy fonts (PDF invoice generation)
 COPY --from=builder --chown=nextjs:nodejs /app/fonts ./fonts
 
 USER nextjs
@@ -56,5 +53,4 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# Railway provides PORT env var — Next.js standalone server respects it
 CMD ["node", "server.js"]
