@@ -14,6 +14,7 @@ RUN bun install --frozen-lockfile
 # Stage 2: Build with Node.js (stable, no SIGSEGV)
 FROM node:22-slim AS builder
 WORKDIR /app
+RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/package.json ./
 COPY . .
@@ -25,15 +26,13 @@ FROM node:22-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 
-RUN groupadd --system --gid 1001 nodejs && \
+RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/* && \
+    groupadd --system --gid 1001 nodejs && \
     useradd --system --uid 1001 --gid nodejs --no-create-home nextjs
 
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
-# Debug: verify static files exist
-RUN ls -la .next/static/chunks/ 2>/dev/null | head -5 || echo "NO_CHUNKS" && \
-    ls -la .next/static/css/ 2>/dev/null | head -5 || echo "NO_CSS"
 COPY --from=builder --chown=nextjs:nodejs /app/fonts ./fonts
 COPY --from=builder --chown=nextjs:nodejs /app/package.json ./
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma

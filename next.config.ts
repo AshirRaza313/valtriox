@@ -2,9 +2,9 @@ import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
-  // "standalone" output for Railway/self-hosted deployment
-  // Vercel ignores this flag and uses its own output mode
-  output: "standalone",
+  // No "standalone" output — Dockerfile uses full .next + node_modules + npx next start
+  // (standalone is unreliable with Next.js 16 Turbopack)
+  // output: "standalone",
   typescript: {
     // NOTE: TypeScript 6.0.2 has a known stack overflow issue with large projects
     // (collectLinkedAliases exceeds max call stack). Keep ignoreBuildErrors enabled
