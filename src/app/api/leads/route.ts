@@ -12,7 +12,7 @@ import { getLeadCaptureEmailHtml } from "@/lib/email-templates";
  * Wrapped in try-catch so email failures never break the lead submission.
  */
 function sendLeadConfirmationEmail(leadEmail: string, leadName: string) {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://valtriox.pk';
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://valtriox.com';
   // Dynamic PDF - generated on-the-fly from PlatformSettings (logo + contact info)
   const downloadUrl = `${baseUrl}/api/lead-magnet`;
 
@@ -26,7 +26,7 @@ function sendLeadConfirmationEmail(leadEmail: string, leadName: string) {
         companyName: settings?.companyName || 'Valtriox',
         platformName,
         platformWebsite: settings?.companyWebsite || baseUrl,
-        companyEmail: settings?.companyEmail || process.env.SMTP_FROM || process.env.RESEND_FROM?.split('<')[0]?.trim() || 'support@valtriox.com',
+        companyEmail: settings?.companyEmail || process.env.SMTP_FROM || process.env.RESEND_FROM?.split('<')[0]?.trim() || 'ashir@valtriox.com',
         companyPhone: settings?.companyPhone || null,
         companyAddress: settings?.companyAddress || null,
         whatsappNumber: settings?.whatsappNumber || null,
@@ -55,7 +55,7 @@ function sendLeadConfirmationEmail(leadEmail: string, leadName: string) {
           companyName: 'Valtriox',
           platformName: 'Valtriox',
           platformWebsite: baseUrl,
-          companyEmail: process.env.SMTP_FROM || process.env.RESEND_FROM?.split('<')[0]?.trim() || 'support@valtriox.com',
+          companyEmail: process.env.SMTP_FROM || process.env.RESEND_FROM?.split('<')[0]?.trim() || 'ashir@valtriox.com',
           companyPhone: null,
           companyAddress: null,
           whatsappNumber: null,

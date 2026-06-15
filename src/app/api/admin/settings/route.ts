@@ -12,7 +12,7 @@ import logger from "@/lib/logger";
 const DEFAULT_SETTINGS = {
   id: "default",
   companyName: "Valtriox",
-  companyEmail: "support@valtriox.pk",
+  companyEmail: "ashir@valtriox.com",
   companyPhone: "",
   companyWebsite: "",
   companyAddress: "",
@@ -129,7 +129,7 @@ export const GET = withAuth(async (_req: NextRequest, authCtx) => {
       const created = await db.platformSettings.create({
         data: {
           companyName: "Valtriox",
-          companyEmail: "support@valtriox.pk",
+          companyEmail: "ashir@valtriox.com",
           currency: "PKR",
         },
       });
@@ -247,7 +247,7 @@ export const PUT = withAuth(async (req: NextRequest, authCtx) => {
         row = await db.platformSettings.create({
           data: {
             companyName: data.companyName || "Valtriox",
-            companyEmail: data.companyEmail || "support@valtriox.pk",
+            companyEmail: data.companyEmail || "ashir@valtriox.com",
             currency: data.currency || "PKR",
             ...data,
           },

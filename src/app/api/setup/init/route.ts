@@ -148,7 +148,7 @@ export async function POST(req: NextRequest) {
       await prisma.platformSettings.create({
         data: {
           companyName: "Valtriox",
-          companyEmail: "support@valtriox.com",
+          companyEmail: "ashir@valtriox.com",
           tagline: "Command Your Brand Universe",
           primaryBrandColor: "#C9A227",
           secondaryBrandColor: "#B8860B",

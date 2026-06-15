@@ -244,7 +244,7 @@ export function ContactSection({ onLegalClick }: ContactSectionProps) {
           >
             {/* Contact Cards */}
             {[
-              { icon: Mail, label: "Email Us", value: identity.companyEmail || "support@valtriox.com", href: `mailto:${identity.companyEmail || "support@valtriox.com"}` },
+              { icon: Mail, label: "Email Us", value: identity.companyEmail || "ashir@valtriox.com", href: `mailto:${identity.companyEmail || "ashir@valtriox.com"}` },
               { icon: Phone, label: "Call Us", value: identity.companyPhone || "+92 300 1234567", href: `tel:${identity.companyPhone || "+923001234567"}` },
               { icon: MapPin, label: "Visit Us", value: identity.companyAddress || "Lahore, Pakistan", href: "#" },
               { icon: Clock, label: "Support Hours", value: "Mon-Fri: 9AM-6PM PKT", href: "#" },

@@ -66,8 +66,8 @@ export const POST = withRateLimit(async (req: NextRequest) => {
     if (emailConfigured) {
       try {
         const platformName = process.env.NEXT_PUBLIC_PLATFORM_NAME || "Valtriox";
-        const platformWebsite = process.env.NEXT_PUBLIC_PLATFORM_WEBSITE || "https://valtriox.pk";
-        const supportEmail = process.env.SUPPORT_EMAIL || "support@valtriox.com";
+        const platformWebsite = process.env.NEXT_PUBLIC_PLATFORM_WEBSITE || "https://valtriox.com";
+        const supportEmail = process.env.SUPPORT_EMAIL || "ashir@valtriox.com";
 
         const html = getPasswordResetOtpEmailHtml({
           otp,

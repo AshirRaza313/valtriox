@@ -128,8 +128,8 @@ export const POST = withAuth(async (req, authCtx) => {
         expiresAt: expiresAt.toISOString(),
         inviterName,
         platformName: "Valtriox",
-        platformWebsite: "https://valtriox.pk",
-        supportEmail: "support@valtriox.pk",
+        platformWebsite: "https://valtriox.com",
+        supportEmail: "ashir@valtriox.com",
       });
 
       emailSent = await sendEmail({
@@ -165,7 +165,7 @@ export const POST = withAuth(async (req, authCtx) => {
       expiresAt: expiresAt.toISOString(),
       inviterName,
       platformName: "Valtriox",
-      supportEmail: "support@valtriox.pk",
+      supportEmail: "ashir@valtriox.com",
     });
 
     return NextResponse.json({

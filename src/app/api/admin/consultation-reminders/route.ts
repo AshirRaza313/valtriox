@@ -204,8 +204,8 @@ export const POST = withAuth(async (req: NextRequest) => {
       consultationType: lead.consultationType,
       message: lead.message,
       platformName: platformSettings?.companyName || "Valtriox",
-      platformWebsite: platformSettings?.companyWebsite || "https://valtriox.pk",
-      companyEmail: platformSettings?.companyEmail || "support@valtriox.pk",
+      platformWebsite: platformSettings?.companyWebsite || "https://valtriox.com",
+      companyEmail: platformSettings?.companyEmail || "ashir@valtriox.com",
       companyPhone: platformSettings?.companyPhone || null,
     };
 

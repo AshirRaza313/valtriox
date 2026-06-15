@@ -320,7 +320,7 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
         `  3. Add your first products and start receiving orders`,
         `  4. Explore the user guide for tips and best practices`,
         ``,
-        `Need help? Contact our support team at support@valtriox.pk`,
+        `Need help? Contact our support team at ashir@valtriox.com`,
       ].join('\n');
 
       await withRetry(

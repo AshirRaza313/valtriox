@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
           to: recipientEmail,
           subject: `${parsed.title || "Document"} from Valtriox`,
           html: buildTextDocumentEmail(parsed.title, processedContent, ph),
-          text: `Hello ${ph.client_name},\n\nHere is the document "${parsed.title}" for ${ph.company_name}.\n\n${processedContent}\n\nBest regards,\nValtriox Team\nsupport@valtriox.pk`,
+          text: `Hello ${ph.client_name},\n\nHere is the document "${parsed.title}" for ${ph.company_name}.\n\n${processedContent}\n\nBest regards,\nValtriox Team\nashir@valtriox.com`,
         });
 
         return {
@@ -167,7 +167,7 @@ export async function POST(req: NextRequest) {
           to: recipientEmail,
           subject: `${file.title} | Document from Valtriox`,
           html: buildFileDocumentEmail(file, customMessage, ph, fileSize, fileIcon),
-          text: `Hello ${ph.client_name},\n\n${customMessage}\n\nDocument: ${file.title}\nType: ${file.fileType.toUpperCase()}\nSize: ${fileSize}\nDownload: ${file.cloudinaryUrl}\n\nBest regards,\nValtriox Team\nsupport@valtriox.pk`,
+          text: `Hello ${ph.client_name},\n\n${customMessage}\n\nDocument: ${file.title}\nType: ${file.fileType.toUpperCase()}\nSize: ${fileSize}\nDownload: ${file.cloudinaryUrl}\n\nBest regards,\nValtriox Team\nashir@valtriox.com`,
         });
 
         return {
@@ -223,9 +223,9 @@ function buildTextDocumentEmail(title: string, content: string, ph: Record<strin
       <p style="color: #334155; font-size: 15px;">Hello <strong>${ph.client_name}</strong>,</p>
       <p style="color: #334155; font-size: 15px;">Please find below the document <strong>"${title}"</strong> prepared for <strong>${ph.company_name}</strong>.</p>
       <div style="background: #fafaf9; border: 1px solid #e8dcc8; border-radius: 10px; padding: 24px; margin: 20px 0; font-size: 14px; color: #1a1a2e; line-height: 1.7; white-space: pre-wrap;">${escapedContent}</div>
-      <p style="color: #64748b; font-size: 13px;">If you have any questions, reply to this email or contact <a href="mailto:support@valtriox.pk" style="color: #C9A227;">support@valtriox.pk</a></p>
+      <p style="color: #64748b; font-size: 13px;">If you have any questions, reply to this email or contact <a href="mailto:ashir@valtriox.com" style="color: #C9A227;">ashir@valtriox.com</a></p>
       <div style="border-top: 1px solid #e8dcc8; padding-top: 16px; margin-top: 24px; text-align: center;">
-        <p style="color: #94a3b8; font-size: 11px; margin: 0;">Valtriox Platform &bull; support@valtriox.pk &bull; valtriox.pk</p>
+        <p style="color: #94a3b8; font-size: 11px; margin: 0;">Valtriox Platform &bull; ashir@valtriox.com &bull; valtriox.com</p>
       </div>
     </div>
   `;
@@ -256,9 +256,9 @@ function buildFileDocumentEmail(
           Download Document
         </a>
       </div>
-      <p style="color: #64748b; font-size: 13px;">If you have any questions, reply to this email or contact <a href="mailto:support@valtriox.pk" style="color: #C9A227;">support@valtriox.pk</a></p>
+      <p style="color: #64748b; font-size: 13px;">If you have any questions, reply to this email or contact <a href="mailto:ashir@valtriox.com" style="color: #C9A227;">ashir@valtriox.com</a></p>
       <div style="border-top: 1px solid #e8dcc8; padding-top: 16px; margin-top: 24px; text-align: center;">
-        <p style="color: #94a3b8; font-size: 11px; margin: 0;">Valtriox Platform &bull; support@valtriox.pk &bull; valtriox.pk</p>
+        <p style="color: #94a3b8; font-size: 11px; margin: 0;">Valtriox Platform &bull; ashir@valtriox.com &bull; valtriox.com</p>
       </div>
     </div>
   `;

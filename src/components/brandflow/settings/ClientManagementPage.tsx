@@ -2057,7 +2057,7 @@ I'm from Valtriox - your brand management platform is ready!
 📧 Login: ${whatsappInviteData.email}
 🌐 Portal: ${whatsappInviteData.loginUrl}
 
-Your 14-day free trial starts now. Log in with your credentials and explore all features. If you need any help, reply to this message or contact us at support@valtriox.pk
+Your 14-day free trial starts now. Log in with your credentials and explore all features. If you need any help, reply to this message or contact us at ashir@valtriox.com
 
 Looking forward to a great partnership! 🚀
 - Valtriox Team`}</pre>

@@ -1048,7 +1048,7 @@ export function SupportChatPage() {
   const orgName = organization?.name || "My Brand";
 
   // Fetch company email for client view (hide personal email)
-  const [companyEmail, setCompanyEmail] = useState("support@valtriox.pk");
+  const [companyEmail, setCompanyEmail] = useState("ashir@valtriox.com");
   useEffect(() => {
     if (!isAdmin) {
       fetch("/api/admin/settings")

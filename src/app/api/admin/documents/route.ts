@@ -131,7 +131,7 @@ Either party may terminate with 30 days written notice. Upon termination, your d
 
 ## 10. Contact
 
-For questions about these Terms, contact: legal@valtriox.pk
+For questions about these Terms, contact: legal@valtriox.com
 `,
   },
   {
@@ -166,7 +166,7 @@ We do not sell your personal data. We may share data with service providers who 
 
 ## 5. Your Rights
 
-You have the right to access, correct, delete, and export your personal data. Contact privacy@valtriox.pk to exercise these rights.
+You have the right to access, correct, delete, and export your personal data. Contact privacy@valtriox.com to exercise these rights.
 
 ## 6. Data Retention
 
@@ -174,7 +174,7 @@ We retain your data for as long as your account is active. Upon account deletion
 
 ## 7. Contact
 
-For privacy-related inquiries: privacy@valtriox.pk
+For privacy-related inquiries: privacy@valtriox.com
 `,
   },
   {
@@ -405,7 +405,7 @@ For privacy-related inquiries: privacy@valtriox.pk
 {{client_email}}
 
 **From**: Valtriox Team
-support@valtriox.pk
+ashir@valtriox.com
 
 ---
 
@@ -438,7 +438,7 @@ We look forward to a successful partnership.
 Warm regards,
 
 The Valtriox Team
-support@valtriox.pk
+ashir@valtriox.com
 `,
   },
 ];

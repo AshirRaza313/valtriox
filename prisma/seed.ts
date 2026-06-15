@@ -10,7 +10,7 @@ async function seed() {
   const settings = await db.platformSettings.create({
     data: {
       companyName: 'Valtriox',
-      companyEmail: 'support@valtriox.com',
+      companyEmail: 'ashir@valtriox.com',
       companyPhone: '+92-300-1234567',
       companyWebsite: 'https://valtriox.vercel.app',
       companyAddress: 'Lahore, Pakistan',

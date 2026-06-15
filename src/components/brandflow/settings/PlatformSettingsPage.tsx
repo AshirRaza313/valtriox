@@ -409,7 +409,7 @@ export function PlatformSettingsPage() {
 
   const DEFAULT_SETTINGS_FALLBACK: PlatformSettingsData = {
     companyName: "Valtriox",
-    companyEmail: "support@valtriox.pk",
+    companyEmail: "ashir@valtriox.com",
     companyPhone: "",
     companyWebsite: "",
     companyAddress: "",
@@ -1096,7 +1096,7 @@ export function PlatformSettingsPage() {
                   </Label>
                   <Input
                     type="email"
-                    placeholder="owner@valtriox.pk"
+                    placeholder="owner@valtriox.com"
                     value={personalDetails.email}
                     onChange={(e) => setPersonalDetails((p) => ({ ...p, email: e.target.value }))}
                     className={inputBg}
@@ -1202,7 +1202,7 @@ export function PlatformSettingsPage() {
                     </Label>
                     <Input
                       type="email"
-                      placeholder="support@valtriox.pk"
+                      placeholder="ashir@valtriox.com"
                       value={settings.companyEmail}
                       onChange={(e) => setSettings((p) => ({ ...p, companyEmail: e.target.value }))}
                       className={inputBg}
@@ -1229,7 +1229,7 @@ export function PlatformSettingsPage() {
                     Company Website
                   </Label>
                   <Input
-                    placeholder="https://valtriox.pk"
+                    placeholder="https://valtriox.com"
                     value={settings.companyWebsite}
                     onChange={(e) => setSettings((p) => ({ ...p, companyWebsite: e.target.value }))}
                     className={inputBg}
@@ -2600,7 +2600,7 @@ export function PlatformSettingsPage() {
                     Email Footer Text
                   </Label>
                   <Textarea
-                    placeholder="Powered by Valtriox | https://valtriox.pk"
+                    placeholder="Powered by Valtriox | https://valtriox.com"
                     rows={2}
                     value={settings.emailFooterText}
                     onChange={(e) => setSettings((p) => ({ ...p, emailFooterText: e.target.value }))}

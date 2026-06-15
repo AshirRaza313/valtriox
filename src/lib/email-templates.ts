@@ -77,7 +77,7 @@ export function generateInvitationPlainText(data: {
     `Warm regards,`,
     `${data.inviterName}`,
     `${data.platformName} Team`,
-    `https://valtriox.pk`,
+    `https://valtriox.com`,
   ].join('\n');
 }
 
@@ -2421,96 +2421,154 @@ export function getPasswordResetOtpEmailHtml(data: PasswordResetOtpEmailData): s
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Password Reset OTP - ${data.platformName}</title>
+  <title>Password Reset - ${data.platformName}</title>
 </head>
-<body style="margin:0;padding:0;background:#0a0a0f;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;">
+<body style="margin:0;padding:0;background:#050507;font-family:'Segoe UI',system-ui,-apple-system,Roboto,sans-serif;">
 
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0a0a0f;min-height:100vh;padding:40px 16px;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#050507;min-height:100vh;">
     <tr>
-      <td align="center">
-        <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#12121a;border:1px solid rgba(255,255,255,0.06);border-radius:16px;overflow:hidden;">
+      <td align="center" style="padding:48px 16px;">
 
+        <!-- Outer card with gold accent border -->
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width:580px;">
+          <!-- Top gold accent line -->
           <tr>
-            <td style="background:linear-gradient(135deg,#1a1508 0%,#12121a 100%);padding:32px 32px 24px;border-bottom:1px solid rgba(201,162,39,0.15);">
+            <td style="height:3px;background:linear-gradient(90deg,transparent 0%,#C9A227 30%,#E8D48B 50%,#C9A227 70%,transparent 100%);border-radius:3px 3px 0 0;"></td>
+          </tr>
+
+          <!-- Main card -->
+          <tr>
+            <td style="background:linear-gradient(165deg,#111118 0%,#0c0c12 50%,#0a0a0f 100%);border:1px solid rgba(201,162,39,0.1);border-top:none;border-radius:0 0 20px 20px;overflow:hidden;">
+
+              <!-- Header with logo -->
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
-                  <td>
-                    <div style="font-size:24px;font-weight:700;color:#C9A227;letter-spacing:-0.5px;margin-bottom:4px;">${data.platformName}</div>
-                    <div style="font-size:12px;color:#6b6b7b;text-transform:uppercase;letter-spacing:1.5px;">Password Reset</div>
-                  </td>
-                  <td align="right">
-                    <div style="display:inline-block;width:40px;height:40px;background:rgba(201,162,39,0.1);border:1px solid rgba(201,162,39,0.2);border-radius:10px;text-align:center;line-height:40px;font-size:20px;">&#128274;</div>
+                  <td style="padding:36px 40px 28px;text-align:center;">
+                    <img src="https://valtriox.com/valtriox-logo.png" alt="${data.platformName}" width="140" style="display:block;margin:0 auto 16px;opacity:0.95;" />
+                    <div style="width:60px;height:1px;background:linear-gradient(90deg,transparent,#C9A227,transparent);margin:0 auto 14px;"></div>
+                    <div style="font-size:11px;color:#6b6b7b;text-transform:uppercase;letter-spacing:3px;font-weight:500;">Password Reset</div>
                   </td>
                 </tr>
               </table>
-            </td>
-          </tr>
 
-          <tr>
-            <td style="padding:32px 32px 0;">
-              <p style="margin:0;font-size:18px;color:#ffffff;font-weight:600;margin-bottom:16px;">Hi ${data.userName},</p>
-              <p style="margin:0;font-size:15px;color:#9ca3af;line-height:1.6;">
-                We received a request to reset your password for your <strong style="color:#C9A227;">${data.platformName}</strong> account. Use the verification code below to proceed. This code will expire in <strong style="color:#ffffff;">${data.expiresMinutes} minutes</strong>.
-              </p>
-            </td>
-          </tr>
-
-          <tr>
-            <td style="padding:28px 32px 0;" align="center">
-              <div style="display:inline-block;background:#0a0a0f;border:2px solid rgba(201,162,39,0.3);border-radius:16px;padding:20px 40px;letter-spacing:12px;font-size:36px;font-weight:800;color:#C9A227;font-family:monospace;">
-                ${data.otp}
-              </div>
-            </td>
-          </tr>
-
-          <tr>
-            <td style="padding:24px 32px 0;">
-              <div style="background:rgba(201,162,39,0.06);border:1px solid rgba(201,162,39,0.12);border-radius:10px;padding:16px 20px;">
-                <p style="margin:0;font-size:13px;color:#9ca3af;line-height:1.6;">
-                  <strong style="color:#C9A227;">Security Notice:</strong> If you did not request a password reset, please ignore this email. Your account remains secure. Do not share this code with anyone.
-                </p>
-              </div>
-            </td>
-          </tr>
-
-          <tr>
-            <td style="padding:28px 32px 0;">
-              <p style="margin:0;font-size:14px;color:#9ca3af;font-weight:600;margin-bottom:10px;">How to reset your password:</p>
-              <ol style="margin:0;padding-left:20px;color:#9ca3af;font-size:14px;line-height:2;">
-                <li>Enter the 6-digit code on the password reset page</li>
-                <li>Create a new password (min 8 characters, 1 uppercase, 1 number)</li>
-                <li>Sign in with your new password</li>
-              </ol>
-            </td>
-          </tr>
-
-          <tr>
-            <td style="padding:28px 32px 8px;">
-              <p style="margin:0;font-size:15px;color:#ffffff;">
-                Stay secure,<br>
-                <strong style="color:#C9A227;">${data.platformName} Team</strong><br>
-                <span style="font-size:13px;color:#6b6b7b;">${data.supportEmail} | ${data.platformWebsite}</span>
-              </p>
-            </td>
-          </tr>
-
-          <tr>
-            <td style="padding:24px 32px;border-top:1px solid rgba(255,255,255,0.06);">
+              <!-- Body -->
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
-                  <td style="font-size:12px;color:#4b4b5b;line-height:1.5;">
-                    &copy; ${new Date().getFullYear()} ${data.platformName}. All rights reserved.<br>
-                    <a href="${data.platformWebsite}" style="color:#C9A227;text-decoration:none;">${data.platformWebsite}</a>
-                  </td>
-                  <td align="right" style="font-size:11px;color:#4b4b5b;">
-                    Security
+                  <td style="padding:0 40px;">
+                    <p style="margin:0 0 8px;font-size:20px;color:#ffffff;font-weight:600;">Hi ${data.userName},</p>
+                    <p style="margin:0 0 28px;font-size:15px;color:#8b8b9b;line-height:1.7;">
+                      We received a request to reset your password for your <strong style="color:#C9A227;font-weight:600;">${data.platformName}</strong> account. Use the verification code below to proceed.
+                    </p>
                   </td>
                 </tr>
               </table>
+
+              <!-- OTP Code Box -->
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="padding:0 40px 8px;" align="center">
+                    <table cellpadding="0" cellspacing="0" style="background:linear-gradient(145deg,#0d0d14 0%,#08080d 100%);border:1.5px solid rgba(201,162,39,0.25);border-radius:18px;padding:28px 48px;">
+                      <tr>
+                        <td align="center">
+                          <div style="font-size:14px;color:#6b6b7b;text-transform:uppercase;letter-spacing:2px;margin-bottom:14px;font-weight:500;">Verification Code</div>
+                          <div style="font-size:42px;font-weight:800;color:#C9A227;font-family:'SF Mono','Fira Code','Courier New',monospace;letter-spacing:14px;text-shadow:0 0 30px rgba(201,162,39,0.15);">
+                            ${data.otp}
+                          </div>
+                          <div style="font-size:12px;color:#5a5a6a;margin-top:14px;">
+                            Expires in <strong style="color:#8b8b9b;">${data.expiresMinutes} minutes</strong>
+                          </div>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Security Notice -->
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="padding:28px 40px 0;">
+                    <table width="100%" cellpadding="0" cellspacing="0" style="background:rgba(201,162,39,0.04);border:1px solid rgba(201,162,39,0.08);border-radius:12px;">
+                      <tr>
+                        <td style="padding:18px 22px;">
+                          <p style="margin:0 0 4px;font-size:11px;color:#C9A227;text-transform:uppercase;letter-spacing:1.5px;font-weight:700;">&#9888; Security Notice</p>
+                          <p style="margin:0;font-size:13px;color:#6b6b7b;line-height:1.7;">
+                            If you did not request a password reset, please ignore this email. Your account remains secure. <strong style="color:#8b8b9b;">Do not share this code with anyone.</strong>
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Steps -->
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="padding:28px 40px 0;">
+                    <p style="margin:0 0 14px;font-size:13px;color:#8b8b9b;text-transform:uppercase;letter-spacing:1px;font-weight:600;">How to Reset</p>
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+                          <table cellpadding="0" cellspacing="0"><tr>
+                            <td style="font-size:13px;color:#C9A227;font-weight:700;padding-right:14px;">01</td>
+                            <td style="font-size:14px;color:#9ca3af;">Enter the 6-digit code on the password reset page</td>
+                          </tr></table>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+                          <table cellpadding="0" cellspacing="0"><tr>
+                            <td style="font-size:13px;color:#C9A227;font-weight:700;padding-right:14px;">02</td>
+                            <td style="font-size:14px;color:#9ca3af;">Create a new password (min 8 chars, 1 uppercase, 1 number)</td>
+                          </tr></table>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding:8px 0;">
+                          <table cellpadding="0" cellspacing="0"><tr>
+                            <td style="font-size:13px;color:#C9A227;font-weight:700;padding-right:14px;">03</td>
+                            <td style="font-size:14px;color:#9ca3af;">Sign in with your new password</td>
+                          </tr></table>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Footer -->
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="padding:36px 40px 16px;text-align:center;">
+                    <div style="width:60px;height:1px;background:linear-gradient(90deg,transparent,rgba(201,162,39,0.2),transparent);margin:0 auto 20px;"></div>
+                    <p style="margin:0 0 4px;font-size:14px;color:#4b4b5b;">Stay secure,</p>
+                    <p style="margin:0 0 12px;font-size:15px;color:#C9A227;font-weight:600;">${data.platformName} Team</p>
+                    <p style="margin:0;font-size:12px;color:#3d3d4d;">
+                      <a href="mailto:${data.supportEmail}" style="color:#6b6b7b;text-decoration:none;">${data.supportEmail}</a>
+                      <span style="color:#2a2a3a;margin:0 8px;">|</span>
+                      <a href="${data.platformWebsite}" style="color:#6b6b7b;text-decoration:none;">${data.platformWebsite}</a>
+                    </p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:0 40px 28px;text-align:center;">
+                    <p style="margin:0;font-size:11px;color:#2a2a3a;">
+                      &copy; ${new Date().getFullYear()} ${data.platformName}. All rights reserved.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
             </td>
           </tr>
 
+          <!-- Bottom gold accent line -->
+          <tr>
+            <td style="height:2px;background:linear-gradient(90deg,transparent 0%,rgba(201,162,39,0.3) 50%,transparent 100%);border-radius:0 0 3px 3px;"></td>
+          </tr>
         </table>
+
       </td>
     </tr>
   </table>

@@ -429,7 +429,7 @@ export function ContactPage() {
               {/* Contact Info Cards */}
               <div className="grid sm:grid-cols-2 gap-3 mb-4">
                 <a
-                  href={`mailto:${identity.companyEmail || "support@valtriox.com"}`}
+                  href={`mailto:${identity.companyEmail || "ashir@valtriox.com"}`}
                   className="flex items-start gap-3 p-4 rounded-2xl bg-white/[0.03] border border-amber-500/15 hover:border-amber-500/30 transition-all duration-300 group"
                 >
                   <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/15 flex items-center justify-center group-hover:bg-amber-500/20 transition-colors">
@@ -437,7 +437,7 @@ export function ContactPage() {
                   </div>
                   <div>
                     <p className="text-xs text-slate-500 uppercase tracking-wider mb-0.5">Email Us</p>
-                    <p className="text-sm font-medium text-white">{identity.companyEmail || "support@valtriox.com"}</p>
+                    <p className="text-sm font-medium text-white">{identity.companyEmail || "ashir@valtriox.com"}</p>
                   </div>
                 </a>
 
@@ -588,7 +588,7 @@ export function ContactPage() {
               <div className="flex gap-6 text-sm">
                 <Link href="/privacy" className="text-slate-500 hover:text-amber-400 transition-colors">Privacy</Link>
                 <Link href="/terms" className="text-slate-500 hover:text-amber-400 transition-colors">Terms</Link>
-                <a href={`mailto:${identity.companyEmail || "support@valtriox.com"}`} className="text-slate-500 hover:text-amber-400 transition-colors">Support</a>
+                <a href={`mailto:${identity.companyEmail || "ashir@valtriox.com"}`} className="text-slate-500 hover:text-amber-400 transition-colors">Support</a>
               </div>
             </div>
           </div>
@@ -654,7 +654,7 @@ export function ContactPage() {
             >
               {/* Contact Cards */}
               {[
-                { icon: Mail, label: "Email Us", value: identity.companyEmail || "support@valtriox.com", href: `mailto:${identity.companyEmail || "support@valtriox.com"}` },
+                { icon: Mail, label: "Email Us", value: identity.companyEmail || "ashir@valtriox.com", href: `mailto:${identity.companyEmail || "ashir@valtriox.com"}` },
                 { icon: Phone, label: "Call Us", value: identity.companyPhone || "+92 300 1234567", href: `tel:${identity.companyPhone || "+923001234567"}` },
                 { icon: MapPin, label: "Visit Us", value: identity.companyAddress || "Lahore, Pakistan", href: "#" },
                 { icon: Clock, label: "Support Hours", value: identity.supportHours || "Mon-Fri: 9AM-6PM PKT", href: "#" },

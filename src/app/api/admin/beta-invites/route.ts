@@ -28,8 +28,8 @@ function generateToken(): string {
 
 async function getPlatformSettings() {
   let platformName = "Valtriox",
-    platformWebsite = "https://valtriox.pk",
-    companyEmail = "support@valtriox.pk",
+    platformWebsite = "https://valtriox.com",
+    companyEmail = "ashir@valtriox.com",
     companyPhone: string | null = null,
     companyAddress: string | null = null;
   try {
