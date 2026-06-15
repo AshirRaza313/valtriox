@@ -65,9 +65,35 @@ const nextConfig: NextConfig = {
     "/api/invoices/**": ["./fonts/**"],
     "/api/reports/**": ["./fonts/**"],
   },
-  // Security headers via Next.js config (backup for middleware)
+  // Security headers + static asset caching for speed
   async headers() {
     return [
+      // Static assets — long cache for speed
+      {
+        source: "/valtriox-icon-:size(png)",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+        ],
+      },
+      {
+        source: "/apple-touch-icon.png",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+        ],
+      },
+      {
+        source: "/assets/:path*",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+        ],
+      },
+      {
+        source: "/downloads/:path*",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=86400" },
+        ],
+      },
+      // Security headers for all other routes
       {
         source: "/:path*",
         headers: [

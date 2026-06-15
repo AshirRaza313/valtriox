@@ -42,6 +42,7 @@ export const metadata: Metadata = {
   authors: [{ name: "Valtriox" }],
   icons: {
     icon: [
+      { url: "/valtriox-icon-16.png", sizes: "16x16", type: "image/png" },
       { url: "/valtriox-icon-32.png", sizes: "32x32", type: "image/png" },
       { url: "/valtriox-icon-192.png", sizes: "192x192", type: "image/png" },
     ],
@@ -57,6 +58,16 @@ export const metadata: Metadata = {
     title: "Valtriox | Command Your Brand Universe",
     description: "The universal brand management portal for modern businesses. Command every aspect of your brand from a single, powerful platform",
     type: "website",
+    url: "https://valtriox.com",
+    siteName: "Valtriox",
+    images: [
+      {
+        url: "/valtriox-icon-512.png",
+        width: 512,
+        height: 512,
+        alt: "Valtriox Brand Management Portal",
+      },
+    ],
   },
 };
 
