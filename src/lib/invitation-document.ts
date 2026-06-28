@@ -116,8 +116,8 @@ export function getUltraPremiumInviteHtml(data: UltraPremiumInviteData): string 
                       </div>
                     </td>
                     <td align="right" valign="top">
-                      <div style="display:inline-block;width:52px;height:52px;background:linear-gradient(135deg,#D3A638 0%,#a88620 100%);border-radius:16px;text-align:center;line-height:52px;font-size:24px;font-weight:900;color:#151A26;box-shadow:0 4px 20px rgba(211,166,56,0.3);overflow:hidden;">
-                        <img src="https://valtriox.vercel.app/valtriox-logo.png" alt="V" style="width:100%;height:100%;object-fit:contain;padding:2px;">
+                      <div style="display:inline-block;width:52px;height:52px;text-align:center;line-height:52px;overflow:hidden;">
+                        <img src="https://valtriox.vercel.app/valtriox-logo.png" alt="V" style="width:100%;height:100%;object-fit:contain;">
                       </div>
                     </td>
                   </tr>
@@ -459,15 +459,9 @@ export function getPrintableInvitationHtml(data: UltraPremiumInviteData): string
     .logo-box {
       width: 56px;
       height: 56px;
-      background: linear-gradient(135deg, #D3A638 0%, #a88620 100%);
-      border-radius: 16px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 26px;
-      font-weight: 900;
-      color: #151A26;
-      box-shadow: 0 4px 20px rgba(211,166,56,0.3);
     }
     .vip-section {
       padding: 28px 44px 0;
@@ -658,7 +652,7 @@ export function getPrintableInvitationHtml(data: UltraPremiumInviteData): string
         <div class="brand-name">${data.platformName}</div>
         <div class="brand-sub">Command Your Brand Universe</div>
       </div>
-      <div class="logo-box"><img src="https://valtriox.vercel.app/valtriox-logo.png" alt="V" style="width:100%;height:100%;object-fit:contain;border-radius:16px;padding:4px;"></div>
+      <div class="logo-box"><img src="https://valtriox.vercel.app/valtriox-logo.png" alt="V" style="width:100%;height:100%;object-fit:contain;"></div>
     </div>
 
     <div class="vip-section">

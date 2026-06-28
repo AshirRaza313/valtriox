@@ -138,27 +138,8 @@ export function AuthScreen() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3, duration: 0.6 }}
         >
-          <div className="relative inline-block">
-            {/* Logo glow ring */}
-            <div
-              className="absolute -inset-2 rounded-3xl opacity-50 blur-xl"
-              style={{
-                background: "conic-gradient(from 0deg, rgba(211,166,56,0.3), rgba(183,144,40,0.1), rgba(245,208,96,0.3), rgba(183,144,40,0.1), rgba(211,166,56,0.3))",
-                animation: "gradient-shift 6s linear infinite",
-              }}
-            />
-            <div
-              className="relative inline-flex items-center justify-center h-16 w-16 sm:h-20 sm:w-20 rounded-2xl overflow-hidden"
-              style={{
-                background: showBrandIdentity
-                  ? "linear-gradient(135deg, #1E293B 0%, #151A26 100%)"
-                  : "linear-gradient(135deg, #B79028 0%, #D3A638 30%, #E7BC55 50%, #D3A638 70%, #B79028 100%)",
-                backgroundSize: showBrandIdentity ? "100%" : "200% 200%",
-                animation: showBrandIdentity ? "none" : "gradient-shift 4s ease infinite",
-              }}
-            >
-              <img src={displayLogo} alt="Logo" className="h-14 w-14 sm:h-[4.5rem] sm:w-[4.5rem] object-contain" />
-            </div>
+          <div className="inline-flex items-center justify-center">
+            <img src={displayLogo} alt="Logo" className="h-16 w-16 sm:h-20 sm:w-20 object-contain" />
           </div>
 
           <motion.h1

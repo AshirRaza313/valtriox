@@ -130,23 +130,8 @@ export function AuthModal() {
             <div className="p-6 sm:p-8">
               {/* Logo + Brand Identity */}
               <div className="text-center mb-6">
-                <div className="relative inline-block">
-                  {/* Logo glow */}
-                  <div className="absolute -inset-1.5 rounded-2xl opacity-40 blur-lg" style={{
-                    background: "conic-gradient(from 0deg, rgba(211,166,56,0.3), rgba(183,144,40,0.1), rgba(245,208,96,0.3), rgba(183,144,40,0.1), rgba(211,166,56,0.3))",
-                  }} />
-                  <div
-                    className="relative inline-flex items-center justify-center h-16 w-16 rounded-2xl overflow-hidden"
-                    style={{
-                      background: showBrandIdentity
-                        ? "linear-gradient(135deg, #1E293B 0%, #151A26 100%)"
-                        : "linear-gradient(135deg, #B79028 0%, #D3A638 30%, #E7BC55 50%, #D3A638 70%, #B79028 100%)",
-                      backgroundSize: showBrandIdentity ? "100%" : "200% 200%",
-                      animation: showBrandIdentity ? "none" : "gradient-shift 4s ease infinite",
-                    }}
-                  >
-                    <img src={displayLogo || undefined} alt="Logo" className="h-14 w-14 object-contain" />
-                  </div>
+                <div className="inline-flex items-center justify-center">
+                  <img src={displayLogo || undefined} alt="Logo" className="h-16 w-16 object-contain" />
                 </div>
                 <h1
                   className="text-2xl font-bold mb-1 mt-4"
