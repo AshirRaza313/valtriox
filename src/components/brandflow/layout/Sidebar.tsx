@@ -294,7 +294,7 @@ export function Sidebar() {
         <div className="relative px-4 pt-5 pb-4">
           <div className="flex items-center gap-3">
             <div className="flex-shrink-0">
-              <img src={organization?.logo || "/valtriox-logo.png"} alt="Logo" className="h-10 w-auto object-contain" />
+              <img src={organization?.logo || "/valtriox-logo.png"} alt="Logo" className="h-8 w-auto object-contain" />
             </div>
             {!isCollapsed && (
               <div className="min-w-0 flex-1">

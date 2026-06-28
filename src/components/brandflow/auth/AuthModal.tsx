@@ -128,7 +128,7 @@ export function AuthModal() {
               {/* Logo + Brand Identity */}
               <div className="text-center mb-6">
                 <div className="inline-flex items-center justify-center px-2">
-                  <img src={displayLogo} alt="Logo" className="h-18 w-auto object-contain" />
+                  <img src={displayLogo} alt="Logo" className="h-16 w-auto object-contain" />
                 </div>
                 {/* Tagline below vertical logo */}
                 <p className="text-sm text-slate-500 mt-3">

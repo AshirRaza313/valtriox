@@ -141,7 +141,7 @@ export function AuthScreen() {
           transition={{ delay: 0.3, duration: 0.6 }}
         >
           <div className="inline-flex items-center justify-center px-4">
-            <img src={displayLogo} alt="Logo" className="h-20 sm:h-24 w-auto object-contain" />
+            <img src={displayLogo} alt="Logo" className="h-16 sm:h-20 w-auto object-contain" />
           </div>
 
           {/* Tagline below vertical logo */}
