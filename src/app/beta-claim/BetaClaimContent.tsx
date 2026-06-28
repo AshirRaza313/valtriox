@@ -549,7 +549,7 @@ export default function BetaClaimContent() {
             <div className="border-t border-white/[0.04] pt-4">
               <div className="flex items-center justify-center gap-1.5 mb-1">
                 <span className="text-sm font-bold text-amber-500/60">Valtriox</span>
-                <span className="text-[10px] text-slate-600">COMMEND YOUR BRAND UNIVERSE</span>
+                <span className="text-[10px] text-slate-600">COMMAND YOUR BRAND UNIVERSE</span>
               </div>
               <p className="text-[10px] text-slate-700">
                 &copy; {new Date().getFullYear()} Valtriox. All rights reserved.

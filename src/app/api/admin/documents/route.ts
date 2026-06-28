@@ -19,12 +19,12 @@ const DEFAULT_DOCUMENTS: Array<{
 }> = [
   {
     key: "document_valtriox_intro",
-    title: "Welcome to Valtriox - COMMEND YOUR BRAND UNIVERSE",
+    title: "Welcome to Valtriox - COMMAND YOUR BRAND UNIVERSE",
     type: "overview",
-    content: `# Welcome to Valtriox - COMMEND YOUR BRAND UNIVERSE
+    content: `# Welcome to Valtriox - COMMAND YOUR BRAND UNIVERSE
 
 ## About Valtriox
-Valtriox is COMMEND YOUR BRAND UNIVERSE, designed to transform how businesses operate in the digital age. Built with enterprise-grade technology and a deep understanding of local market needs, Valtriox provides a comprehensive platform that handles everything from order management to AI-powered insights.
+Valtriox is COMMAND YOUR BRAND UNIVERSE, designed to transform how businesses operate in the digital age. Built with enterprise-grade technology and a deep understanding of local market needs, Valtriox provides a comprehensive platform that handles everything from order management to AI-powered insights.
 
 ## What Makes Valtriox Different?
 

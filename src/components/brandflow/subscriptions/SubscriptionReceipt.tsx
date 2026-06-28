@@ -158,7 +158,7 @@ export function SubscriptionReceipt({
                   <h1 className="text-2xl font-black tracking-tight" style={{ color: "#D4A73A" }}>
                     {data.platformName || companyName}
                   </h1>
-                  <p className="text-xs text-slate-500 mt-1">COMMEND YOUR BRAND UNIVERSE</p>
+                  <p className="text-xs text-slate-500 mt-1">COMMAND YOUR BRAND UNIVERSE</p>
                 </div>
                 <div className="text-right">
                   <div className="flex items-center justify-end gap-1.5 mb-1">

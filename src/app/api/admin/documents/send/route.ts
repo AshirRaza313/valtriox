@@ -218,7 +218,7 @@ function buildTextDocumentEmail(title: string, content: string, ph: Record<strin
     <div style="font-family: Arial, Helvetica, sans-serif; max-width: 640px; margin: 0 auto; padding: 24px; color: #334155;">
       <div style="border-bottom: 3px solid #D4A73A; padding-bottom: 16px; margin-bottom: 24px;">
         <h1 style="color: #1a1a2e; margin: 0; font-size: 24px;">Valtriox</h1>
-        <p style="color: #64748b; margin: 4px 0 0 0; font-size: 13px;">COMMEND YOUR BRAND UNIVERSE</p>
+        <p style="color: #64748b; margin: 4px 0 0 0; font-size: 13px;">COMMAND YOUR BRAND UNIVERSE</p>
       </div>
       <p style="color: #334155; font-size: 15px;">Hello <strong>${ph.client_name}</strong>,</p>
       <p style="color: #334155; font-size: 15px;">Please find below the document <strong>"${title}"</strong> prepared for <strong>${ph.company_name}</strong>.</p>
@@ -244,7 +244,7 @@ function buildFileDocumentEmail(
     <div style="font-family: Arial, Helvetica, sans-serif; max-width: 640px; margin: 0 auto; padding: 24px; color: #334155;">
       <div style="border-bottom: 3px solid #D4A73A; padding-bottom: 16px; margin-bottom: 24px;">
         <h1 style="color: #1a1a2e; margin: 0; font-size: 24px;">Valtriox</h1>
-        <p style="color: #64748b; margin: 4px 0 0 0; font-size: 13px;">COMMEND YOUR BRAND UNIVERSE</p>
+        <p style="color: #64748b; margin: 4px 0 0 0; font-size: 13px;">COMMAND YOUR BRAND UNIVERSE</p>
       </div>
       <p style="color: #334155; font-size: 15px;">Hello <strong>${ph.client_name}</strong>,</p>
       <p style="color: #334155; font-size: 15px;">${message}</p>

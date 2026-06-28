@@ -42,7 +42,7 @@ export async function GET() {
     // Generate PDF with current settings
     const pdfBuffer = await generateLeadMagnetPDF({
       companyName,
-      tagline: settings?.tagline || "COMMEND YOUR BRAND UNIVERSE",
+      tagline: settings?.tagline || "COMMAND YOUR BRAND UNIVERSE",
       logoUrl: settings?.logoUrl || null,
       companyEmail: settings?.companyEmail || "ashir@valtriox.com",
       companyPhone: settings?.companyPhone || null,
@@ -124,7 +124,7 @@ export async function POST() {
     // Generate fresh PDF
     const pdfBuffer = await generateLeadMagnetPDF({
       companyName,
-      tagline: settings?.tagline || "COMMEND YOUR BRAND UNIVERSE",
+      tagline: settings?.tagline || "COMMAND YOUR BRAND UNIVERSE",
       logoUrl: settings?.logoUrl || null,
       companyEmail: settings?.companyEmail || "ashir@valtriox.com",
       companyPhone: settings?.companyPhone || null,

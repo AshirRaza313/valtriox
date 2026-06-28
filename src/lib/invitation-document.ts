@@ -112,7 +112,7 @@ export function getUltraPremiumInviteHtml(data: UltraPremiumInviteData): string 
                         ${data.platformName}
                       </div>
                       <div style="font-size:12px;color:#6b6b7b;text-transform:uppercase;letter-spacing:2.5px;font-weight:500;">
-                        COMMEND YOUR BRAND UNIVERSE
+                        COMMAND YOUR BRAND UNIVERSE
                       </div>
                     </td>
                     <td align="right" valign="top">
@@ -331,13 +331,13 @@ export function getUltraPremiumWhatsAppMessage(data: UltraPremiumInviteData): st
 
   const message = [
     `\u{1F3AF} *V A L T R I O X*`,
-    `COMMEND YOUR BRAND UNIVERSE`,
+    `COMMAND YOUR BRAND UNIVERSE`,
     ``,
     `\u{1F48E} *EXCLUSIVE BETA INVITATION* \u{1F48E}`,
     ``,
     `Dear Brand Owner,`,
     ``,
-    `Congratulations! You have been *exclusively selected* for beta access to *Valtriox* - COMMEND YOUR BRAND UNIVERSE. This is a *limited-time opportunity* to experience our platform *completely free* before public launch.`,
+    `Congratulations! You have been *exclusively selected* for beta access to *Valtriox* - COMMAND YOUR BRAND UNIVERSE. This is a *limited-time opportunity* to experience our platform *completely free* before public launch.`,
     ``,
     `\u{1F4CB} *YOUR INVITATION DETAILS*`,
     `\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501`,
@@ -650,7 +650,7 @@ export function getPrintableInvitationHtml(data: UltraPremiumInviteData): string
       <div>
         <div class="badge">Exclusive Beta Invitation</div>
         <div class="brand-name">${data.platformName}</div>
-        <div class="brand-sub">COMMEND YOUR BRAND UNIVERSE</div>
+        <div class="brand-sub">COMMAND YOUR BRAND UNIVERSE</div>
       </div>
       <div class="logo-box"><img src="https://valtriox.vercel.app/valtriox-logo.png" alt="V" style="width:100%;height:100%;object-fit:contain;"></div>
     </div>
@@ -665,7 +665,7 @@ export function getPrintableInvitationHtml(data: UltraPremiumInviteData): string
     <div class="content">
       <p class="greeting">Dear Brand Owner,</p>
       <p class="body-text">
-        Congratulations! You have been <strong style="color:#D4A73A">exclusively selected</strong> for beta access to <strong style="color:#ffffff">${data.platformName}</strong> - COMMEND YOUR BRAND UNIVERSE. This is a <strong style="color:#ffffff">limited-time opportunity</strong> to experience our full-featured platform <strong style="color:#ffffff">completely free</strong> before public launch.
+        Congratulations! You have been <strong style="color:#D4A73A">exclusively selected</strong> for beta access to <strong style="color:#ffffff">${data.platformName}</strong> - COMMAND YOUR BRAND UNIVERSE. This is a <strong style="color:#ffffff">limited-time opportunity</strong> to experience our full-featured platform <strong style="color:#ffffff">completely free</strong> before public launch.
       </p>
 
       <div class="details-card">

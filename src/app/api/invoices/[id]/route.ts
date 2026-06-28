@@ -93,7 +93,7 @@ export const GET = withAuth(async (
         platformInvoiceHeaderText: platformSettings?.invoiceHeaderText || undefined,
         platformPaymentMethods: (() => { try { const p = platformSettings?.paymentMethods; return p ? JSON.parse(p) : undefined; } catch { return undefined; } })(),
         platformLogo: platformSettings?.logoUrl || undefined,
-        platformTagline: platformSettings?.tagline || "COMMEND YOUR BRAND UNIVERSE",
+        platformTagline: platformSettings?.tagline || "COMMAND YOUR BRAND UNIVERSE",
       };
 
       let pdfBuffer: Buffer;

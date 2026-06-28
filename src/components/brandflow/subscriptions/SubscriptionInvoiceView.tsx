@@ -463,7 +463,7 @@ export function SubscriptionInvoiceView({ invoice, open, onClose }: Subscription
               )}
               <div>
                 <h1 className="text-xl font-extrabold tracking-tight text-slate-900">{displayBrand}</h1>
-                <p className="text-[11px] text-slate-400 italic">{invoice.platformTagline || "COMMEND YOUR BRAND UNIVERSE"}</p>
+                <p className="text-[11px] text-slate-400 italic">{invoice.platformTagline || "COMMAND YOUR BRAND UNIVERSE"}</p>
                 {(invoice.platformEmail || invoice.platformPhone || invoice.platformWebsite) && (
                   <p className="text-[11px] text-slate-400 mt-1">
                     {[invoice.platformEmail, invoice.platformPhone, invoice.platformWebsite].filter(Boolean).join("  |  ")}

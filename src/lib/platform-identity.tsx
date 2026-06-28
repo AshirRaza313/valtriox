@@ -51,7 +51,7 @@ interface PlatformIdentityContextType {
 
 const DEFAULT_IDENTITY: PlatformIdentity = {
   companyName: "Valtriox",
-  tagline: "COMMEND YOUR BRAND UNIVERSE",
+  tagline: "COMMAND YOUR BRAND UNIVERSE",
   logoUrl: null,
   faviconUrl: null,
   primaryColor: "#D4A73A",
@@ -103,7 +103,7 @@ export function PlatformIdentityProvider({ children }: { children: ReactNode }) 
         const data = await res.json();
         const mapped: PlatformIdentity = {
           companyName: data.companyName || "Valtriox",
-          tagline: data.tagline || "COMMEND YOUR BRAND UNIVERSE",
+          tagline: data.tagline || "COMMAND YOUR BRAND UNIVERSE",
           logoUrl: data.logoUrl || null,
           faviconUrl: data.faviconUrl || null,
           primaryColor: data.primaryBrandColor || "#D4A73A",
@@ -137,7 +137,7 @@ export function PlatformIdentityProvider({ children }: { children: ReactNode }) 
 
         // Update page title dynamically
         if (typeof document !== "undefined" && data.companyName) {
-          document.title = `${data.companyName} - COMMEND YOUR BRAND UNIVERSE`;
+          document.title = `${data.companyName} - COMMAND YOUR BRAND UNIVERSE`;
         }
 
         // Update favicon if custom
@@ -159,7 +159,7 @@ export function PlatformIdentityProvider({ children }: { children: ReactNode }) 
       const s = data.settings || data;
       const mapped: PlatformIdentity = {
         companyName: s.companyName || "Valtriox",
-        tagline: s.tagline || "COMMEND YOUR BRAND UNIVERSE",
+        tagline: s.tagline || "COMMAND YOUR BRAND UNIVERSE",
         logoUrl: s.logoUrl || null,
         faviconUrl: s.faviconUrl || null,
         primaryColor: s.primaryBrandColor || "#D4A73A",
@@ -192,7 +192,7 @@ export function PlatformIdentityProvider({ children }: { children: ReactNode }) 
       setIdentity(mapped);
 
       if (typeof document !== "undefined" && s.companyName) {
-        document.title = `${s.companyName} - COMMEND YOUR BRAND UNIVERSE`;
+        document.title = `${s.companyName} - COMMAND YOUR BRAND UNIVERSE`;
       }
       if (typeof document !== "undefined" && s.faviconUrl) {
         const link = document.querySelector("link[rel='icon']") as HTMLLinkElement;

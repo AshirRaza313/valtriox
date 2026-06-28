@@ -37,7 +37,7 @@ export function Hero({ onAuthClick }: HeroProps) {
               className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 mb-4 sm:mb-6"
             >
               <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-              <span className="text-xs sm:text-sm text-amber-300 font-medium">COMMEND YOUR BRAND UNIVERSE</span>
+              <span className="text-xs sm:text-sm text-amber-300 font-medium">COMMAND YOUR BRAND UNIVERSE</span>
             </motion.div>
 
             <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-tight tracking-tight">

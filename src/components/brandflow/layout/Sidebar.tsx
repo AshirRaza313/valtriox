@@ -302,7 +302,7 @@ export function Sidebar() {
                 {brandTagline ? (
                   <p className="truncate text-[11px] font-medium text-slate-400">{brandTagline}</p>
                 ) : (
-                  <p className="truncate text-[11px] font-medium text-slate-400">COMMEND YOUR BRAND UNIVERSE</p>
+                  <p className="truncate text-[11px] font-medium text-slate-400">COMMAND YOUR BRAND UNIVERSE</p>
                 )}
               </div>
             )}

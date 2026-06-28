@@ -2178,7 +2178,7 @@ export function getBetaInviteEmailHtml(data: BetaInviteEmailData): string {
                       ${data.platformName}
                     </div>
                     <div style="font-size:13px;color:#8b8b9b;text-transform:uppercase;letter-spacing:2px;">
-                      COMMEND YOUR BRAND UNIVERSE
+                      COMMAND YOUR BRAND UNIVERSE
                     </div>
                   </td>
                   <td align="right" valign="top">

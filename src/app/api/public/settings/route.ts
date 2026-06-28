@@ -3,7 +3,7 @@ import { db, ensurePlatformSettingsColumns, withRetry} from "@/lib/db";
 
 const DEFAULT_SETTINGS = {
   companyName: "Valtriox",
-  tagline: "COMMEND YOUR BRAND UNIVERSE",
+  tagline: "COMMAND YOUR BRAND UNIVERSE",
   companyEmail: "ashir@valtriox.com",
   companyPhone: null,
   companyWebsite: null,

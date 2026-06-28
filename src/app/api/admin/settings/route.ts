@@ -44,7 +44,7 @@ const DEFAULT_SETTINGS = {
   secondaryBrandColor: "#D4A73A",
   currencySymbol: "Rs.",
   customCss: "",
-  tagline: "COMMEND YOUR BRAND UNIVERSE",
+  tagline: "COMMAND YOUR BRAND UNIVERSE",
   emailFooterText: "",
   invoiceHeaderText: "",
 };
@@ -99,7 +99,7 @@ function formatRow(row: any) {
     leadMagnetPdfUrl: row.leadMagnetPdfUrl || "",
     leadMagnetSentCount: row.leadMagnetSentCount || 0,
     leadMagnetDownloadCount: row.leadMagnetDownloadCount || 0,
-    tagline: row.tagline || "COMMEND YOUR BRAND UNIVERSE",
+    tagline: row.tagline || "COMMAND YOUR BRAND UNIVERSE",
     emailFooterText: row.emailFooterText || "",
     invoiceHeaderText: row.invoiceHeaderText || "",
   };

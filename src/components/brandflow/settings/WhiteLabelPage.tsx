@@ -785,7 +785,7 @@ export function WhiteLabelPage() {
                   <h3 className="text-white text-xl font-bold">
                     {settings.customLoginHeading
                       ? settings.customLoginHeadingValue
-                      : settings.customPortalTitle || "COMMEND YOUR BRAND UNIVERSE"}
+                      : settings.customPortalTitle || "COMMAND YOUR BRAND UNIVERSE"}
                   </h3>
                   {!settings.removePoweredByFooter && (
                     <p className="text-white/60 text-xs mt-2">Powered by Valtriox</p>

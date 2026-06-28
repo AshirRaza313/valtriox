@@ -734,7 +734,7 @@ export async function generateInvoicePDF(invoice: InvoiceData): Promise<Buffer> 
 
       // Slogan - from DB or default
       doc.font(FONT.italic).fontSize(8).fillColor(C.textLight);
-      doc.text(invoice.platformTagline || "COMMEND YOUR BRAND UNIVERSE", headerRightStartX, y + 24);
+      doc.text(invoice.platformTagline || "COMMAND YOUR BRAND UNIVERSE", headerRightStartX, y + 24);
 
       // Platform contact info (right side of header)
       const rx = W - P;
@@ -1680,7 +1680,7 @@ export async function generateReportPDF(report: ReportData): Promise<Buffer> {
         // Powered by
         doc.save();
         doc.font(FONT.italic).fontSize(7).fillColor(C.textLight);
-        doc.text(`Powered by ${platformName} - COMMEND YOUR BRAND UNIVERSE`, P, H - 44, { width: CW, align: "center" });
+        doc.text(`Powered by ${platformName} - COMMAND YOUR BRAND UNIVERSE`, P, H - 44, { width: CW, align: "center" });
         doc.restore();
 
         // Page number: "Page X of Y"
