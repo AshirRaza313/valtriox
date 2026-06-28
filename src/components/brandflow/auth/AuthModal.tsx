@@ -32,8 +32,6 @@ export function AuthModal() {
     setBrandName,
     setBrandConfigured,
     setView,
-    brandConfigured,
-    brandLogo,
     brandName,
     brandTagline,
   } = useValtrioxStore();
@@ -47,9 +45,10 @@ export function AuthModal() {
 
   const { identity: platformIdentity } = usePlatformIdentity();
 
-  const showBrandIdentity = brandConfigured && brandName;
-  const displayLogo = showBrandIdentity ? brandLogo : "/valtriox-logo.png";
-  const displayName = showBrandIdentity ? brandName : platformIdentity.companyName;
+  // Use platform identity logo (server-fetched), NOT stale localStorage brandLogo
+  // On auth screens, user isn't logged in — always show current platform logo or default
+  const displayLogo = platformIdentity.logoUrl || "/valtriox-logo.png";
+  const displayName = platformIdentity.companyName || "Valtriox";
 
   const defaultTab = "login";
 
@@ -140,7 +139,7 @@ export function AuthModal() {
                   <span className="gold-gradient-text">{displayName}</span>
                 </h1>
                 <p className="text-sm text-slate-500 mt-1">
-                  {showBrandIdentity && brandTagline ? brandTagline : "Command Your Brand Universe"}
+                  {platformIdentity.tagline || "Command Your Brand Universe"}
                 </p>
               </div>
 

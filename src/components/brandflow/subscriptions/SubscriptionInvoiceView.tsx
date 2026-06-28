@@ -89,7 +89,7 @@ function getStatusConfig(status: string) {
 // ── Component ──
 
 export function SubscriptionInvoiceView({ invoice, open, onClose }: SubscriptionInvoiceViewProps) {
-  const { brandName, brandLogo, organization } = useValtrioxStore();
+  const { brandName, organization } = useValtrioxStore();
   const { identity } = usePlatformIdentity();
   const invoiceRef = useRef<HTMLDivElement>(null);
 
@@ -99,7 +99,7 @@ export function SubscriptionInvoiceView({ invoice, open, onClose }: Subscription
   const platformName = invoice.platformName || identity.companyName || "Valtriox";
   const platformLogo = invoice.platformLogo || null;
   const displayBrand = brandName || organization?.name || platformName;
-  const displayLogo = platformLogo || brandLogo || organization?.logo || null;
+  const displayLogo = platformLogo || organization?.logo || identity.logoUrl || "/valtriox-logo.png";
   const cycleLabel = invoice.billingCycle === "annually" ? "Annual" : "Monthly";
 
   const handlePrint = () => {

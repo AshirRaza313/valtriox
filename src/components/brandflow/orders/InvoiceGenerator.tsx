@@ -88,7 +88,7 @@ function getPaymentStatus(status: string): { label: string; color: string; bgCol
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function InvoiceGenerator({ order, open, onClose }: InvoiceGeneratorProps) {
-  const { brandName, brandLogo, organization } = useValtrioxStore();
+  const { brandName, organization } = useValtrioxStore();
   const { identity } = usePlatformIdentity();
   const companyName = identity.companyName;
   const invoiceRef = useRef<HTMLDivElement>(null);
@@ -97,7 +97,7 @@ export function InvoiceGenerator({ order, open, onClose }: InvoiceGeneratorProps
 
   const paymentStatus = getPaymentStatus(order.status);
   const displayBrand = brandName || organization?.name || companyName;
-  const displayLogo = brandLogo || organization?.logo;
+  const displayLogo = organization?.logo || identity.logoUrl || "/valtriox-logo.png";
 
   const handlePrint = () => {
     const printContent = invoiceRef.current;

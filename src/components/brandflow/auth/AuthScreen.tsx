@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import { Loader2, Eye, EyeOff, Sparkles, Shield, ArrowRight, ArrowLeft, KeyRound } from "lucide-react";
 
 export function AuthScreen() {
-  const { setView, setUser, setOrganization, setBrandName, setBrandConfigured, brandConfigured, brandLogo, brandName, brandTagline, authModalMode } = useValtrioxStore();
+  const { setView, setUser, setOrganization, setBrandName, setBrandConfigured, brandName, brandTagline, authModalMode } = useValtrioxStore();
   const [defaultTab, setDefaultTab] = useState<string>("login");
 
   // Sync default tab with store's authModalMode
@@ -28,11 +28,11 @@ export function AuthScreen() {
   const [loginData, setLoginData] = useState({ email: "", password: "" });
   const [pinLoginData, setPinLoginData] = useState({ email: "", pin: "" });
 
-  // Use brand identity if configured, otherwise default Valtriox
-  const showBrandIdentity = brandConfigured && brandName;
-  const displayLogo = showBrandIdentity ? brandLogo : "/valtriox-logo.png";
-  const displayName = showBrandIdentity ? brandName : identity.companyName;
-  const displayTagline = showBrandIdentity && brandTagline ? brandTagline : "Command Your Brand Universe";
+  // Use platform identity logo (server-fetched), NOT stale localStorage brandLogo
+  // On auth screens, user isn't logged in — always show current platform logo or default
+  const displayLogo = identity.logoUrl || "/valtriox-logo.png";
+  const displayName = identity.companyName || "Valtriox";
+  const displayTagline = identity.tagline || "Command Your Brand Universe";
 
   const { handleLogin: doLogin, handlePinLogin: doPinLogin, isLoading: loading } = useAuthHandlers({
     onSuccess: (data) => {
