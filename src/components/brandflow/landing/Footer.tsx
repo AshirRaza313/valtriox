@@ -7,13 +7,6 @@ interface FooterProps {
   onLegalClick?: (page: string) => void;
 }
 
-function splitBrandName(name: string) {
-  const mid = Math.ceil(name.length / 2);
-  const first = name.slice(0, mid);
-  const rest = name.slice(mid);
-  return <>{first}<span className="text-amber-400">{rest}</span></>;
-}
-
 /* Custom SVG icons for Discord & Reddit (lucide-react doesn't have these) */
 function DiscordIcon({ className }: { className?: string }) {
   return (
@@ -65,10 +58,7 @@ export function Footer({ onLegalClick }: FooterProps) {
           {/* Brand */}
           <div className="col-span-2 sm:col-span-3 lg:col-span-1">
             <div className="flex items-center gap-2 mb-4">
-              <img src="/valtriox-logo.png" alt={companyName} className="h-8 w-8 object-contain rounded-lg" />
-              <span className="text-xl font-bold text-white">
-                {splitBrandName(companyName)}
-              </span>
+              <img src="/valtriox-logo.png" alt={companyName} className="h-10 w-auto object-contain" />
             </div>
             <p className="text-sm text-slate-500 leading-relaxed mb-6">
               Command Your Brand Universe. All-in-one operations portal for modern brands.

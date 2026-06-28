@@ -157,7 +157,7 @@ export function AuthScreen() {
                 animation: showBrandIdentity ? "none" : "gradient-shift 4s ease infinite",
               }}
             >
-              <img src={displayLogo} alt="Logo" className="h-11 w-11 sm:h-14 sm:w-14 object-contain rounded-xl" />
+              <img src={displayLogo} alt="Logo" className="h-14 w-14 sm:h-[4.5rem] sm:w-[4.5rem] object-contain" />
             </div>
           </div>
 

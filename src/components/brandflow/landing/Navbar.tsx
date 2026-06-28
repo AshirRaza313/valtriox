@@ -11,13 +11,6 @@ interface NavbarProps {
   onAuthClick: (mode: "login" | "signup") => void;
 }
 
-function splitBrandName(name: string) {
-  const mid = Math.ceil(name.length / 2);
-  const first = name.slice(0, mid);
-  const rest = name.slice(mid);
-  return <>{first}<span className="text-amber-400">{rest}</span></>;
-}
-
 /* Custom SVG icons for Discord & Reddit (lucide-react doesn't have these) */
 function DiscordIcon({ className }: { className?: string }) {
   return (
@@ -84,18 +77,9 @@ export function Navbar({ onAuthClick }: NavbarProps) {
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center h-14 sm:h-16">
-          {/* Logo - shrink on mobile, never push hamburger out */}
-          <div className="flex items-center gap-2 min-w-0 shrink">
-            <div className="relative flex-shrink-0">
-              <div className="absolute -inset-[1px] rounded-xl bg-gradient-to-br opacity-80 blur-[0.5px]"
-                style={{ background: "linear-gradient(135deg, #D3A638, #E7BC55, #B79028)" }} />
-              <div className="relative flex h-8 w-8 items-center justify-center rounded-xl bg-slate-900 shadow-lg overflow-hidden">
-                <img src="/valtriox-logo.png" alt={companyName} className="h-7 w-7 object-contain rounded-lg" />
-              </div>
-            </div>
-            <span className="text-base sm:text-xl font-bold text-white truncate">
-              {splitBrandName(companyName)}
-            </span>
+          {/* Logo */}
+          <div className="flex items-center min-w-0 shrink">
+            <img src="/valtriox-logo.png" alt={companyName} className="h-10 sm:h-12 w-auto object-contain" />
           </div>
 
           {/* Spacer - pushes hamburger to right on mobile; on desktop, nav links handle centering via flex-1 */}

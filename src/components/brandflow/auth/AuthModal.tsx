@@ -145,7 +145,7 @@ export function AuthModal() {
                       animation: showBrandIdentity ? "none" : "gradient-shift 4s ease infinite",
                     }}
                   >
-                    <img src={displayLogo || undefined} alt="Logo" className="h-11 w-11 object-contain rounded-xl" />
+                    <img src={displayLogo || undefined} alt="Logo" className="h-14 w-14 object-contain" />
                   </div>
                 </div>
                 <h1

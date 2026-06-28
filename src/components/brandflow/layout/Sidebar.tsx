@@ -293,14 +293,8 @@ export function Sidebar() {
         {/* Logo / Brand Identity */}
         <div className="relative px-4 pt-5 pb-4">
           <div className="flex items-center gap-3">
-            <div className="relative flex-shrink-0">
-              <div className="absolute -inset-[1px] rounded-xl bg-gradient-to-br opacity-80 blur-[0.5px]"
-                style={{ background: appTheme === "premium-dark"
-                  ? "linear-gradient(135deg, #D3A638, #E7BC55, #B79028)"
-                  : "linear-gradient(135deg, #D3A638, #D3A638, #B79028)" }} />
-              <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 shadow-lg overflow-hidden">
-                <img src={brandLogo || "/valtriox-logo.png"} alt="Logo" className="h-8 w-8 rounded-lg object-contain" />
-              </div>
+            <div className="flex-shrink-0">
+              <img src={brandLogo || "/valtriox-logo.png"} alt="Logo" className="h-10 w-10 object-contain" />
             </div>
             {!isCollapsed && (
               <div className="min-w-0 flex-1">
