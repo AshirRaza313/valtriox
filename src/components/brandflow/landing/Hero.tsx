@@ -42,7 +42,7 @@ export function Hero({ onAuthClick }: HeroProps) {
 
             <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-tight tracking-tight">
               Run Your Entire Brand From{" "}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#D3A638] via-[#e8c547] to-[#D3A638]">
                 One Dashboard
               </span>
             </h1>
