@@ -45,8 +45,8 @@ export function AuthModal() {
 
   const { identity: platformIdentity } = usePlatformIdentity();
 
-  // Auth screens: ALWAYS use /valtriox-logo.png directly — no flicker, no API dependency
-  const displayLogo = "/valtriox-logo.png";
+  // Auth screens: ALWAYS use /valtriox-logo-vertical.png directly — no flicker, no API dependency
+  const displayLogo = "/valtriox-logo-vertical.png";
 
   const defaultTab = "login";
 
@@ -127,11 +127,11 @@ export function AuthModal() {
             <div className="p-6 sm:p-8">
               {/* Logo + Brand Identity */}
               <div className="text-center mb-6">
-                <div className="inline-flex items-center justify-center">
-                  <img src={displayLogo} alt="Logo" className="h-24 w-auto max-w-[180px] object-contain" />
+                <div className="inline-flex items-center justify-center px-2">
+                  <img src={displayLogo} alt="Logo" className="h-18 w-auto object-contain" />
                 </div>
                 {/* Tagline below vertical logo */}
-                <p className="text-sm text-slate-500 mt-4">
+                <p className="text-sm text-slate-500 mt-3">
                   {platformIdentity.tagline || "Command Your Brand Universe"}
                 </p>
               </div>

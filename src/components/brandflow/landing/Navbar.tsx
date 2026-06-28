@@ -79,7 +79,7 @@ export function Navbar({ onAuthClick }: NavbarProps) {
         <div className="flex items-center h-14 sm:h-16">
           {/* Logo */}
           <div className="flex items-center min-w-0 shrink">
-            <img src="/valtriox-logo.png" alt={companyName} className="h-8 sm:h-10 w-auto object-contain" />
+            <img src="/valtriox-logo.png" alt={companyName} className="h-10 sm:h-12 w-auto object-contain" />
           </div>
 
           {/* Spacer - pushes hamburger to right on mobile; on desktop, nav links handle centering via flex-1 */}

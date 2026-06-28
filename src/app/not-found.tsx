@@ -3,7 +3,7 @@ import Link from "next/link";
 export default function NotFound() {
   return (
     <div className="flex h-screen w-screen flex-col items-center justify-center bg-[#0F1419] px-4">
-      <img src="/valtriox-logo.png" alt="Valtriox" className="h-20 w-auto object-contain mb-8" />
+      <img src="/valtriox-logo.png" alt="Valtriox" className="h-12 w-auto object-contain mb-8" />
       <h1 className="text-6xl font-bold text-white">404</h1>
       <p className="mt-4 text-lg text-slate-400">Page not found</p>
       <Link

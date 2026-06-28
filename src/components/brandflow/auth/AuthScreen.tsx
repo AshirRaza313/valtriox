@@ -28,11 +28,11 @@ export function AuthScreen() {
   const [loginData, setLoginData] = useState({ email: "", password: "" });
   const [pinLoginData, setPinLoginData] = useState({ email: "", pin: "" });
 
-  // Auth screens: ALWAYS use /valtriox-logo.png directly — no flicker, no API dependency
+  // Auth screens: ALWAYS use /valtriox-logo-vertical.png directly — no flicker, no API dependency
   // The identity.logoUrl from API may return an old/stale uploaded logo from DB,
   // causing a flicker (new logo shows → API responds → old logo replaces it).
   // Auth screens are for the VALTRIOX platform itself, so always show the default logo.
-  const displayLogo = "/valtriox-logo.png";
+  const displayLogo = "/valtriox-logo-vertical.png";
   const displayName = identity.companyName || "Valtriox";
   const displayTagline = identity.tagline || "Command Your Brand Universe";
 
@@ -140,8 +140,8 @@ export function AuthScreen() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3, duration: 0.6 }}
         >
-          <div className="inline-flex items-center justify-center">
-            <img src={displayLogo} alt="Logo" className="h-24 sm:h-32 w-auto max-w-[180px] sm:max-w-[240px] object-contain" />
+          <div className="inline-flex items-center justify-center px-4">
+            <img src={displayLogo} alt="Logo" className="h-20 sm:h-24 w-auto object-contain" />
           </div>
 
           {/* Tagline below vertical logo */}

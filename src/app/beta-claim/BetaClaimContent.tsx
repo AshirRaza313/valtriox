@@ -202,7 +202,7 @@ export default function BetaClaimContent() {
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ delay: 0.2, duration: 0.5 }}
-                className="w-28 h-28 mx-auto mb-5 flex items-center justify-center overflow-hidden"
+                className="w-24 h-24 mx-auto mb-5 flex items-center justify-center overflow-hidden"
               >
                 <img src="/valtriox-logo.png" alt="Valtriox" className="w-full h-full object-contain" />
               </motion.div>
