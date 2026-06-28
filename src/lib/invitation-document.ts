@@ -112,7 +112,7 @@ export function getUltraPremiumInviteHtml(data: UltraPremiumInviteData): string 
                         ${data.platformName}
                       </div>
                       <div style="font-size:12px;color:#6b6b7b;text-transform:uppercase;letter-spacing:2.5px;font-weight:500;">
-                        Command Your Brand Universe
+                        COMMEND YOUR BRAND UNIVERSE
                       </div>
                     </td>
                     <td align="right" valign="top">
@@ -650,7 +650,7 @@ export function getPrintableInvitationHtml(data: UltraPremiumInviteData): string
       <div>
         <div class="badge">Exclusive Beta Invitation</div>
         <div class="brand-name">${data.platformName}</div>
-        <div class="brand-sub">Command Your Brand Universe</div>
+        <div class="brand-sub">COMMEND YOUR BRAND UNIVERSE</div>
       </div>
       <div class="logo-box"><img src="https://valtriox.vercel.app/valtriox-logo.png" alt="V" style="width:100%;height:100%;object-fit:contain;"></div>
     </div>

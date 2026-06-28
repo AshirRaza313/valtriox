@@ -280,7 +280,7 @@ export function UserManagementPage() {
 
   const generateWhatsAppMessage = (data: { pin: string; name: string; email: string; role: string; orgName: string }) => {
     const portalUrl = typeof window !== "undefined" ? window.location.origin : "https://valtriox.vercel.app";
-    return `Assalam o Alaikum! 🌟\n\nYou've been invited to join ${data.orgName} on Valtriox Portal!\n\n📌 Your Invitation PIN: ${data.pin}\n🌐 Portal: ${portalUrl}\n📧 Register/Login with the email: ${data.email}\n👤 Role: ${data.role}\n\nAfter registration, enter your PIN to join the team.\n\nValtriox Portal | Command Your Brand Universe`;
+    return `Assalam o Alaikum! 🌟\n\nYou've been invited to join ${data.orgName} on Valtriox Portal!\n\n📌 Your Invitation PIN: ${data.pin}\n🌐 Portal: ${portalUrl}\n📧 Register/Login with the email: ${data.email}\n👤 Role: ${data.role}\n\nAfter registration, enter your PIN to join the team.\n\nValtriox Portal | COMMEND YOUR BRAND UNIVERSE`;
   };
 
   // ── Role Update Handler ─────────────────────────────────────────────

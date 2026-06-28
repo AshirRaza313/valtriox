@@ -34,7 +34,7 @@ export function AuthScreen() {
   // Auth screens are for the VALTRIOX platform itself, so always show the default logo.
   const displayLogo = "/valtriox-logo-vertical.png";
   const displayName = identity.companyName || "Valtriox";
-  const displayTagline = identity.tagline || "Command Your Brand Universe";
+  const displayTagline = identity.tagline || "COMMEND YOUR BRAND UNIVERSE";
 
   const { handleLogin: doLogin, handlePinLogin: doPinLogin, isLoading: loading } = useAuthHandlers({
     onSuccess: (data) => {

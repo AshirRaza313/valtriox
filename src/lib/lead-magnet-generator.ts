@@ -233,7 +233,7 @@ export async function generateLeadMagnetPDF(settings: LeadMagnetSettings): Promi
     const CW = W - P * 2;
 
     const companyName = settings.companyName || "Valtriox";
-    const tagline = settings.tagline || "Command Your Brand Universe";
+    const tagline = settings.tagline || "COMMEND YOUR BRAND UNIVERSE";
     const brandColor = settings.primaryBrandColor || C.gold;
 
     let pageNum = 0;

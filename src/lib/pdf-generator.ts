@@ -734,7 +734,7 @@ export async function generateInvoicePDF(invoice: InvoiceData): Promise<Buffer> 
 
       // Slogan - from DB or default
       doc.font(FONT.italic).fontSize(8).fillColor(C.textLight);
-      doc.text(invoice.platformTagline || "Command Your Brand Universe", headerRightStartX, y + 24);
+      doc.text(invoice.platformTagline || "COMMEND YOUR BRAND UNIVERSE", headerRightStartX, y + 24);
 
       // Platform contact info (right side of header)
       const rx = W - P;

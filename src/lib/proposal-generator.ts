@@ -858,7 +858,7 @@ export async function generateProposalPDF(
     const CW = W - P * 2;
 
     const companyName = settings.companyName || "Valtriox";
-    const tagline = settings.tagline || "Command Your Brand Universe";
+    const tagline = settings.tagline || "COMMEND YOUR BRAND UNIVERSE";
 
     try {
       ensureFontsRegistered(doc);

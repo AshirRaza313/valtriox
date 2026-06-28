@@ -17,7 +17,7 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
     }, 2, 500);
     const proposalSettings: ProposalSettings = {
       companyName: settings?.companyName || "Valtriox",
-      tagline: settings?.tagline || "Command Your Brand Universe",
+      tagline: settings?.tagline || "COMMEND YOUR BRAND UNIVERSE",
       logoUrl: settings?.logoUrl || null,
       companyEmail: settings?.companyEmail || "",
       companyPhone: settings?.companyPhone || null,

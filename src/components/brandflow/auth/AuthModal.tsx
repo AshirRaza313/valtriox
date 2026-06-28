@@ -132,7 +132,7 @@ export function AuthModal() {
                 </div>
                 {/* Tagline below vertical logo */}
                 <p className="text-sm text-slate-500 mt-3">
-                  {platformIdentity.tagline || "Command Your Brand Universe"}
+                  {platformIdentity.tagline || "COMMEND YOUR BRAND UNIVERSE"}
                 </p>
               </div>
 

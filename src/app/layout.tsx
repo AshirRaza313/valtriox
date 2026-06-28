@@ -35,7 +35,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Valtriox | Command Your Brand Universe",
+  title: "Valtriox | COMMEND YOUR BRAND UNIVERSE",
   description: "The universal brand management portal for modern businesses. Command every aspect of your brand from a single, powerful platform",
 
   keywords: ["Valtriox", "brand management", "universal brand management portal", "order management", "inventory", "team collaboration", "business operations", "SaaS"],
@@ -55,7 +55,7 @@ export const metadata: Metadata = {
     title: "Valtriox",
   },
   openGraph: {
-    title: "Valtriox | Command Your Brand Universe",
+    title: "Valtriox | COMMEND YOUR BRAND UNIVERSE",
     description: "The universal brand management portal for modern businesses. Command every aspect of your brand from a single, powerful platform",
     type: "website",
     url: "https://valtriox.com",

@@ -61,7 +61,7 @@ export function Footer({ onLegalClick }: FooterProps) {
               <img src="/valtriox-logo.png" alt={companyName} className="h-8 w-auto object-contain" />
             </div>
             <p className="text-sm text-slate-500 leading-relaxed mb-6">
-              Command Your Brand Universe. All-in-one operations portal for modern brands.
+              COMMEND YOUR BRAND UNIVERSE. All-in-one operations portal for modern brands.
             </p>
             <div className="flex gap-2.5">
               {socialLinks.map((link, i) => {
