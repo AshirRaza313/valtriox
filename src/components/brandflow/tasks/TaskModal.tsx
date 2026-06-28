@@ -192,12 +192,12 @@ export function TaskModal({ open, onOpenChange, organizationId, editTask, defaul
   );
 
   const submitBtnClass = isGold
-    ? "bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 text-black hover:shadow-[0_4px_20px_rgba(212,160,23,0.3)] hover:-translate-y-0.5"
+    ? "bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 text-black hover:shadow-[0_4px_20px_rgba(212,167,58,0.3)] hover:-translate-y-0.5"
     : "bg-amber-600 hover:bg-amber-700";
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!loading) onOpenChange(v); }}>
-      <DialogContent className={cn("sm:max-w-md", isGold && "bg-[#15151e] border-white/[0.08]")}>
+      <DialogContent className={cn("sm:max-w-md", isGold && "bg-[#1C2333] border-white/[0.08]")}>
         <DialogHeader>
           <DialogTitle className={cn(isDark && "text-white")}>
             {editTask ? "Edit Task" : "New Task"}

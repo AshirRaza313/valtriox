@@ -319,7 +319,7 @@ export function ForgotPasswordFlow({ onBack, onSuccess, isModal = false, onAutoL
               <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
                 <Button
                   type="submit"
-                  className="btn-gold w-full h-11 rounded-xl text-sm shadow-[0_0_30px_rgba(212,160,23,0.25)] flex items-center justify-center gap-2"
+                  className="btn-gold w-full h-11 rounded-xl text-sm shadow-[0_0_30px_rgba(212,167,58,0.25)] flex items-center justify-center gap-2"
                   disabled={loading}
                 >
                   {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
@@ -391,7 +391,7 @@ export function ForgotPasswordFlow({ onBack, onSuccess, isModal = false, onAutoL
               <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
                 <Button
                   type="submit"
-                  className="btn-gold w-full h-11 rounded-xl text-sm shadow-[0_0_30px_rgba(212,160,23,0.25)] flex items-center justify-center gap-2"
+                  className="btn-gold w-full h-11 rounded-xl text-sm shadow-[0_0_30px_rgba(212,167,58,0.25)] flex items-center justify-center gap-2"
                   disabled={loading || otp.length !== 6}
                   id="otp-verify-btn"
                 >
@@ -514,7 +514,7 @@ export function ForgotPasswordFlow({ onBack, onSuccess, isModal = false, onAutoL
               <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
                 <Button
                   type="submit"
-                  className="btn-gold w-full h-11 rounded-xl text-sm shadow-[0_0_30px_rgba(212,160,23,0.25)] flex items-center justify-center gap-2"
+                  className="btn-gold w-full h-11 rounded-xl text-sm shadow-[0_0_30px_rgba(212,167,58,0.25)] flex items-center justify-center gap-2"
                   disabled={loading || !newPassword || !confirmPassword || newPassword !== confirmPassword}
                 >
                   {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Lock className="h-4 w-4" />}
@@ -565,7 +565,7 @@ export function ForgotPasswordFlow({ onBack, onSuccess, isModal = false, onAutoL
                       onBack();
                     }
                   }}
-                  className="btn-gold h-11 rounded-xl text-sm shadow-[0_0_30px_rgba(212,160,23,0.25)] flex items-center justify-center gap-2 px-8 mx-auto"
+                  className="btn-gold h-11 rounded-xl text-sm shadow-[0_0_30px_rgba(212,167,58,0.25)] flex items-center justify-center gap-2 px-8 mx-auto"
                 >
                   <ArrowRight className="h-4 w-4" />
                   Back to Sign In

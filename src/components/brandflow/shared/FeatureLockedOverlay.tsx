@@ -76,10 +76,10 @@ export function FeatureLockedOverlay({
             ? "linear-gradient(145deg, rgba(10,10,15,0.97), rgba(15,15,25,0.95))"
             : "linear-gradient(145deg, rgba(15,23,42,0.97), rgba(10,15,30,0.95))",
           border: isGold
-            ? "1px solid rgba(212,160,23,0.2)"
+            ? "1px solid rgba(212,167,58,0.2)"
             : "1px solid rgba(16,185,129,0.2)",
           boxShadow: isGold
-            ? "0 25px 60px rgba(0,0,0,0.5), 0 0 80px rgba(212,160,23,0.08)"
+            ? "0 25px 60px rgba(0,0,0,0.5), 0 0 80px rgba(212,167,58,0.08)"
             : "0 25px 60px rgba(0,0,0,0.5), 0 0 80px rgba(16,185,129,0.08)",
         }}
       >
@@ -90,7 +90,7 @@ export function FeatureLockedOverlay({
           }`}
           style={{
             boxShadow: isGold
-              ? "inset 0 1px 0 rgba(212,160,23,0.15), 0 4px 20px rgba(212,160,23,0.1)"
+              ? "inset 0 1px 0 rgba(212,167,58,0.15), 0 4px 20px rgba(212,167,58,0.1)"
               : "inset 0 1px 0 rgba(16,185,129,0.15), 0 4px 20px rgba(16,185,129,0.1)",
           }}
         >
@@ -120,8 +120,8 @@ export function FeatureLockedOverlay({
 
         {/* Benefits List */}
         <div className="text-left mb-6 rounded-xl p-4" style={{
-          background: isGold ? "rgba(212,160,23,0.04)" : "rgba(16,185,129,0.04)",
-          border: isGold ? "1px solid rgba(212,160,23,0.08)" : "1px solid rgba(16,185,129,0.08)",
+          background: isGold ? "rgba(212,167,58,0.04)" : "rgba(16,185,129,0.04)",
+          border: isGold ? "1px solid rgba(212,167,58,0.08)" : "1px solid rgba(16,185,129,0.08)",
         }}>
           <p
             className={`text-[11px] font-semibold uppercase tracking-wider mb-3 ${

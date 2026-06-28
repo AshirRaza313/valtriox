@@ -30,7 +30,7 @@ export function HowItWorks() {
   const companyName = identity.companyName;
 
   return (
-    <section id="how-it-works" className="py-24 bg-[#0a0a0f]">
+    <section id="how-it-works" className="py-24 bg-[#161B26]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -70,7 +70,7 @@ export function HowItWorks() {
                   <div className="w-20 h-20 rounded-2xl bg-amber-500/10 border-2 border-amber-500/20 flex items-center justify-center mx-auto">
                     <step.icon className="w-8 h-8 text-amber-400" />
                   </div>
-                  <div className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-gradient-to-br from-amber-500 to-amber-700 text-white text-xs font-bold flex items-center justify-center shadow-[0_0_12px_rgba(212,160,23,0.4)]">
+                  <div className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-gradient-to-br from-amber-500 to-amber-700 text-white text-xs font-bold flex items-center justify-center shadow-[0_0_12px_rgba(212,167,58,0.4)]">
                     {step.number}
                   </div>
                 </div>

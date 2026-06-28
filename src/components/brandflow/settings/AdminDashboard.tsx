@@ -119,7 +119,7 @@ interface RevenueData {
 
 // ─── Colors ─────────────────────────────────────────────────────────────
 
-const PIE_COLORS = ["#C9A227", "#C9A227", "#8b5cf6", "#ec4899", "#06b6d4", "#f59e0b"];
+const PIE_COLORS = ["#D4A73A", "#D4A73A", "#8b5cf6", "#ec4899", "#06b6d4", "#f59e0b"];
 
 // ─── Access Denied Component ────────────────────────────────────────────
 
@@ -604,7 +604,7 @@ export function AdminDashboard() {
                           }}
                           formatter={(v: number) => [`Rs. ${v.toLocaleString()}`, "Revenue"]}
                         />
-                        <Bar dataKey="revenue" fill={isGold ? "#d4a017" : "#C9A227"} radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="revenue" fill={isGold ? "#D4A73A" : "#D4A73A"} radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -780,8 +780,8 @@ export function AdminDashboard() {
                             <AreaChart data={revenueData.revenueByMonth} margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
                               <defs>
                                 <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                                  <stop offset="5%" stopColor={isGold ? "#d4a017" : "#C9A227"} stopOpacity={0.3} />
-                                  <stop offset="95%" stopColor={isGold ? "#d4a017" : "#C9A227"} stopOpacity={0} />
+                                  <stop offset="5%" stopColor={isGold ? "#D4A73A" : "#D4A73A"} stopOpacity={0.3} />
+                                  <stop offset="95%" stopColor={isGold ? "#D4A73A" : "#D4A73A"} stopOpacity={0} />
                                 </linearGradient>
                                 <linearGradient id="profitGradient" x1="0" y1="0" x2="0" y2="1">
                                   <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
@@ -801,7 +801,7 @@ export function AdminDashboard() {
                                 }}
                                 formatter={(v: number, name: string) => [`Rs. ${v.toLocaleString()}`, name === "revenue" ? "Revenue" : name === "profit" ? "Profit" : "Expenses"]}
                               />
-                              <Area type="monotone" dataKey="revenue" stroke={isGold ? "#d4a017" : "#C9A227"} fill="url(#revenueGradient)" strokeWidth={2} />
+                              <Area type="monotone" dataKey="revenue" stroke={isGold ? "#D4A73A" : "#D4A73A"} fill="url(#revenueGradient)" strokeWidth={2} />
                               <Area type="monotone" dataKey="profit" stroke="#10b981" fill="url(#profitGradient)" strokeWidth={2} />
                               <Area type="monotone" dataKey="expenses" stroke="#ef4444" fill="none" strokeWidth={1.5} strokeDasharray="5 5" />
                             </AreaChart>
@@ -839,7 +839,7 @@ export function AdminDashboard() {
                                 }}
                                 formatter={(v: number) => [`Rs. ${v.toLocaleString()}`, "Revenue"]}
                               />
-                              <Bar dataKey="revenue" fill={isGold ? "#d4a017" : "#C9A227"} radius={[0, 4, 4, 0]} />
+                              <Bar dataKey="revenue" fill={isGold ? "#D4A73A" : "#D4A73A"} radius={[0, 4, 4, 0]} />
                             </BarChart>
                           </ResponsiveContainer>
                         </div>

@@ -119,7 +119,7 @@ export function AuthModal() {
         <div className="relative rounded-2xl overflow-hidden">
           {/* Outer glow border */}
           <div className="absolute -inset-px rounded-2xl opacity-50" style={{
-            background: "linear-gradient(135deg, rgba(212,160,23,0.3), rgba(255,255,255,0.05), rgba(212,160,23,0.15))",
+            background: "linear-gradient(135deg, rgba(212,167,58,0.3), rgba(255,255,255,0.05), rgba(212,167,58,0.15))",
           }} />
 
           {/* Inner card */}
@@ -133,14 +133,14 @@ export function AuthModal() {
                 <div className="relative inline-block">
                   {/* Logo glow */}
                   <div className="absolute -inset-1.5 rounded-2xl opacity-40 blur-lg" style={{
-                    background: "conic-gradient(from 0deg, rgba(212,160,23,0.3), rgba(184,134,11,0.1), rgba(245,208,96,0.3), rgba(184,134,11,0.1), rgba(212,160,23,0.3))",
+                    background: "conic-gradient(from 0deg, rgba(212,167,58,0.3), rgba(184,146,46,0.1), rgba(245,208,96,0.3), rgba(184,146,46,0.1), rgba(212,167,58,0.3))",
                   }} />
                   <div
                     className="relative inline-flex items-center justify-center h-16 w-16 rounded-2xl overflow-hidden"
                     style={{
                       background: showBrandIdentity
-                        ? "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)"
-                        : "linear-gradient(135deg, #b8860b 0%, #d4a017 30%, #f5d060 50%, #d4a017 70%, #b8860b 100%)",
+                        ? "linear-gradient(135deg, #1E293B 0%, #161B26 100%)"
+                        : "linear-gradient(135deg, #B8922E 0%, #D4A73A 30%, #E8BE5A 50%, #D4A73A 70%, #B8922E 100%)",
                       backgroundSize: showBrandIdentity ? "100%" : "200% 200%",
                       animation: showBrandIdentity ? "none" : "gradient-shift 4s ease infinite",
                     }}
@@ -223,7 +223,7 @@ export function AuthModal() {
                     <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
                       <Button
                         type="submit"
-                        className="btn-gold w-full h-11 rounded-xl text-sm shadow-[0_0_25px_rgba(212,160,23,0.25)] flex items-center justify-center gap-2"
+                        className="btn-gold w-full h-11 rounded-xl text-sm shadow-[0_0_25px_rgba(212,167,58,0.25)] flex items-center justify-center gap-2"
                         disabled={loading}
                       >
                         {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
@@ -301,7 +301,7 @@ export function AuthModal() {
                         <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
                           <Button
                             type="submit"
-                            className="btn-gold w-full h-11 rounded-xl text-sm shadow-[0_0_25px_rgba(212,160,23,0.25)] flex items-center justify-center gap-2"
+                            className="btn-gold w-full h-11 rounded-xl text-sm shadow-[0_0_25px_rgba(212,167,58,0.25)] flex items-center justify-center gap-2"
                             disabled={loading}
                           >
                             {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}

@@ -184,7 +184,7 @@ export function ProductModal({ open, onClose, onSaved, organizationId, product }
     <Dialog open={open} onOpenChange={(v) => { if (!v && !loading) onClose(); }}>
       <DialogContent className={cn(
         "max-w-md max-h-[90vh] overflow-y-auto",
-        isGold && "bg-[#15151e] border-white/[0.08]"
+        isGold && "bg-[#1C2333] border-white/[0.08]"
       )}>
         <DialogHeader>
           <DialogTitle className={cn(isDark && "text-white")}>
@@ -370,7 +370,7 @@ export function ProductModal({ open, onClose, onSaved, organizationId, product }
               className={cn(
                 "flex-1",
                 isGold
-                  ? "bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 text-black font-bold hover:shadow-[0_4px_20px_rgba(212,160,23,0.3)]"
+                  ? "bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 text-black font-bold hover:shadow-[0_4px_20px_rgba(212,167,58,0.3)]"
                   : "bg-amber-600 hover:bg-amber-700 text-white"
               )}
             >

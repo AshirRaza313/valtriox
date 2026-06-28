@@ -187,11 +187,11 @@ export function InvoiceGenerator({ order, open, onClose }: InvoiceGeneratorProps
           .text-slate-900 { color: #0f172a; }
           .text-slate-700 { color: #334155; }
           .text-slate-500 { color: #64748b; }
-          .text-amber-600 { color: #C9A227; }
+          .text-amber-600 { color: #D4A73A; }
           .text-red-600 { color: #dc2626; }
           .text-muted-foreground { color: #64748b; }
           .text-foreground { color: #0f172a; }
-          .bg-amber-600 { background-color: #C9A227; }
+          .bg-amber-600 { background-color: #D4A73A; }
           .bg-slate-50 { background-color: #f8fafc; }
           .bg-amber-50 { background-color: #fffbeb; }
           .bg-red-50 { background-color: #fef2f2; }
@@ -230,7 +230,7 @@ export function InvoiceGenerator({ order, open, onClose }: InvoiceGeneratorProps
           .text-white { color: #ffffff; }
           .shadow-lg { box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1); }
           .max-w-sm { max-width: 24rem; }
-          .bg-\\[\\#0a0a0f\\] { background-color: #0a0a0f; }
+          .bg-\\[\\#161B26\\] { background-color: #161B26; }
           .backdrop-blur-xl { backdrop-filter: blur(24px); }
           .border-b \\+ \\{ border-bottom-width: 1px; }
 

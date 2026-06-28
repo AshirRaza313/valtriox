@@ -7,7 +7,7 @@ import logger from "@/lib/logger";
 //  Professional Email Templates - HTML with inline styles
 // ═══════════════════════════════════════════════════════════════════════════
 
-const BRAND_COLOR = "#C9A227";
+const BRAND_COLOR = "#D4A73A";
 const BRAND_DARK = "#A8851F";
 const BRAND_LIGHT = "#FFF9E6";
 const TEXT_PRIMARY = "#1a1a2e";

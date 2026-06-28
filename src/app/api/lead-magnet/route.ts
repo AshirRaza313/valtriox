@@ -58,7 +58,7 @@ export async function GET() {
       youtubeUrl: settings?.youtubeUrl || null,
       tiktokUrl: settings?.tiktokUrl || null,
       supportHours: settings?.supportHours || "Mon-Fri: 9AM-6PM PKT",
-      primaryBrandColor: settings?.primaryBrandColor || "#C9A227",
+      primaryBrandColor: settings?.primaryBrandColor || "#D4A73A",
     });
 
     // Cache the result
@@ -140,7 +140,7 @@ export async function POST() {
       youtubeUrl: settings?.youtubeUrl || null,
       tiktokUrl: settings?.tiktokUrl || null,
       supportHours: settings?.supportHours || "Mon-Fri: 9AM-6PM PKT",
-      primaryBrandColor: settings?.primaryBrandColor || "#C9A227",
+      primaryBrandColor: settings?.primaryBrandColor || "#D4A73A",
     });
 
     // Update cache

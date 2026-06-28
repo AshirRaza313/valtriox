@@ -109,8 +109,8 @@ export default function SetupPage() {
 
   if (step === "done") {
     return (
-      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-[#111118] border border-[rgba(217,119,6,0.15)] rounded-2xl p-8 text-center">
+      <div className="min-h-screen bg-[#161B26] flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-[#1C2333] border border-[rgba(217,119,6,0.15)] rounded-2xl p-8 text-center">
           <div className="w-20 h-20 rounded-full bg-[rgba(52,211,153,0.1)] border border-[rgba(52,211,153,0.3)] flex items-center justify-center mx-auto mb-6">
             <svg className="w-10 h-10 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -132,10 +132,10 @@ export default function SetupPage() {
 
   if (step === "configuring") {
     return (
-      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-4">
-        <div className="max-w-lg w-full bg-[#111118] border border-[rgba(217,119,6,0.15)] rounded-2xl p-8">
+      <div className="min-h-screen bg-[#161B26] flex items-center justify-center p-4">
+        <div className="max-w-lg w-full bg-[#1C2333] border border-[rgba(217,119,6,0.15)] rounded-2xl p-8">
           <h2 className="text-xl font-bold text-amber-400 mb-6">Setting Up Valtriox...</h2>
-          <div className="bg-[#0a0a0f] rounded-xl p-4 h-64 overflow-y-auto font-mono text-xs">
+          <div className="bg-[#161B26] rounded-xl p-4 h-64 overflow-y-auto font-mono text-xs">
             {logs.map((log, i) => (
               <p key={i} className={`${log.includes("ERROR") ? "text-red-400" : log.includes("successfully") || log.includes("success") ? "text-amber-400" : "text-gray-400"} mb-1`}>
                 {log}
@@ -153,7 +153,7 @@ export default function SetupPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[#161B26] flex items-center justify-center p-4">
       <div className="max-w-xl w-full">
         {/* Header */}
         <div className="text-center mb-8">
@@ -162,7 +162,7 @@ export default function SetupPage() {
         </div>
 
         {/* Card */}
-        <div className="bg-[#111118] border border-[rgba(217,119,6,0.15)] rounded-2xl p-8">
+        <div className="bg-[#1C2333] border border-[rgba(217,119,6,0.15)] rounded-2xl p-8">
           {/* Step 1: Database URL */}
           <div className="mb-6">
             <label className="block text-sm font-semibold text-amber-400 mb-2">
@@ -183,7 +183,7 @@ export default function SetupPage() {
               value={neonUrl}
               onChange={(e) => setNeonUrl(e.target.value)}
               placeholder="postgresql://user:pass@ep-xxx.region.neon.tech/neondb?sslmode=require&pgbouncer=true"
-              className="w-full px-4 py-3 bg-[#0a0a0f] border border-[rgba(217,119,6,0.15)] rounded-xl text-white text-sm placeholder-gray-600 focus:outline-none focus:border-amber-500/40"
+              className="w-full px-4 py-3 bg-[#161B26] border border-[rgba(217,119,6,0.15)] rounded-xl text-white text-sm placeholder-gray-600 focus:outline-none focus:border-amber-500/40"
             />
           </div>
 
@@ -197,7 +197,7 @@ export default function SetupPage() {
               value={adminEmail}
               onChange={(e) => setAdminEmail(e.target.value)}
               placeholder="admin@example.com"
-              className="w-full px-4 py-3 bg-[#0a0a0f] border border-[rgba(217,119,6,0.15)] rounded-xl text-white text-sm placeholder-gray-600 focus:outline-none focus:border-amber-500/40"
+              className="w-full px-4 py-3 bg-[#161B26] border border-[rgba(217,119,6,0.15)] rounded-xl text-white text-sm placeholder-gray-600 focus:outline-none focus:border-amber-500/40"
             />
           </div>
 
@@ -212,7 +212,7 @@ export default function SetupPage() {
                 value={nextauthSecret}
                 onChange={(e) => setNextauthSecret(e.target.value)}
                 placeholder="Auto-generated or paste your own"
-                className="flex-1 px-4 py-3 bg-[#0a0a0f] border border-[rgba(217,119,6,0.15)] rounded-xl text-white text-sm placeholder-gray-600 focus:outline-none focus:border-amber-500/40"
+                className="flex-1 px-4 py-3 bg-[#161B26] border border-[rgba(217,119,6,0.15)] rounded-xl text-white text-sm placeholder-gray-600 focus:outline-none focus:border-amber-500/40"
               />
               <button
                 type="button"
@@ -241,7 +241,7 @@ export default function SetupPage() {
           </button>
 
           {/* Copy env vars */}
-          <div className="mt-6 p-4 bg-[#0a0a0f] rounded-xl">
+          <div className="mt-6 p-4 bg-[#161B26] rounded-xl">
             <p className="text-xs text-gray-500 mb-2 font-semibold">
               For Vercel, add these Environment Variables:
             </p>

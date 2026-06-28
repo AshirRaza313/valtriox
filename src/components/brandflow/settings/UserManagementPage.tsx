@@ -608,7 +608,7 @@ export function UserManagementPage() {
 
       {/* ── Invite Dialog ────────────────────────────────────────────── */}
       <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
-        <DialogContent className={cn("sm:max-w-md", isGold && "bg-[#15151e] border-white/[0.08]")}>
+        <DialogContent className={cn("sm:max-w-md", isGold && "bg-[#1C2333] border-white/[0.08]")}>
           <DialogHeader>
             <DialogTitle className={cn("flex items-center gap-2", isDark && "text-white")}>
               <UserPlus className="h-5 w-5" /> Invite User
@@ -684,7 +684,7 @@ export function UserManagementPage() {
 
       {/* ── Edit Role Dialog ─────────────────────────────────────────── */}
       <Dialog open={editRoleOpen} onOpenChange={setEditRoleOpen}>
-        <DialogContent className={cn("sm:max-w-md", isGold && "bg-[#15151e] border-white/[0.08]")}>
+        <DialogContent className={cn("sm:max-w-md", isGold && "bg-[#1C2333] border-white/[0.08]")}>
           <DialogHeader>
             <DialogTitle className={cn("flex items-center gap-2", isDark && "text-white")}>
               <Shield className="h-5 w-5" /> Assign Role
@@ -796,7 +796,7 @@ export function UserManagementPage() {
 
       {/* ── Role Detail Dialog ───────────────────────────────────────── */}
       <Dialog open={roleDetailOpen} onOpenChange={setRoleDetailOpen}>
-        <DialogContent className={cn("sm:max-w-lg", isGold && "bg-[#15151e] border-white/[0.08]")}>
+        <DialogContent className={cn("sm:max-w-lg", isGold && "bg-[#1C2333] border-white/[0.08]")}>
           <DialogHeader>
             <DialogTitle className={cn("flex items-center gap-2", isDark && "text-white")}>
               <Shield className="h-5 w-5" />
@@ -856,7 +856,7 @@ export function UserManagementPage() {
       </Dialog>
       {/* ── WhatsApp Invite Dialog ── */}
       <Dialog open={whatsappInviteOpen} onOpenChange={setWhatsappInviteOpen}>
-        <DialogContent className={cn("sm:max-w-md", isGold && "bg-[#15151e] border-white/[0.08]")}>
+        <DialogContent className={cn("sm:max-w-md", isGold && "bg-[#1C2333] border-white/[0.08]")}>
           <DialogHeader>
             <DialogTitle className={cn("flex items-center gap-2", isDark && "text-white")}>
               <UserCheck className="h-5 w-5 text-green-400" />

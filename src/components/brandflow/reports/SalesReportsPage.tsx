@@ -50,7 +50,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   returns: { label: "Returns", color: "bg-amber-500/20 text-amber-300" },
 };
 
-const PIE_COLORS = ["#D4AF37", "#f59e0b", "#ef4444", "#8b5cf6", "#f97316", "#06b6d4", "#ec4899"];
+const PIE_COLORS = ["#D4A73A", "#f59e0b", "#ef4444", "#8b5cf6", "#f97316", "#06b6d4", "#ec4899"];
 
 const TABS = ["daily", "weekly", "monthly"] as const;
 
@@ -344,8 +344,8 @@ export function SalesReportsPage() {
                 <AreaChart data={data.dailyBreakdown} margin={{ top: 5, right: 10, left: 10, bottom: 0 }}>
                   <defs>
                     <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={isGold ? "#f59e0b" : "#D4AF37"} stopOpacity={0.3} />
-                      <stop offset="95%" stopColor={isGold ? "#f59e0b" : "#D4AF37"} stopOpacity={0} />
+                      <stop offset="5%" stopColor={isGold ? "#f59e0b" : "#D4A73A"} stopOpacity={0.3} />
+                      <stop offset="95%" stopColor={isGold ? "#f59e0b" : "#D4A73A"} stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "rgba(255,255,255,0.06)" : "#f1f5f9"} />
@@ -376,11 +376,11 @@ export function SalesReportsPage() {
                   <Area
                     type="monotone"
                     dataKey="revenue"
-                    stroke={isGold ? "#f59e0b" : "#D4AF37"}
+                    stroke={isGold ? "#f59e0b" : "#D4A73A"}
                     strokeWidth={2}
                     fill="url(#revenueGradient)"
                     dot={data.dailyBreakdown.length <= 31}
-                    activeDot={{ r: 5, fill: isGold ? "#f59e0b" : "#D4AF37", strokeWidth: 0 }}
+                    activeDot={{ r: 5, fill: isGold ? "#f59e0b" : "#D4A73A", strokeWidth: 0 }}
                   />
                 </AreaChart>
               </ResponsiveContainer>

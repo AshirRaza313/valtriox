@@ -38,7 +38,7 @@ export function EmptyState({ icon: Icon, title, description, action }: EmptyStat
           className={cn(
             "px-5 py-2.5 rounded-xl text-sm font-semibold transition-all",
             isGold
-              ? "bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 text-black hover:shadow-[0_4px_20px_rgba(212,160,23,0.3)] hover:-translate-y-0.5"
+              ? "bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 text-black hover:shadow-[0_4px_20px_rgba(212,167,58,0.3)] hover:-translate-y-0.5"
               : "bg-amber-600 hover:bg-amber-700 text-white"
           )}
         >

@@ -150,8 +150,8 @@ export async function POST(req: NextRequest) {
           companyName: "Valtriox",
           companyEmail: "ashir@valtriox.com",
           tagline: "Command Your Brand Universe",
-          primaryBrandColor: "#C9A227",
-          secondaryBrandColor: "#B8860B",
+          primaryBrandColor: "#D4A73A",
+          secondaryBrandColor: "#B8922E",
           currency: "PKR",
           currencySymbol: "Rs.",
           paymentMethods: JSON.stringify([

@@ -68,19 +68,19 @@ const C = {
   bg: "#ffffff",
   bg2: "#fafaf9",
   bg3: "#f5f5f4",
-  gold: "#D4AF37",           // Primary Gold
-  goldBright: "#B8860B",     // Dark Gold
-  goldMid: "#F5D060",         // Light Gold
-  goldDim: "#92710c",
+  gold: "#D4A73A",           // Primary Gold
+  goldBright: "#B8922E",     // Dark Gold
+  goldMid: "#E8BE5A",         // Light Gold
+  goldDim: "#A68B2F",
   goldBg: "#fffefb",
   goldBg2: "#fefcf5",
   goldBg3: "#fdf8e8",
   goldBorder: "#e8dcc8",
   goldBorder2: "#d4c5a0",
-  darkPremium: "#0a0a0f",     // Premium Dark
-  deepNavy: "#020617",         // Deep Navy
+  darkPremium: "#161B26",     // Premium Dark
+  deepNavy: "#0F1419",         // Deep Navy
   slate800: "#1e293b",        // Slate-800
-  amberGlow: "#d4a017",       // Amber Glow
+  amberGlow: "#D4A73A",       // Amber Glow
   lightSurface: "#f5f0e8",     // Light Surface / warm cream
   textPrimary: "#1e293b",
   textSecondary: "#334155",

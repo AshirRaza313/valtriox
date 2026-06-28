@@ -448,7 +448,7 @@ export function OrdersPage() {
           </Button>
           <Button
             className={isGold
-              ? "bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 text-black hover:shadow-[0_4px_20px_rgba(212,160,23,0.3)] hover:-translate-y-0.5"
+              ? "bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 text-black hover:shadow-[0_4px_20px_rgba(212,167,58,0.3)] hover:-translate-y-0.5"
               : "bg-amber-600 hover:bg-amber-700"
             }
             onClick={() => setOrderModalOpen(true)}
@@ -626,7 +626,7 @@ export function OrdersPage() {
                       className={cn(
                         "mt-5",
                         isGold
-                          ? "bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 text-black hover:shadow-[0_4px_20px_rgba(212,160,23,0.3)] hover:-translate-y-0.5"
+                          ? "bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 text-black hover:shadow-[0_4px_20px_rgba(212,167,58,0.3)] hover:-translate-y-0.5"
                           : "bg-amber-600 hover:bg-amber-700"
                       )}
                       onClick={() => setOrderModalOpen(true)}

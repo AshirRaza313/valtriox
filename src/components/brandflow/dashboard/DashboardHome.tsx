@@ -46,8 +46,8 @@ import { ActivityFeed } from "./ActivityFeed";
 import { DailySummaryWidget } from "./DailySummaryWidget";
 import { DashboardGrid } from "./DashboardGrid";
 
-const defaultPieColors = ["#C9A227", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#f97316"];
-const goldPieColors = ["#d4a017", "#f5d060", "#b8860b", "#8b6914", "#e8c547", "#c9a227", "#a67c00"];
+const defaultPieColors = ["#D4A73A", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#f97316"];
+const goldPieColors = ["#D4A73A", "#E8BE5A", "#B8922E", "#8b6914", "#E8BE5A", "#D4A73A", "#a67c00"];
 
 interface DashboardStats {
   totalRevenue: number;
@@ -248,7 +248,7 @@ export function DashboardHome() {
                 </p>
                 <Button
                   onClick={handleRetry}
-                  className={`rounded-xl ${isGold ? "btn-gold shadow-[0_0_20px_rgba(212,160,23,0.3)]" : "bg-amber-600 hover:bg-amber-700"}`}
+                  className={`rounded-xl ${isGold ? "btn-gold shadow-[0_0_20px_rgba(212,167,58,0.3)]" : "bg-amber-600 hover:bg-amber-700"}`}
                 >
                   <RefreshCw className="mr-2 h-4 w-4" /> {t("retry")}
                 </Button>
@@ -287,13 +287,13 @@ export function DashboardHome() {
   const pieData = hasPieData ? stats.orderStatusData : [];
 
   const pieColors = isGold ? goldPieColors : defaultPieColors;
-  const chartStroke = isGold ? "#d4a017" : "#C9A227";
-  const chartStopColor = isGold ? "#d4a017" : "#C9A227";
+  const chartStroke = isGold ? "#D4A73A" : "#D4A73A";
+  const chartStopColor = isGold ? "#D4A73A" : "#D4A73A";
   const gridStroke = isDark ? "rgba(255,255,255,0.05)" : "#e2e8f0";
   const tickStroke = isDark ? "#64748b" : "#94a3b8";
-  const tooltipBg = isDark ? "#1a1a25" : "#ffffff";
+  const tooltipBg = isDark ? "#1F2937" : "#ffffff";
   const tooltipBorder = isDark ? "rgba(255,255,255,0.1)" : "#e2e8f0";
-  const tooltipText = isDark ? "#f5f5f5" : "#1e293b";
+  const tooltipText = isDark ? "#FAFAFA" : "#1e293b";
 
   const hasRecentOrders = stats?.recentOrders && stats.recentOrders.length > 0;
   const hasRevenueData = stats?.revenueChartData && stats.revenueChartData.some((d) => d.revenue > 0);
@@ -323,7 +323,7 @@ export function DashboardHome() {
             key={kpi.title}
             className={`kpi-gold-shimmer relative overflow-hidden transition-all duration-300 ${
               isGold
-                ? "bg-white/[0.03] border border-white/[0.06] backdrop-blur-sm border-t-2 border-t-amber-500/30 hover:bg-white/[0.06] hover:border-amber-500/20 hover:shadow-[0_4px_20px_rgba(212,160,23,0.08)]"
+                ? "bg-white/[0.03] border border-white/[0.06] backdrop-blur-sm border-t-2 border-t-amber-500/30 hover:bg-white/[0.06] hover:border-amber-500/20 hover:shadow-[0_4px_20px_rgba(212,167,58,0.08)]"
                 : isDark
                 ? "bg-slate-800/50 border border-slate-700/50 hover:bg-slate-800 hover:shadow-lg"
                 : "bg-white border-slate-200 hover:shadow-lg hover:border-slate-300"
@@ -489,7 +489,7 @@ export function DashboardHome() {
                   variant="outline"
                   className={`h-auto flex flex-col items-center gap-2 py-4 rounded-xl transition-all duration-200 ${
                     isGold
-                      ? "bg-white/[0.05] border-white/[0.08] text-slate-300 hover:bg-amber-500/10 hover:border-amber-500/30 hover:text-amber-400 hover:shadow-[0_0_15px_rgba(212,160,23,0.1)]"
+                      ? "bg-white/[0.05] border-white/[0.08] text-slate-300 hover:bg-amber-500/10 hover:border-amber-500/30 hover:text-amber-400 hover:shadow-[0_0_15px_rgba(212,167,58,0.1)]"
                       : isDark
                       ? "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700 hover:border-slate-600 hover:text-white"
                       : "border-slate-200 hover:border-transparent bg-amber-600 hover:bg-amber-700 text-white hover:text-white"
@@ -577,7 +577,7 @@ export function DashboardHome() {
                     </p>
                     <Button
                       size="sm"
-                      className={`rounded-xl ${isGold ? "btn-gold shadow-[0_0_20px_rgba(212,160,23,0.3)]" : "bg-amber-600 hover:bg-amber-700"}`}
+                      className={`rounded-xl ${isGold ? "btn-gold shadow-[0_0_20px_rgba(212,167,58,0.3)]" : "bg-amber-600 hover:bg-amber-700"}`}
                       onClick={() => setActiveSection("orders")}
                     >
                       <Plus className="mr-1 h-3.5 w-3.5" /> {t("newOrder")}

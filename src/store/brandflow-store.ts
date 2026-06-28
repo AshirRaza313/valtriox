@@ -754,9 +754,9 @@ export const useValtrioxStore = create<ValtrioxStore>((set, get) => ({
   setEventsSubTab: (tab) => set({ eventsSubTab: tab }),
 
   // Brand Theme
-  brandColor: "#C9A227",
+  brandColor: "#D4A73A",
   setBrandColor: (color) => set({ brandColor: color }),
-  brandGradient: "linear-gradient(135deg, #C9A227 0%, #B8860B 100%)",
+  brandGradient: "linear-gradient(135deg, #D4A73A 0%, #B8922E 100%)",
   setBrandGradient: (gradient) => set({ brandGradient: gradient }),
   brandBgColor: "#ffffff",
   setBrandBgColor: (color) => set({ brandBgColor: color }),

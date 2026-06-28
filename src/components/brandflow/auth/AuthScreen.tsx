@@ -80,15 +80,15 @@ export function AuthScreen() {
           className="absolute inset-0"
           style={{
             background:
-              "radial-gradient(ellipse 80% 50% at 20% 40%, rgba(212,160,23,0.06) 0%, transparent 70%), " +
-              "radial-gradient(ellipse 60% 60% at 80% 20%, rgba(184,134,11,0.04) 0%, transparent 70%), " +
+              "radial-gradient(ellipse 80% 50% at 20% 40%, rgba(212,167,58,0.06) 0%, transparent 70%), " +
+              "radial-gradient(ellipse 60% 60% at 80% 20%, rgba(184,146,46,0.04) 0%, transparent 70%), " +
               "radial-gradient(ellipse 70% 40% at 50% 90%, rgba(245,208,96,0.03) 0%, transparent 70%)",
           }}
         />
         {/* Animated gradient orbs */}
         <motion.div
           className="absolute w-96 h-96 rounded-full opacity-20 blur-3xl"
-          style={{ background: "radial-gradient(circle, rgba(212,160,23,0.3), transparent 70%)" }}
+          style={{ background: "radial-gradient(circle, rgba(212,167,58,0.3), transparent 70%)" }}
           animate={{
             x: [0, 100, -50, 0],
             y: [0, -80, 40, 0],
@@ -98,7 +98,7 @@ export function AuthScreen() {
         />
         <motion.div
           className="absolute w-72 h-72 rounded-full opacity-15 blur-3xl"
-          style={{ background: "radial-gradient(circle, rgba(184,134,11,0.3), transparent 70%)" }}
+          style={{ background: "radial-gradient(circle, rgba(184,146,46,0.3), transparent 70%)" }}
           animate={{
             x: [0, -80, 60, 0],
             y: [0, 60, -40, 0],
@@ -143,7 +143,7 @@ export function AuthScreen() {
             <div
               className="absolute -inset-2 rounded-3xl opacity-50 blur-xl"
               style={{
-                background: "conic-gradient(from 0deg, rgba(212,160,23,0.3), rgba(184,134,11,0.1), rgba(245,208,96,0.3), rgba(184,134,11,0.1), rgba(212,160,23,0.3))",
+                background: "conic-gradient(from 0deg, rgba(212,167,58,0.3), rgba(184,146,46,0.1), rgba(245,208,96,0.3), rgba(184,146,46,0.1), rgba(212,167,58,0.3))",
                 animation: "gradient-shift 6s linear infinite",
               }}
             />
@@ -151,8 +151,8 @@ export function AuthScreen() {
               className="relative inline-flex items-center justify-center h-16 w-16 sm:h-20 sm:w-20 rounded-2xl overflow-hidden"
               style={{
                 background: showBrandIdentity
-                  ? "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)"
-                  : "linear-gradient(135deg, #b8860b 0%, #d4a017 30%, #f5d060 50%, #d4a017 70%, #b8860b 100%)",
+                  ? "linear-gradient(135deg, #1E293B 0%, #161B26 100%)"
+                  : "linear-gradient(135deg, #B8922E 0%, #D4A73A 30%, #E8BE5A 50%, #D4A73A 70%, #B8922E 100%)",
                 backgroundSize: showBrandIdentity ? "100%" : "200% 200%",
                 animation: showBrandIdentity ? "none" : "gradient-shift 4s ease infinite",
               }}
@@ -189,10 +189,10 @@ export function AuthScreen() {
         >
           {/* Card outer glow */}
           <div className="absolute -inset-px rounded-2xl opacity-60" style={{
-            background: "linear-gradient(135deg, rgba(212,160,23,0.3) 0%, rgba(255,255,255,0.05) 30%, rgba(212,160,23,0.15) 60%, rgba(255,255,255,0.03) 100%)",
+            background: "linear-gradient(135deg, rgba(212,167,58,0.3) 0%, rgba(255,255,255,0.05) 30%, rgba(212,167,58,0.15) 60%, rgba(255,255,255,0.03) 100%)",
           }} />
           <div className="absolute -inset-px rounded-2xl opacity-30 blur-sm" style={{
-            background: "linear-gradient(135deg, rgba(212,160,23,0.4), transparent, rgba(212,160,23,0.2))",
+            background: "linear-gradient(135deg, rgba(212,167,58,0.4), transparent, rgba(212,167,58,0.2))",
           }} />
 
           {/* Card inner */}
@@ -231,13 +231,13 @@ export function AuthScreen() {
                   <TabsList className="grid w-full grid-cols-2 mb-5 sm:mb-7 bg-white/[0.04] border border-white/[0.06] rounded-xl h-10 sm:h-11 p-1">
                     <TabsTrigger
                       value="login"
-                      className="text-slate-500 data-[state=active]:text-amber-300 data-[state=active]:bg-amber-500/10 data-[state=active]:shadow-[0_0_15px_rgba(212,160,23,0.1)] rounded-lg transition-all text-[10px] sm:text-xs font-medium"
+                      className="text-slate-500 data-[state=active]:text-amber-300 data-[state=active]:bg-amber-500/10 data-[state=active]:shadow-[0_0_15px_rgba(212,167,58,0.1)] rounded-lg transition-all text-[10px] sm:text-xs font-medium"
                     >
                       Sign In
                     </TabsTrigger>
                     <TabsTrigger
                       value="pin-login"
-                      className="text-slate-500 data-[state=active]:text-amber-300 data-[state=active]:bg-amber-500/10 data-[state=active]:shadow-[0_0_15px_rgba(212,160,23,0.1)] rounded-lg transition-all text-[10px] sm:text-xs font-medium"
+                      className="text-slate-500 data-[state=active]:text-amber-300 data-[state=active]:bg-amber-500/10 data-[state=active]:shadow-[0_0_15px_rgba(212,167,58,0.1)] rounded-lg transition-all text-[10px] sm:text-xs font-medium"
                     >
                       Team Login
                     </TabsTrigger>
@@ -283,7 +283,7 @@ export function AuthScreen() {
                       <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
                         <Button
                           type="submit"
-                          className="btn-gold w-full h-11 rounded-xl text-sm shadow-[0_0_30px_rgba(212,160,23,0.25)] flex items-center justify-center gap-2"
+                          className="btn-gold w-full h-11 rounded-xl text-sm shadow-[0_0_30px_rgba(212,167,58,0.25)] flex items-center justify-center gap-2"
                           disabled={loading}
                         >
                           {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
@@ -340,7 +340,7 @@ export function AuthScreen() {
                       <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
                         <Button
                           type="submit"
-                          className="btn-gold w-full h-11 rounded-xl text-sm shadow-[0_0_30px_rgba(212,160,23,0.25)] flex items-center justify-center gap-2"
+                          className="btn-gold w-full h-11 rounded-xl text-sm shadow-[0_0_30px_rgba(212,167,58,0.25)] flex items-center justify-center gap-2"
                           disabled={loading}
                         >
                           {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Shield className="h-4 w-4" />}

@@ -80,7 +80,7 @@ export function Navbar({ onAuthClick }: NavbarProps) {
       initial={{ y: -20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.5 }}
-      className="fixed top-0 left-0 right-0 z-50 bg-[#0a0a0f]/80 backdrop-blur-xl border-b border-white/[0.06]"
+      className="fixed top-0 left-0 right-0 z-50 bg-[#161B26]/80 backdrop-blur-xl border-b border-white/[0.06]"
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center h-14 sm:h-16">
@@ -88,7 +88,7 @@ export function Navbar({ onAuthClick }: NavbarProps) {
           <div className="flex items-center gap-2 min-w-0 shrink">
             <div className="relative flex-shrink-0">
               <div className="absolute -inset-[1px] rounded-xl bg-gradient-to-br opacity-80 blur-[0.5px]"
-                style={{ background: "linear-gradient(135deg, #d4a017, #f5d060, #b8860b)" }} />
+                style={{ background: "linear-gradient(135deg, #D4A73A, #E8BE5A, #B8922E)" }} />
               <div className="relative flex h-8 w-8 items-center justify-center rounded-xl bg-slate-900 shadow-lg overflow-hidden">
                 <img src="/valtriox-logo.png" alt={companyName} className="h-7 w-7 object-contain rounded-lg" />
               </div>
@@ -146,7 +146,7 @@ export function Navbar({ onAuthClick }: NavbarProps) {
             </Button>
             <Button
               onClick={() => { window.location.href = '/contact'; }}
-              className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white rounded-xl shadow-[0_0_16px_rgba(212,160,23,0.25)]"
+              className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white rounded-xl shadow-[0_0_16px_rgba(212,167,58,0.25)]"
             >
               Get Started
             </Button>
@@ -170,7 +170,7 @@ export function Navbar({ onAuthClick }: NavbarProps) {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="lg:hidden bg-[#0a0a0f] border-t border-white/[0.06] overflow-hidden"
+            className="lg:hidden bg-[#161B26] border-t border-white/[0.06] overflow-hidden"
           >
             <div className="px-4 py-4 space-y-1">
               {navLinks.map((link) => (
@@ -214,7 +214,7 @@ export function Navbar({ onAuthClick }: NavbarProps) {
                   Login
                 </Button>
                 <Button
-                  className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white rounded-xl h-12 text-sm shadow-[0_0_16px_rgba(212,160,23,0.25)]"
+                  className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white rounded-xl h-12 text-sm shadow-[0_0_16px_rgba(212,167,58,0.25)]"
                   onClick={() => { window.location.href = '/contact'; }}
                 >
                   Get Started

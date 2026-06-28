@@ -1261,7 +1261,7 @@ export function ProductsPage() {
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className={cn(
                                   "w-36",
-                                  isDark ? "bg-[#15151e] border-white/[0.08]" : ""
+                                  isDark ? "bg-[#1C2333] border-white/[0.08]" : ""
                                 )}>
                                   <DropdownMenuItem
                                     onClick={() => { setEditingCategory(cat.name); setCategoryName(cat.name); setCategoryOpen(true); }}
@@ -1650,7 +1650,7 @@ export function ProductsPage() {
       <Dialog open={categoryOpen} onOpenChange={setCategoryOpen}>
         <DialogContent className={cn(
           "sm:max-w-md",
-          isGold && "bg-[#15151e] border-white/[0.08]"
+          isGold && "bg-[#1C2333] border-white/[0.08]"
         )}>
           <DialogHeader>
             <DialogTitle className={cn(isDark && "text-white")}>

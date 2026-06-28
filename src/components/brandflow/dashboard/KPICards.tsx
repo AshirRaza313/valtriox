@@ -96,7 +96,7 @@ export function KPICards() {
           {isGold ? (
             <div className="relative rounded-xl p-px bg-gradient-to-br from-amber-500/30 via-transparent to-amber-500/20 group">
               <Card
-                className={`kpi-gold-shimmer overflow-hidden transition-all duration-300 bg-white/[0.03] border-0 border-t-2 border-t-amber-500/30 backdrop-blur-sm hover:bg-white/[0.06] hover:shadow-[0_4px_24px_rgba(212,160,23,0.12)]`}
+                className={`kpi-gold-shimmer overflow-hidden transition-all duration-300 bg-white/[0.03] border-0 border-t-2 border-t-amber-500/30 backdrop-blur-sm hover:bg-white/[0.06] hover:shadow-[0_4px_24px_rgba(212,167,58,0.12)]`}
               >
                 <CardContent className="p-5">
                   <div className="flex items-center justify-between mb-3">
