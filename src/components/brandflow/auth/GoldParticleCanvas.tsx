@@ -76,13 +76,13 @@ export function GoldParticleCanvas({
 
       // Draw radial background glows
       const glow1 = ctx.createRadialGradient(width * 0.2, height * 0.3, 0, width * 0.2, height * 0.3, width * 0.4);
-      glow1.addColorStop(0, "rgba(211, 166, 56, 0.04)");
+      glow1.addColorStop(0, "rgba(212, 167, 58, 0.04)");
       glow1.addColorStop(1, "transparent");
       ctx.fillStyle = glow1;
       ctx.fillRect(0, 0, width, height);
 
       const glow2 = ctx.createRadialGradient(width * 0.8, height * 0.7, 0, width * 0.8, height * 0.7, width * 0.35);
-      glow2.addColorStop(0, "rgba(183, 144, 40, 0.03)");
+      glow2.addColorStop(0, "rgba(184, 148, 47, 0.03)");
       glow2.addColorStop(1, "transparent");
       ctx.fillStyle = glow2;
       ctx.fillRect(0, 0, width, height);
@@ -94,7 +94,7 @@ export function GoldParticleCanvas({
       ctx.fillRect(0, 0, width, height);
 
       // Draw grid dots pattern
-      ctx.fillStyle = "rgba(211, 166, 56, 0.015)";
+      ctx.fillStyle = "rgba(212, 167, 58, 0.015)";
       const gridSize = 40;
       for (let gx = 0; gx < width; gx += gridSize) {
         for (let gy = 0; gy < height; gy += gridSize) {
@@ -157,7 +157,7 @@ export function GoldParticleCanvas({
       }
 
       // Draw subtle connecting lines between close particles
-      ctx.strokeStyle = "rgba(211, 166, 56, 0.02)";
+      ctx.strokeStyle = "rgba(212, 167, 58, 0.02)";
       ctx.lineWidth = 0.5;
       for (let i = 0; i < particles.length; i++) {
         for (let j = i + 1; j < particles.length; j++) {
@@ -166,7 +166,7 @@ export function GoldParticleCanvas({
           const dist = Math.sqrt(dx * dx + dy * dy);
           if (dist < 150) {
             const alpha = (1 - dist / 150) * 0.04;
-            ctx.strokeStyle = `rgba(211, 166, 56, ${alpha})`;
+            ctx.strokeStyle = `rgba(212, 167, 58, ${alpha})`;
             ctx.beginPath();
             ctx.moveTo(particles[i].x, particles[i].y);
             ctx.lineTo(particles[j].x, particles[j].y);

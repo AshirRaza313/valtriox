@@ -233,7 +233,7 @@ export function MarketLaunchTimelinePage() {
               className="relative"
             >
               {/* Timeline dot */}
-              <div className="hidden sm:flex absolute -left-[2px] top-6 h-4 w-4 rounded-full border-2 border-amber-500 bg-[#151A26] z-10">
+              <div className="hidden sm:flex absolute -left-[2px] top-6 h-4 w-4 rounded-full border-2 border-amber-500 bg-[#161B26] z-10">
                 <div className={`absolute inset-0.5 rounded-full bg-gradient-to-br ${month.color}`} />
               </div>
 

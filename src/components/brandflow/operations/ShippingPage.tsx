@@ -148,7 +148,7 @@ export function ShippingPage() {
   const isDark = appTheme !== "light";
   const isGold = appTheme === "premium-dark";
 
-  const cardBg = isGold ? "bg-[#1C2333] border-white/8" : isDark ? "bg-white/[0.03] border-white/[0.06]" : "bg-white border-slate-200";
+  const cardBg = isGold ? "bg-[#1D2437] border-white/8" : isDark ? "bg-white/[0.03] border-white/[0.06]" : "bg-white border-slate-200";
   const textPrimary = isDark ? "text-white" : "text-slate-900";
   const textSecondary = isDark ? "text-slate-400" : "text-slate-500";
 
@@ -475,7 +475,7 @@ export function ShippingPage() {
 
       {/* Create Shipment Dialog */}
       <Dialog open={shipmentOpen} onOpenChange={setShipmentOpen}>
-        <DialogContent className={cn("max-w-[calc(100vw-2rem)] sm:max-w-lg", isDark ? "bg-[#1C2333] border-white/10" : "")}>
+        <DialogContent className={cn("max-w-[calc(100vw-2rem)] sm:max-w-lg", isDark ? "bg-[#1D2437] border-white/10" : "")}>
           <DialogHeader>
             <DialogTitle className={cn("flex items-center gap-2", isGold ? "text-amber-400" : textPrimary)}>
               <Truck className="h-4 w-4 text-amber-500" /> Create New Shipment
@@ -535,7 +535,7 @@ export function ShippingPage() {
 
       {/* Carrier Setup Dialog */}
       <Dialog open={carrierOpen} onOpenChange={setCarrierOpen}>
-        <DialogContent className={cn("max-w-[calc(100vw-2rem)] sm:max-w-lg", isDark ? "bg-[#1C2333] border-white/10" : "")}>
+        <DialogContent className={cn("max-w-[calc(100vw-2rem)] sm:max-w-lg", isDark ? "bg-[#1D2437] border-white/10" : "")}>
           <DialogHeader>
             <DialogTitle className={cn("flex items-center gap-2", isGold ? "text-amber-400" : textPrimary)}>
               <Globe className="h-4 w-4 text-amber-500" /> Configure Carrier

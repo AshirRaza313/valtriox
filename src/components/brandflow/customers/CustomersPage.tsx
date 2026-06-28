@@ -956,7 +956,7 @@ export function CustomersPage() {
 
       {/* Note Dialog */}
       <Dialog open={noteOpen} onOpenChange={setNoteOpen}>
-        <DialogContent className={cn("sm:max-w-md", isGold && "bg-[#1C2333] border-white/[0.08]")}>
+        <DialogContent className={cn("sm:max-w-md", isGold && "bg-[#1D2437] border-white/[0.08]")}>
           <DialogHeader>
             <DialogTitle className={cn(isDark && "text-white")}>Add Note</DialogTitle>
           </DialogHeader>

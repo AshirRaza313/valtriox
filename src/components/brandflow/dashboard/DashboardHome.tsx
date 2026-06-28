@@ -46,8 +46,8 @@ import { ActivityFeed } from "./ActivityFeed";
 import { DailySummaryWidget } from "./DailySummaryWidget";
 import { DashboardGrid } from "./DashboardGrid";
 
-const defaultPieColors = ["#D3A638", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#f97316"];
-const goldPieColors = ["#D3A638", "#E7BC55", "#B79028", "#8b6914", "#E7BC55", "#D3A638", "#a67c00"];
+const defaultPieColors = ["#D4A73A", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#f97316"];
+const goldPieColors = ["#D4A73A", "#E8BD58", "#B8942F", "#8b6914", "#E8BD58", "#D4A73A", "#a67c00"];
 
 interface DashboardStats {
   totalRevenue: number;
@@ -287,13 +287,13 @@ export function DashboardHome() {
   const pieData = hasPieData ? stats.orderStatusData : [];
 
   const pieColors = isGold ? goldPieColors : defaultPieColors;
-  const chartStroke = isGold ? "#D3A638" : "#D3A638";
-  const chartStopColor = isGold ? "#D3A638" : "#D3A638";
+  const chartStroke = isGold ? "#D4A73A" : "#D4A73A";
+  const chartStopColor = isGold ? "#D4A73A" : "#D4A73A";
   const gridStroke = isDark ? "rgba(255,255,255,0.05)" : "#e2e8f0";
   const tickStroke = isDark ? "#64748b" : "#94a3b8";
   const tooltipBg = isDark ? "#1F2937" : "#ffffff";
   const tooltipBorder = isDark ? "rgba(255,255,255,0.1)" : "#e2e8f0";
-  const tooltipText = isDark ? "#F9FAFB" : "#1e293b";
+  const tooltipText = isDark ? "#FAFAFA" : "#1e293b";
 
   const hasRecentOrders = stats?.recentOrders && stats.recentOrders.length > 0;
   const hasRevenueData = stats?.revenueChartData && stats.revenueChartData.some((d) => d.revenue > 0);

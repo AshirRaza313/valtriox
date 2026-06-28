@@ -79,19 +79,19 @@ const C = {
   bg: "#ffffff",
   bg2: "#fafaf9",
   bg3: "#f5f5f4",
-  gold: "#D3A638",
-  goldBright: "#B79028",
-  goldMid: "#E7BC55",
+  gold: "#D4A73A",
+  goldBright: "#B8942F",
+  goldMid: "#E8BD58",
   goldDim: "#A58829",
   goldBg: "#fffefb",
   goldBg2: "#fefcf5",
   goldBg3: "#fdf8e8",
   goldBorder: "#e8dcc8",
   goldBorder2: "#d4c5a0",
-  darkPremium: "#151A26",
-  deepNavy: "#0F1419",
+  darkPremium: "#161B26",
+  deepNavy: "#10151E",
   slate800: "#1e293b",
-  amberGlow: "#D3A638",
+  amberGlow: "#D4A73A",
   lightSurface: "#f5f0e8",
   textPrimary: "#1e293b",
   textSecondary: "#334155",
@@ -101,7 +101,7 @@ const C = {
   greenBg: "#ecfdf5",
   slate200: "#e2e8f0",
   white: "#ffffff",
-  watermark: "#D3A638",
+  watermark: "#D4A73A",
 };
 
 // ── Proposal Type Content Templates (Ultra-Premium) ──
@@ -1137,7 +1137,7 @@ export async function generateProposalPDF(
 
         drawCard(doc, P, y, CW, cardH);
 
-        // Gold left border accent (#D3A638)
+        // Gold left border accent (#D4A73A)
         doc.save();
         doc.roundedRect(P, y, 4, cardH, 2).fill(C.gold);
         doc.restore();

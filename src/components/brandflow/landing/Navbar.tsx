@@ -73,7 +73,7 @@ export function Navbar({ onAuthClick }: NavbarProps) {
       initial={{ y: -20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.5 }}
-      className="fixed top-0 left-0 right-0 z-50 bg-[#151A26]/80 backdrop-blur-xl border-b border-white/[0.06]"
+      className="fixed top-0 left-0 right-0 z-50 bg-[#161B26]/80 backdrop-blur-xl border-b border-white/[0.06]"
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center h-14 sm:h-16">
@@ -154,7 +154,7 @@ export function Navbar({ onAuthClick }: NavbarProps) {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="lg:hidden bg-[#151A26] border-t border-white/[0.06] overflow-hidden"
+            className="lg:hidden bg-[#161B26] border-t border-white/[0.06] overflow-hidden"
           >
             <div className="px-4 py-4 space-y-1">
               {navLinks.map((link) => (

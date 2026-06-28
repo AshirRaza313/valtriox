@@ -11,7 +11,7 @@ export const maxDuration = 60;
 // ── Chart Color Palettes ──
 const PIE_COLORS = ["#f59e0b", "#E8D48B", "#60a5fa", "#f87171", "#a78bfa", "#fb923c", "#38bdf8", "#4ade80"];
 const BAR_COLORS = [
-  "#f59e0b", "#fbbf24", "#D3A638", "#b45309", "#92400e",
+  "#f59e0b", "#fbbf24", "#D4A73A", "#b45309", "#92400e",
   "#78350f", "#fcd34d", "#fde68a", "#fef3c7", "#E8D48B",
 ];
 
@@ -95,7 +95,7 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
       platformTwitter: platformSettings?.twitterUrl || undefined,
       platformSupportHours: platformSettings?.supportHours || undefined,
       platformLogo: platformSettings?.logoUrl || undefined,
-      platformTagline: platformSettings?.tagline || "Pakistan's #1 Brand Management Platform",
+      platformTagline: platformSettings?.tagline || "COMMEND YOUR BRAND UNIVERSE",
     };
 
     let reportData: ReportData;

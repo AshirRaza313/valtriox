@@ -172,7 +172,7 @@ export function CustomerModal({
       <DialogContent
         className={cn(
           "max-w-md max-h-[90vh] overflow-y-auto",
-          isGold && "bg-[#1C2333] border-white/[0.08]"
+          isGold && "bg-[#1D2437] border-white/[0.08]"
         )}
       >
         <DialogHeader>

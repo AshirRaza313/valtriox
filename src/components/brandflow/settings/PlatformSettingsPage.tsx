@@ -154,7 +154,7 @@ const pageVariants = {
 };
 
 const presetColors = [
-  "#D3A638", "#D3A638", "#dc2626", "#7c3aed", "#ec4899",
+  "#D4A73A", "#D4A73A", "#dc2626", "#7c3aed", "#ec4899",
   "#0891b2", "#475569", "#ea580c", "#0d9488", "#2563eb",
   "#db2777", "#65a30d",
 ];
@@ -234,8 +234,8 @@ export function PlatformSettingsPage() {
     currency: "PKR",
     logoUrl: "",
     faviconUrl: "",
-    primaryBrandColor: "#D3A638",
-    secondaryBrandColor: "#D3A638",
+    primaryBrandColor: "#D4A73A",
+    secondaryBrandColor: "#D4A73A",
     currencySymbol: "Rs.",
     customCss: "",
     emailFooterText: "",
@@ -437,8 +437,8 @@ export function PlatformSettingsPage() {
     currency: "PKR",
     logoUrl: "",
     faviconUrl: "",
-    primaryBrandColor: "#D3A638",
-    secondaryBrandColor: "#D3A638",
+    primaryBrandColor: "#D4A73A",
+    secondaryBrandColor: "#D4A73A",
     currencySymbol: "Rs.",
     customCss: "",
     emailFooterText: "",
@@ -2472,7 +2472,7 @@ export function PlatformSettingsPage() {
                       value={settings.primaryBrandColor}
                       onChange={(e) => setSettings((p) => ({ ...p, primaryBrandColor: e.target.value }))}
                       className={cn("w-32 font-mono text-sm", inputBg)}
-                      placeholder="#D3A638"
+                      placeholder="#D4A73A"
                     />
                     <input
                       type="color"
@@ -2518,7 +2518,7 @@ export function PlatformSettingsPage() {
                       value={settings.secondaryBrandColor}
                       onChange={(e) => setSettings((p) => ({ ...p, secondaryBrandColor: e.target.value }))}
                       className={cn("w-32 font-mono text-sm", inputBg)}
-                      placeholder="#D3A638"
+                      placeholder="#D4A73A"
                     />
                     <input
                       type="color"
@@ -2713,7 +2713,7 @@ export function PlatformSettingsPage() {
       {/* Payment Method Dialog                                              */}
       {/* ================================================================== */}
       <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
-        <DialogContent className={cn("sm:max-w-lg max-h-[90vh] overflow-y-auto", isGold && "bg-[#1C2333] border-white/[0.08]")}>
+        <DialogContent className={cn("sm:max-w-lg max-h-[90vh] overflow-y-auto", isGold && "bg-[#1D2437] border-white/[0.08]")}>
           <DialogHeader>
             <DialogTitle className={cn("flex items-center gap-2", isDark && "text-white")}>
               <CreditCard className="h-5 w-5" />

@@ -292,7 +292,7 @@ export default function Home() {
     if (legalPage) {
       const handleBack = () => setLegalPage(null);
       return (
-        <div className="min-h-screen bg-[#151A26]">
+        <div className="min-h-screen bg-[#161B26]">
           {legalPage === "privacy" && <PrivacyPolicyPage onBack={handleBack} />}
           {legalPage === "terms" && <TermsOfServicePage onBack={handleBack} />}
           {legalPage === "refund" && <RefundPolicyPage onBack={handleBack} />}
@@ -303,7 +303,7 @@ export default function Home() {
     }
 
     return (
-      <div className="min-h-screen bg-[#151A26]">
+      <div className="min-h-screen bg-[#161B26]">
         <Navbar onAuthClick={handleAuthClick} />
         <Hero onAuthClick={handleAuthClick} />
         <SocialProof />
@@ -325,7 +325,7 @@ export default function Home() {
 
   // ── DASHBOARD ──
   const themeBg =
-    appTheme === "premium-dark" ? "bg-[#151A26]" :
+    appTheme === "premium-dark" ? "bg-[#161B26]" :
     appTheme === "dark" ? "bg-slate-950" :
     "bg-slate-50";
 

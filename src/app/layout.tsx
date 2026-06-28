@@ -27,7 +27,7 @@ const cinzel = Cinzel({
 });
 
 export const viewport: Viewport = {
-  themeColor: "#D3A638",
+  themeColor: "#D4A73A",
   width: "device-width",
   initialScale: 1,
  viewportFit: "cover",
@@ -65,7 +65,7 @@ export const metadata: Metadata = {
         url: "/valtriox-icon-512.png",
         width: 512,
         height: 512,
-        alt: "Valtriox Brand Management Portal",
+        alt: "COMMEND YOUR BRAND UNIVERSE",
       },
     ],
   },

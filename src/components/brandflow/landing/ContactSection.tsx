@@ -203,7 +203,7 @@ export function ContactSection({ onLegalClick }: ContactSectionProps) {
   ];
 
   return (
-    <section id="contact" className="relative bg-[#151A26] py-24 sm:py-32">
+    <section id="contact" className="relative bg-[#161B26] py-24 sm:py-32">
       {/* Background effects */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,rgba(211,166,56,0.06),transparent_60%)]" />
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-amber-500/[0.03] rounded-full blur-[120px]" />

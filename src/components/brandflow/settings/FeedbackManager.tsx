@@ -350,7 +350,7 @@ export function FeedbackManager() {
 
       {/* Add Feedback Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className={cn("sm:max-w-lg", isGold && "bg-[#1C2333] border-white/[0.08]")}>
+        <DialogContent className={cn("sm:max-w-lg", isGold && "bg-[#1D2437] border-white/[0.08]")}>
           <DialogHeader>
             <DialogTitle className={cn(isDark && "text-white")}>Add Feedback</DialogTitle>
           </DialogHeader>

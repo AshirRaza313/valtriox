@@ -139,7 +139,7 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
       platformTwitter: platformSettings?.twitterUrl || undefined,
       platformSupportHours: platformSettings?.supportHours || undefined,
       platformInvoiceHeaderText: platformSettings?.invoiceHeaderText || undefined,
-      platformTagline: platformSettings?.tagline || "Premium Brand Management Portal",
+      platformTagline: platformSettings?.tagline || "COMMEND YOUR BRAND UNIVERSE",
     };
 
     // Try to parse payment methods from JSON string

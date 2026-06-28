@@ -184,7 +184,7 @@ export function ProductModal({ open, onClose, onSaved, organizationId, product }
     <Dialog open={open} onOpenChange={(v) => { if (!v && !loading) onClose(); }}>
       <DialogContent className={cn(
         "max-w-md max-h-[90vh] overflow-y-auto",
-        isGold && "bg-[#1C2333] border-white/[0.08]"
+        isGold && "bg-[#1D2437] border-white/[0.08]"
       )}>
         <DialogHeader>
           <DialogTitle className={cn(isDark && "text-white")}>

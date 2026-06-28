@@ -564,7 +564,7 @@ export function ConsultationRemindersPage() {
               "w-full justify-start",
               isDark ? "bg-white/[0.04]" : "bg-slate-100"
             )}>
-              <TabsTrigger value="all" className="gap-1.5 data-[state=active]:bg-[#D3A638] data-[state=active]:text-black">
+              <TabsTrigger value="all" className="gap-1.5 data-[state=active]:bg-[#D4A73A] data-[state=active]:text-black">
                 All
                 {stats.total > 0 && (
                   <span className={cn(
@@ -575,7 +575,7 @@ export function ConsultationRemindersPage() {
                   </span>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="upcoming" className="gap-1.5 data-[state=active]:bg-[#D3A638] data-[state=active]:text-black">
+              <TabsTrigger value="upcoming" className="gap-1.5 data-[state=active]:bg-[#D4A73A] data-[state=active]:text-black">
                 Upcoming
                 {stats.upcoming > 0 && (
                   <span className={cn(
@@ -586,7 +586,7 @@ export function ConsultationRemindersPage() {
                   </span>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="overdue" className="gap-1.5 data-[state=active]:bg-[#D3A638] data-[state=active]:text-black">
+              <TabsTrigger value="overdue" className="gap-1.5 data-[state=active]:bg-[#D4A73A] data-[state=active]:text-black">
                 Overdue
                 {stats.overdue > 0 && (
                   <span className={cn(
@@ -597,7 +597,7 @@ export function ConsultationRemindersPage() {
                   </span>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="followUpDue" className="gap-1.5 data-[state=active]:bg-[#D3A638] data-[state=active]:text-black">
+              <TabsTrigger value="followUpDue" className="gap-1.5 data-[state=active]:bg-[#D4A73A] data-[state=active]:text-black">
                 Follow-up Due
                 {stats.followUpDue > 0 && (
                   <span className={cn(

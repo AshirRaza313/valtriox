@@ -294,10 +294,10 @@ export function Header() {
                   style={{
                     background:
                       appTheme === "premium-dark"
-                        ? "linear-gradient(135deg, #D3A638, #B79028)"
+                        ? "linear-gradient(135deg, #D4A73A, #B8942F)"
                         : appTheme === "dark"
-                        ? "#D3A638"
-                        : "#D3A638",
+                        ? "#D4A73A"
+                        : "#D4A73A",
                   }}
                 >
                   <span className="text-white font-bold text-[9px] leading-none">
@@ -396,7 +396,7 @@ export function Header() {
                 "flex items-center rounded-lg border transition-all duration-200",
                 searchFocused
                   ? appTheme === "premium-dark"
-                    ? "border-amber-500/50 ring-2 ring-amber-500/20 bg-[#1C2333] shadow-sm"
+                    ? "border-amber-500/50 ring-2 ring-amber-500/20 bg-[#1D2437] shadow-sm"
                     : "border-amber-300 ring-2 ring-amber-100 bg-white shadow-sm"
                   : appTheme === "premium-dark"
                   ? "border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/[0.07]"
@@ -450,7 +450,7 @@ export function Header() {
                   className={cn(
                     "absolute top-full left-0 right-0 mt-1.5 z-50 rounded-xl border shadow-lg overflow-hidden",
                     appTheme === "premium-dark"
-                      ? "bg-[#1C2333] border-white/8"
+                      ? "bg-[#1D2437] border-white/8"
                       : "bg-white border-slate-200 shadow-slate-200/40"
                   )}
                 >
@@ -635,7 +635,7 @@ export function Header() {
                   className={cn(
                     "w-auto p-0 rounded-xl border shadow-lg",
                     appTheme === "premium-dark"
-                      ? "bg-[#1C2333] border-white/8"
+                      ? "bg-[#1D2437] border-white/8"
                       : "bg-white border-slate-200 shadow-slate-200/40"
                   )}
                 >
@@ -703,8 +703,8 @@ export function Header() {
                       style={{
                         background:
                           appTheme === "premium-dark"
-                            ? "linear-gradient(135deg, #D3A638, #B79028)"
-                            : "linear-gradient(135deg, #D3A638, #D3A638)",
+                            ? "linear-gradient(135deg, #D4A73A, #B8942F)"
+                            : "linear-gradient(135deg, #D4A73A, #D4A73A)",
                       }}
                     >
                       {initials}
@@ -752,7 +752,7 @@ export function Header() {
               className={cn(
                 "w-56 rounded-xl p-1.5",
                 appTheme === "premium-dark"
-                  ? "bg-[#1C2333] border-white/8"
+                  ? "bg-[#1D2437] border-white/8"
                   : "border-slate-200 shadow-lg shadow-slate-200/40"
               )}
             >
@@ -776,8 +776,8 @@ export function Header() {
                         style={{
                           background:
                             appTheme === "premium-dark"
-                              ? "linear-gradient(135deg, #D3A638, #B79028)"
-                              : "linear-gradient(135deg, #D3A638, #D3A638)",
+                              ? "linear-gradient(135deg, #D4A73A, #B8942F)"
+                              : "linear-gradient(135deg, #D4A73A, #D4A73A)",
                         }}
                       >
                         {initials}
@@ -868,7 +868,7 @@ export function Header() {
             className={cn(
               "sm:hidden fixed inset-0 z-50 backdrop-blur-xl p-4 pt-6",
               appTheme === "premium-dark"
-                ? "bg-[#151A26]/95"
+                ? "bg-[#161B26]/95"
                 : appTheme === "dark"
                 ? "bg-slate-950/95"
                 : "bg-white/95"

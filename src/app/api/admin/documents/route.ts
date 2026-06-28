@@ -19,12 +19,12 @@ const DEFAULT_DOCUMENTS: Array<{
 }> = [
   {
     key: "document_valtriox_intro",
-    title: "Welcome to Valtriox - Premium Brand Management Portal",
+    title: "Welcome to Valtriox - COMMEND YOUR BRAND UNIVERSE",
     type: "overview",
-    content: `# Welcome to Valtriox - Premium Brand Management Portal
+    content: `# Welcome to Valtriox - COMMEND YOUR BRAND UNIVERSE
 
 ## About Valtriox
-Valtriox is Pakistan's most advanced brand management portal, designed to transform how businesses operate in the digital age. Built with enterprise-grade technology and a deep understanding of local market needs, Valtriox provides a comprehensive platform that handles everything from order management to AI-powered insights.
+Valtriox is COMMEND YOUR BRAND UNIVERSE, designed to transform how businesses operate in the digital age. Built with enterprise-grade technology and a deep understanding of local market needs, Valtriox provides a comprehensive platform that handles everything from order management to AI-powered insights.
 
 ## What Makes Valtriox Different?
 

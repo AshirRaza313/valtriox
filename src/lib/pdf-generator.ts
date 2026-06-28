@@ -152,9 +152,9 @@ const C = {
   bg2: "#fafaf9",
   bg3: "#f5f5f4",
   // Gold Accent Hierarchy
-  goldBright: "#B79028",
-  gold: "#D3A638",
-  goldMid: "#D3A638",
+  goldBright: "#B8942F",
+  gold: "#D4A73A",
+  goldMid: "#D4A73A",
   goldDim: "#A58829",
   goldFaint: "#785e0a",
   goldUltraFaint: "#5c4808",
@@ -1680,7 +1680,7 @@ export async function generateReportPDF(report: ReportData): Promise<Buffer> {
         // Powered by
         doc.save();
         doc.font(FONT.italic).fontSize(7).fillColor(C.textLight);
-        doc.text(`Powered by ${platformName} - The Universal Brand Management Portal`, P, H - 44, { width: CW, align: "center" });
+        doc.text(`Powered by ${platformName} - COMMEND YOUR BRAND UNIVERSE`, P, H - 44, { width: CW, align: "center" });
         doc.restore();
 
         // Page number: "Page X of Y"

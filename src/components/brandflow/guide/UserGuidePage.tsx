@@ -360,7 +360,7 @@ export function UserGuidePage() {
   const txt1 = isDark ? "text-slate-100" : "text-slate-800";
   const txt2 = isDark ? "text-slate-400" : "text-slate-500";
   const txt3 = isDark ? "text-slate-300" : "text-slate-600";
-  const cardBg = isGold ? "bg-[#1C2333] border-white/8" : isDark ? "bg-slate-800/50 border-slate-700/50" : "bg-white border-slate-200";
+  const cardBg = isGold ? "bg-[#1D2437] border-white/8" : isDark ? "bg-slate-800/50 border-slate-700/50" : "bg-white border-slate-200";
   const hoverBg = isDark ? "hover:bg-white/5" : "hover:bg-slate-50";
   const tabsBg = isGold ? "bg-[#0f0f17]" : isDark ? "bg-slate-800" : "bg-slate-100";
   const activeTab = isGold
@@ -520,7 +520,7 @@ export function UserGuidePage() {
 
       {/* ── EDIT DIALOG ── */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className={cn("sm:max-w-lg max-h-[85vh] overflow-y-auto mx-2 sm:mx-0 rounded-xl", isDark ? "bg-[#1C2333] border-white/10" : "")}>
+        <DialogContent className={cn("sm:max-w-lg max-h-[85vh] overflow-y-auto mx-2 sm:mx-0 rounded-xl", isDark ? "bg-[#1D2437] border-white/10" : "")}>
           <DialogHeader>
             <DialogTitle className={cn("text-sm flex items-center gap-2", txt1)}>
               <Pencil className={cn("h-4 w-4", accent)} /> Edit Guide Item
@@ -545,7 +545,7 @@ export function UserGuidePage() {
 
       {/* ── ADD DIALOG ── */}
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
-        <DialogContent className={cn("sm:max-w-lg max-h-[85vh] overflow-y-auto mx-2 sm:mx-0 rounded-xl", isDark ? "bg-[#1C2333] border-white/10" : "")}>
+        <DialogContent className={cn("sm:max-w-lg max-h-[85vh] overflow-y-auto mx-2 sm:mx-0 rounded-xl", isDark ? "bg-[#1D2437] border-white/10" : "")}>
           <DialogHeader>
             <DialogTitle className={cn("text-sm flex items-center gap-2", txt1)}>
               <Plus className={cn("h-4 w-4", accent)} /> Add Guide Item

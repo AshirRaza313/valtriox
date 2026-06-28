@@ -524,7 +524,7 @@ export function PayrollPage() {
 
       {/* ── Salary Entry Dialog ───────────────────────────────────────── */}
       <Dialog open={entryOpen} onOpenChange={setEntryOpen}>
-        <DialogContent className={cn("sm:max-w-md", isGold && "bg-[#1C2333] border-white/[0.08]")}>
+        <DialogContent className={cn("sm:max-w-md", isGold && "bg-[#1D2437] border-white/[0.08]")}>
           <DialogHeader>
             <DialogTitle className={cn("flex items-center gap-2", isDark && "text-white")}>
               <Receipt className="h-5 w-5" /> Add Payroll Entry

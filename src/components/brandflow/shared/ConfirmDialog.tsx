@@ -41,7 +41,7 @@ export function ConfirmDialog({
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent className={cn(
-        isGold && "bg-[#1C2333] border-white/[0.08]"
+        isGold && "bg-[#1D2437] border-white/[0.08]"
       )}>
         <AlertDialogHeader>
           <AlertDialogTitle className={cn(

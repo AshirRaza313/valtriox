@@ -7,7 +7,7 @@ import logger from "@/lib/logger";
 //  Professional Email Templates - HTML with inline styles
 // ═══════════════════════════════════════════════════════════════════════════
 
-const BRAND_COLOR = "#D3A638";
+const BRAND_COLOR = "#D4A73A";
 const BRAND_DARK = "#A8851F";
 const BRAND_LIGHT = "#FFF9E6";
 const TEXT_PRIMARY = "#1a1a2e";
@@ -136,7 +136,7 @@ const SEED_TEMPLATES = [
         </tr>
       </table>
       <!-- What Happens Next Card -->
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:20px 0; background:#f9fafb; border-radius:10px; border:1px solid #e5e7eb;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:20px 0; background:#FAFAFA; border-radius:10px; border:1px solid #e5e7eb;">
         <tr>
           <td style="padding:16px 20px;">
             <p style="margin:0 0 6px; font-size:14px; font-weight:700; color:${BRAND_DARK};">What Happens Next?</p>
@@ -174,7 +174,7 @@ const SEED_TEMPLATES = [
       <!-- Key Benefits -->
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:20px 0; border:1px solid #e5e7eb; border-radius:10px; overflow:hidden;">
         <tr>
-          <td style="padding:16px 20px; background:#f9fafb;">
+          <td style="padding:16px 20px; background:#FAFAFA;">
             <p style="margin:0 0 10px; font-size:14px; font-weight:700; color:${BRAND_DARK};">Why brands like yours are switching to {{brandName}}:</p>
             <ul style="margin:0; padding-left:18px; font-size:13px; color:${TEXT_SECONDARY}; line-height:2;">
               <li><strong>Save 15+ hours/week</strong> with automated order management &amp; AI-powered insights</li>
@@ -227,7 +227,7 @@ const SEED_TEMPLATES = [
           <td width="80" style="background:${BRAND_COLOR}; padding:16px; text-align:center; vertical-align:middle;">
             <p style="margin:0; font-size:24px; font-weight:700; color:#ffffff; line-height:1;">&#128197;</p>
           </td>
-          <td style="padding:16px 20px; background:#f9fafb;">
+          <td style="padding:16px 20px; background:#FAFAFA;">
             <table role="presentation" cellpadding="0" cellspacing="0" border="0">
               <tr>
                 <td style="padding:0 0 4px;">
@@ -263,7 +263,7 @@ const SEED_TEMPLATES = [
         </tr>
       </table>
       <!-- Tips -->
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:0 0 20px; background:#f9fafb; border-radius:8px; border:1px solid #e5e7eb;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:0 0 20px; background:#FAFAFA; border-radius:8px; border:1px solid #e5e7eb;">
         <tr>
           <td style="padding:14px 20px;">
             <p style="margin:0 0 6px; font-size:13px; font-weight:700; color:${TEXT_PRIMARY};">To prepare for our call:</p>
@@ -302,7 +302,7 @@ const SEED_TEMPLATES = [
       <!-- What's Inside -->
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:20px 0; border:1px solid #e5e7eb; border-radius:10px; overflow:hidden;">
         <tr>
-          <td style="padding:20px 24px; background:#f9fafb;">
+          <td style="padding:20px 24px; background:#FAFAFA;">
             <p style="margin:0 0 14px; font-size:14px; font-weight:700; color:${BRAND_DARK};">What's inside your proposal:</p>
             <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
               <tr>
@@ -386,7 +386,7 @@ const SEED_TEMPLATES = [
       <!-- Support Channels -->
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:16px 0; border:1px solid #e5e7eb; border-radius:10px; overflow:hidden;">
         <tr>
-          <td style="padding:16px 20px; background:#f9fafb;">
+          <td style="padding:16px 20px; background:#FAFAFA;">
             <p style="margin:0 0 10px; font-size:14px; font-weight:700; color:${BRAND_DARK};">Need help? We're here 24/7:</p>
             <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
               <tr>
@@ -414,7 +414,7 @@ const SEED_TEMPLATES = [
         </tr>
       </table>
       <!-- Share Guide CTA -->
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:16px 0; background:#f9fafb; border-radius:8px; border:1px solid #e5e7eb;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:16px 0; background:#FAFAFA; border-radius:8px; border:1px solid #e5e7eb;">
         <tr>
           <td style="padding:14px 20px;">
             <p style="margin:0; font-size:13px; color:${TEXT_SECONDARY}; line-height:1.6;">
@@ -451,7 +451,7 @@ const SEED_TEMPLATES = [
           </td>
         </tr>
         <tr>
-          <td style="padding:20px 24px; background:#f9fafb;">
+          <td style="padding:20px 24px; background:#FAFAFA;">
             <p style="margin:0 0 12px; font-size:14px; font-weight:700; color:${TEXT_PRIMARY};">How one E-Commerce brand grew their order volume 3x in 3 months</p>
             <p style="margin:0 0 14px; font-size:13px; color:${TEXT_SECONDARY}; line-height:1.7;">
               After switching to {{brandName}}, one of our clients in the E-Commerce industry saw a <strong>3x increase in order volume</strong> within just 3 months. They automated their entire order pipeline with SLA monitoring, leveraged <strong>AI-Powered Insights</strong> for demand prediction, and used the <strong>Marketing Hub</strong> to run targeted WhatsApp campaigns. Their team went from chaos to clarity.
@@ -495,7 +495,7 @@ const SEED_TEMPLATES = [
       <p style="margin:16px 0 8px; font-size:14px; color:${TEXT_SECONDARY}; line-height:1.7;">
         Join <strong>500+ Pakistani brands</strong> who are already running smarter operations with {{brandName}}. With pricing starting at <strong>Rs. 7,999/month</strong> (Starter plan) and scaling to <strong>Rs. 15,000/month</strong> (Growth), <strong>Rs. 25,000/month</strong> (Professional), or <strong>Rs. 75,000+/month</strong> (Enterprise), there's a perfect fit for every stage. All plans include a 14-day free trial.
       </p>
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:16px 0; background:#f9fafb; border-radius:8px; border:1px solid #e5e7eb;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:16px 0; background:#FAFAFA; border-radius:8px; border:1px solid #e5e7eb;">
         <tr>
           <td style="padding:14px 20px;">
             <p style="margin:0; font-size:13px; color:${TEXT_SECONDARY}; line-height:1.6;">
@@ -527,7 +527,7 @@ const SEED_TEMPLATES = [
       <!-- Questions -->
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:20px 0; border:1px solid #e5e7eb; border-radius:10px; overflow:hidden;">
         <tr>
-          <td style="padding:16px 20px; background:#f9fafb;">
+          <td style="padding:16px 20px; background:#FAFAFA;">
             <p style="margin:0 0 10px; font-size:14px; font-weight:700; color:${BRAND_DARK};">To prepare for your free consultation, please consider:</p>
             <ul style="margin:0; padding-left:18px; font-size:13px; color:${TEXT_SECONDARY}; line-height:1.9;">
               <li>What type of business do you run?</li>
@@ -570,7 +570,7 @@ const SEED_TEMPLATES = [
       <!-- Payment Details -->
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:20px 0; border:1px solid #e5e7eb; border-radius:10px; overflow:hidden;">
         <tr>
-          <td style="padding:20px 24px; background:#f9fafb;">
+          <td style="padding:20px 24px; background:#FAFAFA;">
             <p style="margin:0 0 14px; font-size:14px; font-weight:700; color:${BRAND_DARK};">Payment Details:</p>
             <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
               <tr>
@@ -617,7 +617,7 @@ const SEED_TEMPLATES = [
       <!-- Getting Started -->
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:20px 0; border:1px solid #e5e7eb; border-radius:10px; overflow:hidden;">
         <tr>
-          <td style="padding:20px 24px; background:#f9fafb;">
+          <td style="padding:20px 24px; background:#FAFAFA;">
             <p style="margin:0 0 14px; font-size:14px; font-weight:700; color:${BRAND_DARK};">Getting Started Checklist:</p>
             <ol style="margin:0; padding-left:18px; font-size:13px; color:${TEXT_SECONDARY}; line-height:2;">
               <li>Log in to your account using the credentials we will send separately</li>
@@ -662,7 +662,7 @@ const SEED_TEMPLATES = [
       <!-- Proposal Highlights -->
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:20px 0; border:1px solid #e5e7eb; border-radius:10px; overflow:hidden;">
         <tr>
-          <td style="padding:20px 24px; background:#f9fafb;">
+          <td style="padding:20px 24px; background:#FAFAFA;">
             <p style="margin:0 0 14px; font-size:14px; font-weight:700; color:${BRAND_DARK};">What's inside your proposal:</p>
             <ul style="margin:0; padding-left:18px; font-size:13px; color:${TEXT_SECONDARY}; line-height:2;">
               <li><strong>Recommended modules</strong> based on your business needs</li>

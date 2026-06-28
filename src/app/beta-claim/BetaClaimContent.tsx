@@ -155,7 +155,7 @@ export default function BetaClaimContent() {
   const features = planFeatures[inviteDetails?.plan || "enterprise"] || planFeatures.enterprise;
 
   return (
-    <div className="min-h-screen bg-[#151A26] flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-[#161B26] flex items-center justify-center p-4 relative overflow-hidden">
       {/* ── Ultra Premium Background ── */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-amber-500/[0.04] rounded-full blur-[150px]" />
@@ -283,7 +283,7 @@ export default function BetaClaimContent() {
                   <button
                     onClick={handleVerify}
                     disabled={loading || !email.trim() || !code.trim()}
-                    className="w-full h-12 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-[#151A26] font-bold text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-amber-500/20 hover:shadow-amber-500/30"
+                    className="w-full h-12 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-[#161B26] font-bold text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-amber-500/20 hover:shadow-amber-500/30"
                   >
                     {loading ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -322,7 +322,7 @@ export default function BetaClaimContent() {
                   </div>
 
                   {/* Plan Preview */}
-                  <div className="rounded-xl bg-[#151A26] border border-white/[0.06] p-4">
+                  <div className="rounded-xl bg-[#161B26] border border-white/[0.06] p-4">
                     <div className="flex items-center justify-between mb-3">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Your Plan Includes</span>
                       <span className={`text-[10px] font-bold uppercase tracking-wider ${colors.text}`}>
@@ -434,7 +434,7 @@ export default function BetaClaimContent() {
                     <button
                       onClick={handleClaim}
                       disabled={loading || !name.trim() || !brandName.trim() || !password.trim() || password !== confirmPassword}
-                      className="flex-1 h-12 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-[#151A26] font-bold text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-amber-500/20 hover:shadow-amber-500/30"
+                      className="flex-1 h-12 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-[#161B26] font-bold text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-amber-500/20 hover:shadow-amber-500/30"
                     >
                       {loading ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -501,7 +501,7 @@ export default function BetaClaimContent() {
 
                   <Link
                     href="/"
-                    className="inline-flex items-center justify-center gap-2 h-12 px-10 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-[#151A26] font-bold text-sm transition-all shadow-lg shadow-amber-500/20 hover:shadow-amber-500/30"
+                    className="inline-flex items-center justify-center gap-2 h-12 px-10 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-[#161B26] font-bold text-sm transition-all shadow-lg shadow-amber-500/20 hover:shadow-amber-500/30"
                   >
                     Go to Dashboard
                     <ArrowRight className="h-4 w-4" />

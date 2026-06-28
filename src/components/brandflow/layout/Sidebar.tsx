@@ -185,7 +185,7 @@ export function Sidebar() {
     setSidebarOpen(false);
   }, [setActiveSection, userRole, setSidebarOpen]);
 
-  const accentColor = appTheme === "premium-dark" ? "#D3A638" : "#D3A638";
+  const accentColor = appTheme === "premium-dark" ? "#D4A73A" : "#D4A73A";
   const isCollapsed = sidebarCollapsed;
 
   // Pre-compute group visibility to avoid hiding groups with no visible items
@@ -286,7 +286,7 @@ export function Sidebar() {
         sidebarOpen ? "translate-x-0 w-[280px] max-w-[85vw]" : "-translate-x-full w-[280px] max-w-[85vw]",
         "lg:translate-x-0",
         isCollapsed ? "lg:w-[60px]" : "lg:w-[260px]",
-      )} style={{ background: "linear-gradient(180deg, #0F1419 0%, #151A26 40%, #1e293b 100%)" } as React.CSSProperties}>
+      )} style={{ background: "linear-gradient(180deg, #10151E 0%, #161B26 40%, #1e293b 100%)" } as React.CSSProperties}>
         {/* Accent line */}
         <div className="h-[2px] w-full shrink-0" style={{ background: `linear-gradient(90deg, transparent, ${accentColor}, transparent)`, opacity: 0.8 }} />
 
@@ -437,8 +437,8 @@ export function Sidebar() {
                                   )}>
                                     {isActive && <motion.div layoutId="active-accent" className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full"
                                       style={{ background: appTheme === "premium-dark"
-                                        ? "linear-gradient(to bottom, #D3A638, #B79028)"
-                                        : "linear-gradient(to bottom, #E8D48B, #D3A638)" }}
+                                        ? "linear-gradient(to bottom, #D4A73A, #B8942F)"
+                                        : "linear-gradient(to bottom, #E8D48B, #D4A73A)" }}
                                       transition={{ type: "spring", stiffness: 350, damping: 30 }} />}
                                     <span className={cn("flex-shrink-0 transition-colors", isActive
                                       ? appTheme === "premium-dark" ? "text-amber-400" : "text-amber-400"
@@ -549,19 +549,19 @@ export function Sidebar() {
               <div className="relative flex-shrink-0">
                 <div className="absolute -inset-[1px] rounded-full opacity-60"
                   style={{ background: appTheme === "premium-dark"
-                    ? "linear-gradient(135deg, #D3A638, #B79028)"
-                    : "linear-gradient(135deg, #D3A638, #D3A638)" }} />
+                    ? "linear-gradient(135deg, #D4A73A, #B8942F)"
+                    : "linear-gradient(135deg, #D4A73A, #D4A73A)" }} />
                 <Avatar className="relative h-8 w-8 ring-2 ring-slate-900">
                   {user?.image ? <AvatarImage src={user.image} /> : null}
                   <AvatarFallback className="text-[11px] font-bold text-white"
                     style={{ background: appTheme === "premium-dark"
-                      ? "linear-gradient(135deg, #D3A638, #B79028)"
-                      : "linear-gradient(135deg, #D3A638, #D3A638)" }}>
+                      ? "linear-gradient(135deg, #D4A73A, #B8942F)"
+                      : "linear-gradient(135deg, #D4A73A, #D4A73A)" }}>
                     {userInitials}
                   </AvatarFallback>
                 </Avatar>
                 <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-slate-900"
-                  style={{ background: appTheme === "premium-dark" ? "#D3A638" : "#D3A638",
+                  style={{ background: appTheme === "premium-dark" ? "#D4A73A" : "#D4A73A",
                     boxShadow: appTheme === "premium-dark" ? "0 0 6px rgba(211,166,56,0.6)" : "0 0 6px rgba(16,185,129,0.6)" }} />
               </div>
               {!isCollapsed && (

@@ -37,12 +37,12 @@ export function Hero({ onAuthClick }: HeroProps) {
               className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 mb-4 sm:mb-6"
             >
               <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-              <span className="text-xs sm:text-sm text-amber-300 font-medium">Pakistan's Premium Brand Management Platform</span>
+              <span className="text-xs sm:text-sm text-amber-300 font-medium">COMMEND YOUR BRAND UNIVERSE</span>
             </motion.div>
 
             <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-tight tracking-tight">
               Run Your Entire Brand From{" "}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#D3A638] via-[#e8c547] to-[#D3A638]">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#D4A73A] via-[#E8BD58] to-[#D4A73A]">
                 One Dashboard
               </span>
             </h1>
@@ -151,7 +151,7 @@ export function Hero({ onAuthClick }: HeroProps) {
       </div>
 
       {/* Bottom fade */}
-      <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-[#151A26] to-transparent" />
+      <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-[#161B26] to-transparent" />
     </section>
   );
 }

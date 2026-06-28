@@ -112,10 +112,10 @@ export function getValtrioxInvitationHtml(data: InvitationTemplateData): string 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Team Invitation - ${data.platformName}</title>
 </head>
-<body style="margin:0;padding:0;background:#151A26;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;">
+<body style="margin:0;padding:0;background:#161B26;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;">
 
   <!-- Outer wrapper -->
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#151A26;min-height:100vh;padding:40px 16px;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#161B26;min-height:100vh;padding:40px 16px;">
     <tr>
       <td align="center">
 
@@ -128,7 +128,7 @@ export function getValtrioxInvitationHtml(data: InvitationTemplateData): string 
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td>
-                    <div style="font-size:24px;font-weight:700;color:#D3A638;letter-spacing:-0.5px;margin-bottom:4px;">
+                    <div style="font-size:24px;font-weight:700;color:#D4A73A;letter-spacing:-0.5px;margin-bottom:4px;">
                       ${data.platformName}
                     </div>
                     <div style="font-size:12px;color:#6b6b7b;text-transform:uppercase;letter-spacing:1.5px;">
@@ -152,7 +152,7 @@ export function getValtrioxInvitationHtml(data: InvitationTemplateData): string 
                 Dear ${data.inviteeName},
               </p>
               <p style="margin:0;font-size:15px;color:#9ca3af;line-height:1.6;">
-                You have been invited to join the <strong style="color:#D3A638;">${data.platformName}</strong> platform team. We believe your expertise and dedication will be a valuable addition to our organization.
+                You have been invited to join the <strong style="color:#D4A73A;">${data.platformName}</strong> platform team. We believe your expertise and dedication will be a valuable addition to our organization.
               </p>
             </td>
           </tr>
@@ -160,7 +160,7 @@ export function getValtrioxInvitationHtml(data: InvitationTemplateData): string 
           <!-- Invitation details card -->
           <tr>
             <td style="padding:24px 32px 0;">
-              <table width="100%" cellpadding="0" cellspacing="0" style="background:#151A26;border:1px solid rgba(255,255,255,0.06);border-radius:12px;overflow:hidden;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#161B26;border:1px solid rgba(255,255,255,0.06);border-radius:12px;overflow:hidden;">
                 <!-- Row: Role -->
                 <tr>
                   <td style="padding:16px 20px;border-bottom:1px solid rgba(255,255,255,0.04);">
@@ -196,7 +196,7 @@ export function getValtrioxInvitationHtml(data: InvitationTemplateData): string 
                         <td style="font-size:11px;color:#6b6b7b;text-transform:uppercase;letter-spacing:1px;padding-bottom:4px;">Invitation Token</td>
                       </tr>
                       <tr>
-                        <td style="font-size:20px;color:#D3A638;font-weight:700;letter-spacing:4px;font-family:monospace;">${data.token}</td>
+                        <td style="font-size:20px;color:#D4A73A;font-weight:700;letter-spacing:4px;font-family:monospace;">${data.token}</td>
                       </tr>
                     </table>
                   </td>
@@ -223,8 +223,8 @@ export function getValtrioxInvitationHtml(data: InvitationTemplateData): string 
             <td style="padding:28px 32px 0;" align="center">
               <a href="${data.joinUrl}" target="_blank" style="
                 display:inline-block;
-                background:linear-gradient(135deg,#D3A638 0%,#B79028 100%);
-                color:#151A26;
+                background:linear-gradient(135deg,#D4A73A 0%,#B8942F 100%);
+                color:#161B26;
                 text-decoration:none;
                 font-size:15px;
                 font-weight:700;
@@ -242,7 +242,7 @@ export function getValtrioxInvitationHtml(data: InvitationTemplateData): string 
             <td style="padding:16px 32px 0;text-align:center;">
               <p style="margin:0;font-size:13px;color:#6b6b7b;line-height:1.5;">
                 If the button above does not work, copy and paste this URL into your browser:<br>
-                <a href="${data.joinUrl}" style="color:#D3A638;word-break:break-all;font-size:12px;">${data.joinUrl}</a>
+                <a href="${data.joinUrl}" style="color:#D4A73A;word-break:break-all;font-size:12px;">${data.joinUrl}</a>
               </p>
             </td>
           </tr>
@@ -255,7 +255,7 @@ export function getValtrioxInvitationHtml(data: InvitationTemplateData): string 
                 <li>Visit the acceptance link above</li>
                 <li>Verify your email address</li>
                 <li>Create your account credentials</li>
-                <li>Enter your invitation token: <strong style="color:#D3A638;font-family:monospace;">${data.token}</strong></li>
+                <li>Enter your invitation token: <strong style="color:#D4A73A;font-family:monospace;">${data.token}</strong></li>
               </ol>
             </td>
           </tr>
@@ -265,7 +265,7 @@ export function getValtrioxInvitationHtml(data: InvitationTemplateData): string 
             <td style="padding:20px 32px 0;">
               <div style="background:rgba(211,166,56,0.06);border:1px solid rgba(211,166,56,0.12);border-radius:8px;padding:14px 18px;">
                 <p style="margin:0;font-size:13px;color:#9ca3af;line-height:1.5;">
-                  <strong style="color:#D3A638;">Please note:</strong> This invitation will expire on ${expiryDate}. If you have any questions or require assistance, do not hesitate to contact us at <a href="mailto:${data.supportEmail}" style="color:#D3A638;">${data.supportEmail}</a>.
+                  <strong style="color:#D4A73A;">Please note:</strong> This invitation will expire on ${expiryDate}. If you have any questions or require assistance, do not hesitate to contact us at <a href="mailto:${data.supportEmail}" style="color:#D4A73A;">${data.supportEmail}</a>.
                 </p>
               </div>
             </td>
@@ -276,7 +276,7 @@ export function getValtrioxInvitationHtml(data: InvitationTemplateData): string 
             <td style="padding:28px 32px 8px;">
               <p style="margin:0;font-size:15px;color:#ffffff;">
                 Warm regards,<br>
-                <strong style="color:#D3A638;">${data.inviterName}</strong><br>
+                <strong style="color:#D4A73A;">${data.inviterName}</strong><br>
                 <span style="font-size:13px;color:#6b6b7b;">${data.platformName} Team</span>
               </p>
             </td>
@@ -289,7 +289,7 @@ export function getValtrioxInvitationHtml(data: InvitationTemplateData): string 
                 <tr>
                   <td style="font-size:12px;color:#4b4b5b;line-height:1.5;">
                     &copy; ${new Date().getFullYear()} ${data.platformName}. All rights reserved.<br>
-                    <a href="${data.platformWebsite}" style="color:#D3A638;text-decoration:none;">${data.platformWebsite}</a>
+                    <a href="${data.platformWebsite}" style="color:#D4A73A;text-decoration:none;">${data.platformWebsite}</a>
                   </td>
                   <td align="right" style="font-size:11px;color:#4b4b5b;">
                     Confidential
@@ -366,7 +366,7 @@ function buildProfessionalFooter(year: number, companyName: string, website: str
                 <tr>
                   <td style="font-size:12px;color:#4b4b5b;line-height:1.5;">
                     &copy; ${year} ${companyName}. All rights reserved.${addressLine}<br>
-                    <a href="${website}" style="color:#D3A638;text-decoration:none;">${website}</a>
+                    <a href="${website}" style="color:#D4A73A;text-decoration:none;">${website}</a>
                   </td>
                   <td align="right" style="font-size:11px;color:#4b4b5b;">
                     <a href="#" style="color:#4b4b5b;text-decoration:none;">Unsubscribe</a> &nbsp;|&nbsp; <a href="#" style="color:#4b4b5b;text-decoration:none;">Preferences</a>
@@ -408,9 +408,9 @@ export function getPostConsultationEmailHtml(data: PostConsultationEmailData): s
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Consultation Follow-Up - ${data.platformName}</title>
 </head>
-<body style="margin:0;padding:0;background:#151A26;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;">
+<body style="margin:0;padding:0;background:#161B26;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;">
 
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#151A26;min-height:100vh;padding:40px 16px;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#161B26;min-height:100vh;padding:40px 16px;">
     <tr>
       <td align="center">
         <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#12121a;border:1px solid rgba(255,255,255,0.06);border-radius:16px;overflow:hidden;">
@@ -421,7 +421,7 @@ export function getPostConsultationEmailHtml(data: PostConsultationEmailData): s
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td>
-                    <div style="font-size:24px;font-weight:700;color:#D3A638;letter-spacing:-0.5px;margin-bottom:4px;">${data.platformName}</div>
+                    <div style="font-size:24px;font-weight:700;color:#D4A73A;letter-spacing:-0.5px;margin-bottom:4px;">${data.platformName}</div>
                     <div style="font-size:12px;color:#6b6b7b;text-transform:uppercase;letter-spacing:1.5px;">Post-Consultation Follow-Up</div>
                   </td>
                   <td align="right">
@@ -437,7 +437,7 @@ export function getPostConsultationEmailHtml(data: PostConsultationEmailData): s
             <td style="padding:32px 32px 0;">
               <p style="margin:0;font-size:18px;color:#ffffff;font-weight:600;margin-bottom:16px;">Dear ${data.clientName},</p>
               <p style="margin:0;font-size:15px;color:#9ca3af;line-height:1.6;">
-                Thank you for taking the time to meet with us on <strong style="color:#D3A638;">${data.consultationDate}</strong>. We truly enjoyed learning about your business goals and exploring how we can help you achieve them. Below is a summary of our discussion and the recommended next steps.
+                Thank you for taking the time to meet with us on <strong style="color:#D4A73A;">${data.consultationDate}</strong>. We truly enjoyed learning about your business goals and exploring how we can help you achieve them. Below is a summary of our discussion and the recommended next steps.
               </p>
             </td>
           </tr>
@@ -446,14 +446,14 @@ export function getPostConsultationEmailHtml(data: PostConsultationEmailData): s
           <tr>
             <td style="padding:28px 32px 0;">
               <p style="margin:0;font-size:14px;color:#9ca3af;font-weight:600;margin-bottom:14px;">Topics Discussed:</p>
-              <table width="100%" cellpadding="0" cellspacing="0" style="background:#151A26;border:1px solid rgba(255,255,255,0.06);border-radius:12px;overflow:hidden;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#161B26;border:1px solid rgba(255,255,255,0.06);border-radius:12px;overflow:hidden;">
                 ${data.discussedTopics.map((topic, i) => `
                 <tr>
                   <td style="padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.04);">
                     <table width="100%" cellpadding="0" cellspacing="0">
                       <tr>
                         <td style="vertical-align:top;">
-                          <div style="width:24px;height:24px;border-radius:6px;background:rgba(211,166,56,0.1);border:1px solid rgba(211,166,56,0.2);text-align:center;line-height:24px;font-size:12px;font-weight:700;color:#D3A638;">${i + 1}</div>
+                          <div style="width:24px;height:24px;border-radius:6px;background:rgba(211,166,56,0.1);border:1px solid rgba(211,166,56,0.2);text-align:center;line-height:24px;font-size:12px;font-weight:700;color:#D4A73A;">${i + 1}</div>
                         </td>
                         <td style="padding-left:14px;font-size:14px;color:#e5e7eb;line-height:1.5;">${topic}</td>
                       </tr>
@@ -468,7 +468,7 @@ export function getPostConsultationEmailHtml(data: PostConsultationEmailData): s
           <tr>
             <td style="padding:28px 32px 0;">
               <p style="margin:0;font-size:14px;color:#9ca3af;font-weight:600;margin-bottom:14px;">Recommended Next Steps:</p>
-              <table width="100%" cellpadding="0" cellspacing="0" style="background:#151A26;border:1px solid rgba(255,255,255,0.06);border-radius:12px;overflow:hidden;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#161B26;border:1px solid rgba(255,255,255,0.06);border-radius:12px;overflow:hidden;">
                 ${[
                   { n: "1", t: "Review this summary and choose the plan that best fits your needs" },
                   { n: "2", t: "Complete account setup with our onboarding team" },
@@ -494,17 +494,17 @@ export function getPostConsultationEmailHtml(data: PostConsultationEmailData): s
           <!-- Plan Recommendation -->
           <tr>
             <td style="padding:28px 32px 0;">
-              <table width="100%" cellpadding="0" cellspacing="0" style="background:#151A26;border:1px solid rgba(211,166,56,0.12);border-radius:12px;overflow:hidden;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#161B26;border:1px solid rgba(211,166,56,0.12);border-radius:12px;overflow:hidden;">
                 <tr>
                   <td style="padding:24px 24px;">
-                    <p style="margin:0;font-size:13px;color:#D3A638;text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:8px;">Recommended Plan</p>
+                    <p style="margin:0;font-size:13px;color:#D4A73A;text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:8px;">Recommended Plan</p>
                     <p style="margin:0;font-size:18px;color:#ffffff;font-weight:700;margin-bottom:4px;">${data.recommendedPlan}</p>
-                    <p style="margin:0;font-size:15px;color:#D3A638;font-weight:600;margin-bottom:12px;">${data.recommendedPlanPrice}</p>
+                    <p style="margin:0;font-size:15px;color:#D4A73A;font-weight:600;margin-bottom:12px;">${data.recommendedPlanPrice}</p>
                     ${data.setupFee ? `<p style="margin:0;font-size:13px;color:#9ca3af;">One-time account setup fee: <strong style="color:#ffffff;">${data.setupFee}</strong></p>` : ''}
                     <table width="100%" cellpadding="0" cellspacing="0">
                       <tr>
                         <td align="center" style="padding-top:20px;">
-                          <a href="${data.platformWebsite}" target="_blank" style="display:inline-block;background:linear-gradient(135deg,#D3A638 0%,#B79028 100%);color:#151A26;text-decoration:none;font-size:15px;font-weight:700;padding:14px 40px;border-radius:10px;">Choose Your Plan</a>
+                          <a href="${data.platformWebsite}" target="_blank" style="display:inline-block;background:linear-gradient(135deg,#D4A73A 0%,#B8942F 100%);color:#161B26;text-decoration:none;font-size:15px;font-weight:700;padding:14px 40px;border-radius:10px;">Choose Your Plan</a>
                         </td>
                       </tr>
                     </table>
@@ -528,7 +528,7 @@ export function getPostConsultationEmailHtml(data: PostConsultationEmailData): s
             <td style="padding:28px 32px 8px;">
               <p style="margin:0;font-size:15px;color:#ffffff;">
                 We look forward to partnering with you,<br>
-                <strong style="color:#D3A638;">${data.platformName} Team</strong><br>
+                <strong style="color:#D4A73A;">${data.platformName} Team</strong><br>
                 <span style="font-size:13px;color:#6b6b7b;">${data.companyEmail} | ${data.companyPhone || data.platformWebsite}</span>
               </p>
             </td>
@@ -574,9 +574,9 @@ export function getAccountSetupEmailHtml(data: AccountSetupEmailData): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Welcome to ${data.platformName} - Account Setup Complete</title>
 </head>
-<body style="margin:0;padding:0;background:#151A26;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;">
+<body style="margin:0;padding:0;background:#161B26;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;">
 
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#151A26;min-height:100vh;padding:40px 16px;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#161B26;min-height:100vh;padding:40px 16px;">
     <tr>
       <td align="center">
         <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#12121a;border:1px solid rgba(255,255,255,0.06);border-radius:16px;overflow:hidden;">
@@ -587,7 +587,7 @@ export function getAccountSetupEmailHtml(data: AccountSetupEmailData): string {
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td>
-                    <div style="font-size:24px;font-weight:700;color:#D3A638;letter-spacing:-0.5px;margin-bottom:4px;">${data.platformName}</div>
+                    <div style="font-size:24px;font-weight:700;color:#D4A73A;letter-spacing:-0.5px;margin-bottom:4px;">${data.platformName}</div>
                     <div style="font-size:12px;color:#6b6b7b;text-transform:uppercase;letter-spacing:1.5px;">Account Setup Confirmation</div>
                   </td>
                   <td align="right">
@@ -611,12 +611,12 @@ export function getAccountSetupEmailHtml(data: AccountSetupEmailData): string {
           <!-- Account Details -->
           <tr>
             <td style="padding:24px 32px 0;">
-              <table width="100%" cellpadding="0" cellspacing="0" style="background:#151A26;border:1px solid rgba(255,255,255,0.06);border-radius:12px;overflow:hidden;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#161B26;border:1px solid rgba(255,255,255,0.06);border-radius:12px;overflow:hidden;">
                 <tr>
                   <td style="padding:16px 20px;border-bottom:1px solid rgba(255,255,255,0.04);">
                     <table width="100%" cellpadding="0" cellspacing="0">
                       <tr><td style="font-size:11px;color:#6b6b7b;text-transform:uppercase;letter-spacing:1px;padding-bottom:4px;">Login URL</td></tr>
-                      <tr><td style="font-size:14px;color:#D3A638;font-weight:600;"><a href="${data.loginUrl}" style="color:#D3A638;text-decoration:none;">${data.loginUrl}</a></td></tr>
+                      <tr><td style="font-size:14px;color:#D4A73A;font-weight:600;"><a href="${data.loginUrl}" style="color:#D4A73A;text-decoration:none;">${data.loginUrl}</a></td></tr>
                     </table>
                   </td>
                 </tr>
@@ -644,10 +644,10 @@ export function getAccountSetupEmailHtml(data: AccountSetupEmailData): string {
           <tr>
             <td style="padding:24px 32px 0;">
               <p style="margin:0;font-size:14px;color:#9ca3af;font-weight:600;margin-bottom:14px;">Your Plan: ${data.selectedPlan}</p>
-              <table width="100%" cellpadding="0" cellspacing="0" style="background:#151A26;border:1px solid rgba(211,166,56,0.12);border-radius:12px;overflow:hidden;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#161B26;border:1px solid rgba(211,166,56,0.12);border-radius:12px;overflow:hidden;">
                 <tr>
                   <td style="padding:20px 20px;">
-                    <p style="margin:0;font-size:13px;color:#D3A638;text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:12px;">Plan Features</p>
+                    <p style="margin:0;font-size:13px;color:#D4A73A;text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:12px;">Plan Features</p>
                     ${data.planFeatures.map((feature) => `
                     <p style="margin:0 0 8px 0;font-size:14px;color:#e5e7eb;line-height:1.5;">&#10003; ${feature}</p>
                     `).join("")}
@@ -661,7 +661,7 @@ export function getAccountSetupEmailHtml(data: AccountSetupEmailData): string {
           <tr>
             <td style="padding:24px 32px 0;">
               <p style="margin:0;font-size:14px;color:#9ca3af;font-weight:600;margin-bottom:14px;">Getting Started Checklist:</p>
-              <table width="100%" cellpadding="0" cellspacing="0" style="background:#151A26;border:1px solid rgba(255,255,255,0.06);border-radius:12px;overflow:hidden;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#161B26;border:1px solid rgba(255,255,255,0.06);border-radius:12px;overflow:hidden;">
                 ${[
                   { n: "1", t: "Log in to your account using the link above" },
                   { n: "2", t: "Complete your profile and company information" },
@@ -674,7 +674,7 @@ export function getAccountSetupEmailHtml(data: AccountSetupEmailData): string {
                     <table width="100%" cellpadding="0" cellspacing="0">
                       <tr>
                         <td style="vertical-align:top;">
-                          <div style="width:24px;height:24px;border-radius:50%;background:rgba(211,166,56,0.1);border:1px solid rgba(211,166,56,0.2);text-align:center;line-height:24px;font-size:11px;font-weight:700;color:#D3A638;">${step.n}</div>
+                          <div style="width:24px;height:24px;border-radius:50%;background:rgba(211,166,56,0.1);border:1px solid rgba(211,166,56,0.2);text-align:center;line-height:24px;font-size:11px;font-weight:700;color:#D4A73A;">${step.n}</div>
                         </td>
                         <td style="padding-left:14px;font-size:14px;color:#e5e7eb;line-height:1.5;">${step.t}</td>
                       </tr>
@@ -688,7 +688,7 @@ export function getAccountSetupEmailHtml(data: AccountSetupEmailData): string {
           <!-- CTA -->
           <tr>
             <td style="padding:28px 32px 0;" align="center">
-              <a href="${data.loginUrl}" target="_blank" style="display:inline-block;background:linear-gradient(135deg,#D3A638 0%,#B79028 100%);color:#151A26;text-decoration:none;font-size:15px;font-weight:700;padding:14px 40px;border-radius:10px;">Access Your Dashboard</a>
+              <a href="${data.loginUrl}" target="_blank" style="display:inline-block;background:linear-gradient(135deg,#D4A73A 0%,#B8942F 100%);color:#161B26;text-decoration:none;font-size:15px;font-weight:700;padding:14px 40px;border-radius:10px;">Access Your Dashboard</a>
             </td>
           </tr>
 
@@ -706,7 +706,7 @@ export function getAccountSetupEmailHtml(data: AccountSetupEmailData): string {
             <td style="padding:28px 32px 8px;">
               <p style="margin:0;font-size:15px;color:#ffffff;">
                 Welcome aboard!<br>
-                <strong style="color:#D3A638;">${data.platformName} Team</strong><br>
+                <strong style="color:#D4A73A;">${data.platformName} Team</strong><br>
                 <span style="font-size:13px;color:#6b6b7b;">Need help? Reply to this email or contact ${data.companyEmail}</span>
               </p>
             </td>
@@ -757,9 +757,9 @@ export function getSubscriptionActivationEmailHtml(data: SubscriptionActivationE
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Subscription Activated - ${data.platformName}</title>
 </head>
-<body style="margin:0;padding:0;background:#151A26;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;">
+<body style="margin:0;padding:0;background:#161B26;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;">
 
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#151A26;min-height:100vh;padding:40px 16px;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#161B26;min-height:100vh;padding:40px 16px;">
     <tr>
       <td align="center">
         <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#12121a;border:1px solid rgba(255,255,255,0.06);border-radius:16px;overflow:hidden;">
@@ -770,7 +770,7 @@ export function getSubscriptionActivationEmailHtml(data: SubscriptionActivationE
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td>
-                    <div style="font-size:24px;font-weight:700;color:#D3A638;letter-spacing:-0.5px;margin-bottom:4px;">${data.platformName}</div>
+                    <div style="font-size:24px;font-weight:700;color:#D4A73A;letter-spacing:-0.5px;margin-bottom:4px;">${data.platformName}</div>
                     <div style="font-size:12px;color:#6b6b7b;text-transform:uppercase;letter-spacing:1.5px;">Subscription Activated</div>
                   </td>
                   <td align="right">
@@ -786,7 +786,7 @@ export function getSubscriptionActivationEmailHtml(data: SubscriptionActivationE
             <td style="padding:32px 32px 0;">
               <p style="margin:0;font-size:18px;color:#ffffff;font-weight:600;margin-bottom:16px;">Great News, ${data.clientName}!</p>
               <p style="margin:0;font-size:15px;color:#9ca3af;line-height:1.6;">
-                Your <strong style="color:#D3A638;">${data.planName}</strong> subscription has been successfully activated. Your payment has been confirmed and you now have full access to all plan features. Here are your subscription details:
+                Your <strong style="color:#D4A73A;">${data.planName}</strong> subscription has been successfully activated. Your payment has been confirmed and you now have full access to all plan features. Here are your subscription details:
               </p>
             </td>
           </tr>
@@ -794,7 +794,7 @@ export function getSubscriptionActivationEmailHtml(data: SubscriptionActivationE
           <!-- Subscription Details -->
           <tr>
             <td style="padding:24px 32px 0;">
-              <table width="100%" cellpadding="0" cellspacing="0" style="background:#151A26;border:1px solid rgba(211,166,56,0.12);border-radius:12px;overflow:hidden;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#161B26;border:1px solid rgba(211,166,56,0.12);border-radius:12px;overflow:hidden;">
                 <tr>
                   <td style="padding:16px 20px;border-bottom:1px solid rgba(255,255,255,0.04);">
                   <table width="100%" cellpadding="0" cellspacing="0"><tr>
@@ -807,7 +807,7 @@ export function getSubscriptionActivationEmailHtml(data: SubscriptionActivationE
                   <table width="100%" cellpadding="0" cellspacing="0"><tr>
                     <td style="font-size:11px;color:#6b6b7b;text-transform:uppercase;letter-spacing:1px;padding-bottom:4px;">Price</td>
                   </tr><tr>
-                    <td style="font-size:16px;color:#D3A638;font-weight:700;">${data.planPrice}</td>
+                    <td style="font-size:16px;color:#D4A73A;font-weight:700;">${data.planPrice}</td>
                   </tr></table>
                 </td>
               </tr>
@@ -851,7 +851,7 @@ export function getSubscriptionActivationEmailHtml(data: SubscriptionActivationE
           <tr>
             <td style="padding:24px 32px 0;">
               <p style="margin:0;font-size:14px;color:#9ca3af;font-weight:600;margin-bottom:14px;">Your Plan Includes:</p>
-              <table width="100%" cellpadding="0" cellspacing="0" style="background:#151A26;border:1px solid rgba(255,255,255,0.06);border-radius:12px;overflow:hidden;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#161B26;border:1px solid rgba(255,255,255,0.06);border-radius:12px;overflow:hidden;">
                 <tr>
                   <td style="padding:20px;">
                     ${data.planFeatures.map((f) => `<p style="margin:0 0 8px 0;font-size:14px;color:#e5e7eb;">&#10003; ${f}</p>`).join("")}
@@ -865,7 +865,7 @@ export function getSubscriptionActivationEmailHtml(data: SubscriptionActivationE
           <tr>
             <td style="padding:24px 32px 0;">
               <p style="margin:0;font-size:14px;color:#9ca3af;font-weight:600;margin-bottom:14px;">What is Next:</p>
-              <table width="100%" cellpadding="0" cellspacing="0" style="background:#151A26;border:1px solid rgba(255,255,255,0.06);border-radius:12px;overflow:hidden;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#161B26;border:1px solid rgba(255,255,255,0.06);border-radius:12px;overflow:hidden;">
                 ${[
                   { n: "1", t: "Log in to your dashboard and explore all features" },
                   { n: "2", t: "Complete your profile and team setup" },
@@ -877,7 +877,7 @@ export function getSubscriptionActivationEmailHtml(data: SubscriptionActivationE
                     <table width="100%" cellpadding="0" cellspacing="0">
                       <tr>
                         <td style="vertical-align:top;">
-                          <div style="width:24px;height:24px;border-radius:6px;background:rgba(211,166,56,0.1);border:1px solid rgba(211,166,56,0.2);text-align:center;line-height:24px;font-size:12px;font-weight:700;color:#D3A638;">${step.n}</div>
+                          <div style="width:24px;height:24px;border-radius:6px;background:rgba(211,166,56,0.1);border:1px solid rgba(211,166,56,0.2);text-align:center;line-height:24px;font-size:12px;font-weight:700;color:#D4A73A;">${step.n}</div>
                         </td>
                         <td style="padding-left:14px;font-size:14px;color:#e5e7eb;line-height:1.5;">${step.t}</td>
                       </tr>
@@ -891,7 +891,7 @@ export function getSubscriptionActivationEmailHtml(data: SubscriptionActivationE
           <!-- CTA -->
           <tr>
             <td style="padding:28px 32px 0;" align="center">
-              <a href="${data.dashboardUrl}" target="_blank" style="display:inline-block;background:linear-gradient(135deg,#D3A638 0%,#B79028 100%);color:#151A26;text-decoration:none;font-size:15px;font-weight:700;padding:14px 40px;border-radius:10px;">Go to Dashboard</a>
+              <a href="${data.dashboardUrl}" target="_blank" style="display:inline-block;background:linear-gradient(135deg,#D4A73A 0%,#B8942F 100%);color:#161B26;text-decoration:none;font-size:15px;font-weight:700;padding:14px 40px;border-radius:10px;">Go to Dashboard</a>
             </td>
           </tr>
 
@@ -909,7 +909,7 @@ export function getSubscriptionActivationEmailHtml(data: SubscriptionActivationE
             <td style="padding:28px 32px 8px;">
               <p style="margin:0;font-size:15px;color:#ffffff;">
                 Thank you for choosing ${data.platformName}!<br>
-                <strong style="color:#D3A638;">${data.platformName} Team</strong><br>
+                <strong style="color:#D4A73A;">${data.platformName} Team</strong><br>
                 <span style="font-size:13px;color:#6b6b7b;">${data.companyEmail} | ${data.companyPhone || data.platformWebsite}</span>
               </p>
             </td>
@@ -956,9 +956,9 @@ export function getProposalDeliveryEmailHtml(data: ProposalDeliveryEmailData): s
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Your Proposal is Ready - ${data.platformName}</title>
 </head>
-<body style="margin:0;padding:0;background:#151A26;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;">
+<body style="margin:0;padding:0;background:#161B26;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;">
 
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#151A26;min-height:100vh;padding:40px 16px;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#161B26;min-height:100vh;padding:40px 16px;">
     <tr>
       <td align="center">
         <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#12121a;border:1px solid rgba(255,255,255,0.06);border-radius:16px;overflow:hidden;">
@@ -969,11 +969,11 @@ export function getProposalDeliveryEmailHtml(data: ProposalDeliveryEmailData): s
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td>
-                    <div style="font-size:24px;font-weight:700;color:#D3A638;letter-spacing:-0.5px;margin-bottom:4px;">${data.platformName}</div>
+                    <div style="font-size:24px;font-weight:700;color:#D4A73A;letter-spacing:-0.5px;margin-bottom:4px;">${data.platformName}</div>
                     <div style="font-size:12px;color:#6b6b7b;text-transform:uppercase;letter-spacing:1.5px;">Proposal Delivery</div>
                   </td>
                   <td align="right">
-                    <div style="display:inline-block;width:40px;height:40px;background:rgba(211,166,56,0.1);border:1px solid rgba(211,166,56,0.2);border-radius:10px;text-align:center;line-height:40px;font-size:18px;color:#D3A638;">&#128196;</div>
+                    <div style="display:inline-block;width:40px;height:40px;background:rgba(211,166,56,0.1);border:1px solid rgba(211,166,56,0.2);border-radius:10px;text-align:center;line-height:40px;font-size:18px;color:#D4A73A;">&#128196;</div>
                   </td>
                 </tr>
               </table>
@@ -985,7 +985,7 @@ export function getProposalDeliveryEmailHtml(data: ProposalDeliveryEmailData): s
             <td style="padding:32px 32px 0;">
               <p style="margin:0;font-size:18px;color:#ffffff;font-weight:600;margin-bottom:16px;">Dear ${data.clientName},</p>
               <p style="margin:0;font-size:15px;color:#9ca3af;line-height:1.6;">
-                Thank you for your interest in working with ${data.platformName}. We have carefully prepared a comprehensive proposal for <strong style="color:#D3A638;">${data.proposalType}</strong> services tailored to your business needs. Please review the proposal details below and let us know if you have any questions.
+                Thank you for your interest in working with ${data.platformName}. We have carefully prepared a comprehensive proposal for <strong style="color:#D4A73A;">${data.proposalType}</strong> services tailored to your business needs. Please review the proposal details below and let us know if you have any questions.
               </p>
             </td>
           </tr>
@@ -993,7 +993,7 @@ export function getProposalDeliveryEmailHtml(data: ProposalDeliveryEmailData): s
           <!-- Proposal Summary -->
           <tr>
             <td style="padding:24px 32px 0;">
-              <table width="100%" cellpadding="0" cellspacing="0" style="background:#151A26;border:1px solid rgba(211,166,56,0.12);border-radius:12px;overflow:hidden;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#161B26;border:1px solid rgba(211,166,56,0.12);border-radius:12px;overflow:hidden;">
                 <tr>
                   <td style="padding:16px 20px;border-bottom:1px solid rgba(255,255,255,0.04);">
                     <table width="100%" cellpadding="0" cellspacing="0"><tr>
@@ -1006,7 +1006,7 @@ export function getProposalDeliveryEmailHtml(data: ProposalDeliveryEmailData): s
                   <table width="100%" cellpadding="0" cellspacing="0"><tr>
                     <td style="font-size:11px;color:#6b6b7b;text-transform:uppercase;letter-spacing:1px;padding-bottom:4px;">Investment</td>
                     </tr><tr>
-                      <td style="font-size:16px;color:#D3A638;font-weight:700;">${data.currencySymbol} ${data.proposalCost}</td>
+                      <td style="font-size:16px;color:#D4A73A;font-weight:700;">${data.currencySymbol} ${data.proposalCost}</td>
                     </tr></table>
                 </td>
               </tr>
@@ -1027,7 +1027,7 @@ export function getProposalDeliveryEmailHtml(data: ProposalDeliveryEmailData): s
           <tr>
             <td style="padding:24px 32px 0;">
               <p style="margin:0;font-size:14px;color:#9ca3af;font-weight:600;margin-bottom:14px;">Next Steps:</p>
-              <table width="100%" cellpadding="0" cellspacing="0" style="background:#151A26;border:1px solid rgba(255,255,255,0.06);border-radius:12px;overflow:hidden;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#161B26;border:1px solid rgba(255,255,255,0.06);border-radius:12px;overflow:hidden;">
                 ${[
                   { n: "1", t: "Review the proposal and share with your team" },
                   { n: "2", t: "Contact us with any questions or for modifications" },
@@ -1039,7 +1039,7 @@ export function getProposalDeliveryEmailHtml(data: ProposalDeliveryEmailData): s
                     <table width="100%" cellpadding="0" cellspacing="0">
                       <tr>
                         <td style="vertical-align:top;">
-                          <div style="width:24px;height:24px;border-radius:6px;background:rgba(211,166,56,0.1);border:1px solid rgba(211,166,56,0.2);text-align:center;line-height:24px;font-size:12px;font-weight:700;color:#D3A638;">${step.n}</div>
+                          <div style="width:24px;height:24px;border-radius:6px;background:rgba(211,166,56,0.1);border:1px solid rgba(211,166,56,0.2);text-align:center;line-height:24px;font-size:12px;font-weight:700;color:#D4A73A;">${step.n}</div>
                         </td>
                         <td style="padding-left:14px;font-size:14px;color:#e5e7eb;line-height:1.5;">${step.t}</td>
                       </tr>
@@ -1055,7 +1055,7 @@ export function getProposalDeliveryEmailHtml(data: ProposalDeliveryEmailData): s
             <td style="padding:20px 32px 0;">
               <div style="background:rgba(211,166,56,0.06);border:1px solid rgba(211,166,56,0.12);border-radius:8px;padding:14px 18px;">
                 <p style="margin:0;font-size:13px;color:#9ca3af;line-height:1.5;">
-                  <strong style="color:#D3A638;">Payment:</strong> 50% advance upon acceptance, 25% at 50% completion, 25% upon final delivery. Payments can be made via bank transfer or online payment. Please contact us for payment details.
+                  <strong style="color:#D4A73A;">Payment:</strong> 50% advance upon acceptance, 25% at 50% completion, 25% upon final delivery. Payments can be made via bank transfer or online payment. Please contact us for payment details.
                 </p>
               </div>
             </td>
@@ -1064,7 +1064,7 @@ export function getProposalDeliveryEmailHtml(data: ProposalDeliveryEmailData): s
           <!-- CTA -->
           <tr>
             <td style="padding:28px 32px 0;" align="center">
-              <a href="${data.proposalViewUrl}" target="_blank" style="display:inline-block;background:linear-gradient(135deg,#D3A638 0%,#B79028 100%);color:#151A26;text-decoration:none;font-size:15px;font-weight:700;padding:14px 40px;border-radius:10px;">View Proposal</a>
+              <a href="${data.proposalViewUrl}" target="_blank" style="display:inline-block;background:linear-gradient(135deg,#D4A73A 0%,#B8942F 100%);color:#161B26;text-decoration:none;font-size:15px;font-weight:700;padding:14px 40px;border-radius:10px;">View Proposal</a>
             </td>
           </tr>
 
@@ -1082,7 +1082,7 @@ export function getProposalDeliveryEmailHtml(data: ProposalDeliveryEmailData): s
             <td style="padding:28px 32px 8px;">
               <p style="margin:0;font-size:15px;color:#ffffff;">
                 We look forward to working with you,<br>
-                <strong style="color:#D3A638;">${data.platformName} Team</strong><br>
+                <strong style="color:#D4A73A;">${data.platformName} Team</strong><br>
                 <span style="font-size:13px;color:#6b6b7b;">${data.companyEmail} | ${data.companyPhone || data.platformWebsite}</span>
               </p>
             </td>
@@ -1132,9 +1132,9 @@ export function getPaymentConfirmationEmailHtml(data: PaymentConfirmationEmailDa
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Payment Confirmation - ${data.platformName}</title>
 </head>
-<body style="margin:0;padding:0;background:#151A26;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;">
+<body style="margin:0;padding:0;background:#161B26;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;">
 
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#151A26;min-height:100vh;padding:40px 16px;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#161B26;min-height:100vh;padding:40px 16px;">
     <tr>
       <td align="center">
         <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#12121a;border:1px solid rgba(255,255,255,0.06);border-radius:16px;overflow:hidden;">
@@ -1145,7 +1145,7 @@ export function getPaymentConfirmationEmailHtml(data: PaymentConfirmationEmailDa
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td>
-                    <div style="font-size:24px;font-weight:700;color:#D3A638;letter-spacing:-0.5px;margin-bottom:4px;">${data.platformName}</div>
+                    <div style="font-size:24px;font-weight:700;color:#D4A73A;letter-spacing:-0.5px;margin-bottom:4px;">${data.platformName}</div>
                     <div style="font-size:12px;color:#6b6b7b;text-transform:uppercase;letter-spacing:1.5px;">Payment Confirmation</div>
                   </td>
                   <td align="right">
@@ -1180,7 +1180,7 @@ export function getPaymentConfirmationEmailHtml(data: PaymentConfirmationEmailDa
           <tr>
             <td style="padding:24px 32px 0;">
               <p style="margin:0;font-size:14px;color:#9ca3af;font-weight:600;margin-bottom:14px;">Invoice Details:</p>
-              <table width="100%" cellpadding="0" cellspacing="0" style="background:#151A26;border:1px solid rgba(255,255,255,0.06);border-radius:12px;overflow:hidden;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#161B26;border:1px solid rgba(255,255,255,0.06);border-radius:12px;overflow:hidden;">
                 <tr>
                   <td style="padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.04);">
                     <table width="100%" cellpadding="0" cellspacing="0"><tr>
@@ -1193,7 +1193,7 @@ export function getPaymentConfirmationEmailHtml(data: PaymentConfirmationEmailDa
                     <table width="100%" cellpadding="0" cellspacing="0"><tr>
                       <td style="font-size:11px;color:#6b6b7b;text-transform:uppercase;letter-spacing:1px;padding-bottom:4px;">Amount</td>
                     </tr><tr>
-                      <td style="font-size:14px;color:#D3A638;font-weight:700;">${data.currencySymbol} ${data.invoiceAmount}</td>
+                      <td style="font-size:14px;color:#D4A73A;font-weight:700;">${data.currencySymbol} ${data.invoiceAmount}</td>
                     </tr></table>
                   </td>
                 </tr>
@@ -1236,7 +1236,7 @@ export function getPaymentConfirmationEmailHtml(data: PaymentConfirmationEmailDa
           <!-- Download Invoice CTA -->
           <tr>
             <td style="padding:28px 32px 0;" align="center">
-              <a href="${data.invoiceDownloadUrl}" target="_blank" style="display:inline-block;background:linear-gradient(135deg,#D3A638 0%,#B79028 100%);color:#151A26;text-decoration:none;font-size:15px;font-weight:700;padding:14px 40px;border-radius:10px;">Download Invoice</a>
+              <a href="${data.invoiceDownloadUrl}" target="_blank" style="display:inline-block;background:linear-gradient(135deg,#D4A73A 0%,#B8942F 100%);color:#161B26;text-decoration:none;font-size:15px;font-weight:700;padding:14px 40px;border-radius:10px;">Download Invoice</a>
             </td>
           </tr>
 
@@ -1245,7 +1245,7 @@ export function getPaymentConfirmationEmailHtml(data: PaymentConfirmationEmailDa
             <td style="padding:20px 32px 0;">
               <div style="background:rgba(211,166,56,0.06);border:1px solid rgba(211,166,56,0.12);border-radius:8px;padding:14px 18px;">
                 <p style="margin:0;font-size:13px;color:#9ca3af;line-height:1.5;">
-                  <strong style="color:#D3A638;">Need help?</strong> If you have any questions about this invoice or your subscription, please do not hesitate to contact us at <a href="mailto:${data.companyEmail}" style="color:#D3A638;">${data.companyEmail}</a> or call <strong style="color:#ffffff;">${data.companyPhone || "our support line"}</strong>.
+                  <strong style="color:#D4A73A;">Need help?</strong> If you have any questions about this invoice or your subscription, please do not hesitate to contact us at <a href="mailto:${data.companyEmail}" style="color:#D4A73A;">${data.companyEmail}</a> or call <strong style="color:#ffffff;">${data.companyPhone || "our support line"}</strong>.
                 </p>
               </div>
             </td>
@@ -1265,7 +1265,7 @@ export function getPaymentConfirmationEmailHtml(data: PaymentConfirmationEmailDa
             <td style="padding:28px 32px 8px;">
               <p style="margin:0;font-size:15px;color:#ffffff;">
                 Thank you for your business!<br>
-                <strong style="color:#D3A638;">${data.platformName} Team</strong><br>
+                <strong style="color:#D4A73A;">${data.platformName} Team</strong><br>
                 <span style="font-size:13px;color:#6b6b7b;">${data.companyEmail} | ${data.companyPhone || data.platformWebsite}</span>
               </p>
             </td>
@@ -1336,7 +1336,7 @@ export function getLeadCaptureEmailHtml(data: LeadCaptureEmailData): string {
           <td style="font-size:11px;color:#6b6b7b;text-transform:uppercase;letter-spacing:1px;padding-bottom:4px;">Email</td>
         </tr>
         <tr>
-          <td style="font-size:14px;color:#D3A638;font-weight:600;"><a href="mailto:${data.companyEmail}" style="color:#D3A638;text-decoration:none;">${data.companyEmail}</a></td>
+          <td style="font-size:14px;color:#D4A73A;font-weight:600;"><a href="mailto:${data.companyEmail}" style="color:#D4A73A;text-decoration:none;">${data.companyEmail}</a></td>
         </tr>
       </table>
     </td>
@@ -1392,10 +1392,10 @@ export function getLeadCaptureEmailHtml(data: LeadCaptureEmailData): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Thank You - ${data.platformName}</title>
 </head>
-<body style="margin:0;padding:0;background:#151A26;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;">
+<body style="margin:0;padding:0;background:#161B26;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;">
 
   <!-- Outer wrapper -->
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#151A26;min-height:100vh;padding:40px 16px;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#161B26;min-height:100vh;padding:40px 16px;">
     <tr>
       <td align="center">
 
@@ -1408,7 +1408,7 @@ export function getLeadCaptureEmailHtml(data: LeadCaptureEmailData): string {
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td>
-                    <div style="font-size:24px;font-weight:700;color:#D3A638;letter-spacing:-0.5px;margin-bottom:4px;">
+                    <div style="font-size:24px;font-weight:700;color:#D4A73A;letter-spacing:-0.5px;margin-bottom:4px;">
                       ${data.platformName}
                     </div>
                     <div style="font-size:12px;color:#6b6b7b;text-transform:uppercase;letter-spacing:1.5px;">
@@ -1432,7 +1432,7 @@ export function getLeadCaptureEmailHtml(data: LeadCaptureEmailData): string {
                 Dear ${data.leadName},
               </p>
               <p style="margin:0;font-size:15px;color:#9ca3af;line-height:1.6;">
-                Thank you for your interest in <strong style="color:#D3A638;">${data.platformName}</strong>! We have successfully received your inquiry and our team is already reviewing it. We will reach out to you within <strong style="color:#ffffff;">24 hours</strong> with a personalized response.
+                Thank you for your interest in <strong style="color:#D4A73A;">${data.platformName}</strong>! We have successfully received your inquiry and our team is already reviewing it. We will reach out to you within <strong style="color:#ffffff;">24 hours</strong> with a personalized response.
               </p>
             </td>
           </tr>
@@ -1440,10 +1440,10 @@ export function getLeadCaptureEmailHtml(data: LeadCaptureEmailData): string {
           <!-- Your Free Guide Section -->
           <tr>
             <td style="padding:28px 32px 0;">
-              <table width="100%" cellpadding="0" cellspacing="0" style="background:#151A26;border:1px solid rgba(211,166,56,0.12);border-radius:12px;overflow:hidden;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#161B26;border:1px solid rgba(211,166,56,0.12);border-radius:12px;overflow:hidden;">
                 <tr>
                   <td style="padding:24px 24px;">
-                    <p style="margin:0;font-size:13px;color:#D3A638;text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:8px;">
+                    <p style="margin:0;font-size:13px;color:#D4A73A;text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:8px;">
                       &#128218; Your Free Guide
                     </p>
                     <p style="margin:0;font-size:15px;color:#ffffff;font-weight:600;margin-bottom:10px;">
@@ -1457,8 +1457,8 @@ export function getLeadCaptureEmailHtml(data: LeadCaptureEmailData): string {
                         <td align="center">
                           <a href="${data.downloadUrl}" target="_blank" style="
                             display:inline-block;
-                            background:linear-gradient(135deg,#D3A638 0%,#B79028 100%);
-                            color:#151A26;
+                            background:linear-gradient(135deg,#D4A73A 0%,#B8942F 100%);
+                            color:#161B26;
                             text-decoration:none;
                             font-size:15px;
                             font-weight:700;
@@ -1481,7 +1481,7 @@ export function getLeadCaptureEmailHtml(data: LeadCaptureEmailData): string {
           <tr>
             <td style="padding:28px 32px 0;">
               <p style="margin:0;font-size:14px;color:#9ca3af;font-weight:600;margin-bottom:14px;">What Happens Next:</p>
-              <table width="100%" cellpadding="0" cellspacing="0" style="background:#151A26;border:1px solid rgba(255,255,255,0.06);border-radius:12px;overflow:hidden;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#161B26;border:1px solid rgba(255,255,255,0.06);border-radius:12px;overflow:hidden;">
                 ${[
                   { num: "1", text: "Our team reviews your inquiry within 24 hours" },
                   { num: "2", text: "We reach out to schedule a free consultation call" },
@@ -1493,7 +1493,7 @@ export function getLeadCaptureEmailHtml(data: LeadCaptureEmailData): string {
                     <table width="100%" cellpadding="0" cellspacing="0">
                       <tr>
                         <td style="vertical-align:top;">
-                          <div style="width:24px;height:24px;border-radius:6px;background:rgba(211,166,56,0.1);border:1px solid rgba(211,166,56,0.2);text-align:center;line-height:24px;font-size:12px;font-weight:700;color:#D3A638;flex-shrink:0;">
+                          <div style="width:24px;height:24px;border-radius:6px;background:rgba(211,166,56,0.1);border:1px solid rgba(211,166,56,0.2);text-align:center;line-height:24px;font-size:12px;font-weight:700;color:#D4A73A;flex-shrink:0;">
                             ${step.num}
                           </div>
                         </td>
@@ -1512,7 +1512,7 @@ export function getLeadCaptureEmailHtml(data: LeadCaptureEmailData): string {
           <tr>
             <td style="padding:28px 32px 0;">
               <p style="margin:0;font-size:14px;color:#9ca3af;font-weight:600;margin-bottom:14px;">Contact Us:</p>
-              <table width="100%" cellpadding="0" cellspacing="0" style="background:#151A26;border:1px solid rgba(255,255,255,0.06);border-radius:12px;overflow:hidden;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#161B26;border:1px solid rgba(255,255,255,0.06);border-radius:12px;overflow:hidden;">
                 ${contactRows.join("")}
               </table>
             </td>
@@ -1534,7 +1534,7 @@ export function getLeadCaptureEmailHtml(data: LeadCaptureEmailData): string {
             <td style="padding:28px 32px 8px;">
               <p style="margin:0;font-size:15px;color:#ffffff;">
                 Best regards,<br>
-                <strong style="color:#D3A638;">${data.platformName} Team</strong><br>
+                <strong style="color:#D4A73A;">${data.platformName} Team</strong><br>
                 <span style="font-size:13px;color:#6b6b7b;">Helping brands grow, every day</span>
               </p>
             </td>
@@ -1547,7 +1547,7 @@ export function getLeadCaptureEmailHtml(data: LeadCaptureEmailData): string {
                 <tr>
                   <td style="font-size:12px;color:#4b4b5b;line-height:1.5;">
                     &copy; ${currentYear} ${data.platformName}. All rights reserved.<br>
-                    <a href="${data.platformWebsite}" style="color:#D3A638;text-decoration:none;">${data.platformWebsite}</a>
+                    <a href="${data.platformWebsite}" style="color:#D4A73A;text-decoration:none;">${data.platformWebsite}</a>
                   </td>
                   <td align="right" style="font-size:11px;color:#4b4b5b;">
                     <a href="#" style="color:#4b4b5b;text-decoration:none;">Unsubscribe</a>
@@ -1599,9 +1599,9 @@ export function getConsultationInquiryEmailHtml(data: ConsultationInquiryEmailDa
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Let's Grow Together - ${data.platformName}</title>
 </head>
-<body style="margin:0;padding:0;background:#151A26;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;">
+<body style="margin:0;padding:0;background:#161B26;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;">
 
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#151A26;min-height:100vh;padding:40px 16px;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#161B26;min-height:100vh;padding:40px 16px;">
     <tr>
       <td align="center">
         <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#12121a;border:1px solid rgba(255,255,255,0.06);border-radius:16px;overflow:hidden;">
@@ -1612,7 +1612,7 @@ export function getConsultationInquiryEmailHtml(data: ConsultationInquiryEmailDa
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td>
-                    <div style="font-size:24px;font-weight:700;color:#D3A638;letter-spacing:-0.5px;margin-bottom:4px;">${data.platformName}</div>
+                    <div style="font-size:24px;font-weight:700;color:#D4A73A;letter-spacing:-0.5px;margin-bottom:4px;">${data.platformName}</div>
                     <div style="font-size:12px;color:#6b6b7b;text-transform:uppercase;letter-spacing:1.5px;">Consultation Inquiry</div>
                   </td>
                   <td align="right">
@@ -1628,7 +1628,7 @@ export function getConsultationInquiryEmailHtml(data: ConsultationInquiryEmailDa
             <td style="padding:32px 32px 0;">
               <p style="margin:0;font-size:18px;color:#ffffff;font-weight:600;margin-bottom:16px;">Hello ${data.clientName},</p>
               <p style="margin:0;font-size:15px;color:#9ca3af;line-height:1.6;">
-                Thank you for your interest in <strong style="color:#D3A638;">${data.platformName}</strong>! We are excited to learn more about your business and explore how we can help you achieve your goals. To prepare for a meaningful consultation, we would love to understand a few things about your needs.
+                Thank you for your interest in <strong style="color:#D4A73A;">${data.platformName}</strong>! We are excited to learn more about your business and explore how we can help you achieve your goals. To prepare for a meaningful consultation, we would love to understand a few things about your needs.
               </p>
             </td>
           </tr>
@@ -1637,7 +1637,7 @@ export function getConsultationInquiryEmailHtml(data: ConsultationInquiryEmailDa
           <tr>
             <td style="padding:28px 32px 0;">
               <p style="margin:0;font-size:14px;color:#9ca3af;font-weight:600;margin-bottom:14px;">Help Us Understand Your Needs:</p>
-              <table width="100%" cellpadding="0" cellspacing="0" style="background:#151A26;border:1px solid rgba(255,255,255,0.06);border-radius:12px;overflow:hidden;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#161B26;border:1px solid rgba(255,255,255,0.06);border-radius:12px;overflow:hidden;">
                 ${[
                   { n: "1", t: "What type of business do you run? (e.g., E-Commerce, Services, Manufacturing, Retail)" },
                   { n: "2", t: "What are the biggest challenges you face in your daily operations?" },
@@ -1650,7 +1650,7 @@ export function getConsultationInquiryEmailHtml(data: ConsultationInquiryEmailDa
                     <table width="100%" cellpadding="0" cellspacing="0">
                       <tr>
                         <td style="vertical-align:top;">
-                          <div style="width:24px;height:24px;border-radius:6px;background:rgba(211,166,56,0.1);border:1px solid rgba(211,166,56,0.2);text-align:center;line-height:24px;font-size:12px;font-weight:700;color:#D3A638;">${q.n}</div>
+                          <div style="width:24px;height:24px;border-radius:6px;background:rgba(211,166,56,0.1);border:1px solid rgba(211,166,56,0.2);text-align:center;line-height:24px;font-size:12px;font-weight:700;color:#D4A73A;">${q.n}</div>
                         </td>
                         <td style="padding-left:14px;font-size:14px;color:#e5e7eb;line-height:1.5;">${q.t}</td>
                       </tr>
@@ -1665,30 +1665,30 @@ export function getConsultationInquiryEmailHtml(data: ConsultationInquiryEmailDa
           <tr>
             <td style="padding:28px 32px 0;">
               <p style="margin:0;font-size:14px;color:#9ca3af;font-weight:600;margin-bottom:14px;">Our Plans at a Glance:</p>
-              <table width="100%" cellpadding="0" cellspacing="0" style="background:#151A26;border:1px solid rgba(211,166,56,0.12);border-radius:12px;overflow:hidden;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#161B26;border:1px solid rgba(211,166,56,0.12);border-radius:12px;overflow:hidden;">
                 <tr>
-                  <td style="padding:14px 16px;background:rgba(211,166,56,0.06);border-bottom:1px solid rgba(211,166,56,0.12);font-size:11px;color:#D3A638;text-transform:uppercase;letter-spacing:1px;font-weight:700;">Plan</td>
-                  <td style="padding:14px 16px;background:rgba(211,166,56,0.06);border-bottom:1px solid rgba(211,166,56,0.12);font-size:11px;color:#D3A638;text-transform:uppercase;letter-spacing:1px;font-weight:700;">Price</td>
-                  <td style="padding:14px 16px;background:rgba(211,166,56,0.06);border-bottom:1px solid rgba(211,166,56,0.12);font-size:11px;color:#D3A638;text-transform:uppercase;letter-spacing:1px;font-weight:700;">Best For</td>
+                  <td style="padding:14px 16px;background:rgba(211,166,56,0.06);border-bottom:1px solid rgba(211,166,56,0.12);font-size:11px;color:#D4A73A;text-transform:uppercase;letter-spacing:1px;font-weight:700;">Plan</td>
+                  <td style="padding:14px 16px;background:rgba(211,166,56,0.06);border-bottom:1px solid rgba(211,166,56,0.12);font-size:11px;color:#D4A73A;text-transform:uppercase;letter-spacing:1px;font-weight:700;">Price</td>
+                  <td style="padding:14px 16px;background:rgba(211,166,56,0.06);border-bottom:1px solid rgba(211,166,56,0.12);font-size:11px;color:#D4A73A;text-transform:uppercase;letter-spacing:1px;font-weight:700;">Best For</td>
                 </tr>
                 <tr>
                   <td style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:14px;color:#ffffff;font-weight:600;">Starter</td>
-                  <td style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:14px;color:#D3A638;font-weight:600;">Rs. 7,999/mo</td>
+                  <td style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:14px;color:#D4A73A;font-weight:600;">Rs. 7,999/mo</td>
                   <td style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:13px;color:#9ca3af;">Small teams (3 members)</td>
                 </tr>
                 <tr>
                   <td style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:14px;color:#ffffff;font-weight:600;">Growth</td>
-                  <td style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:14px;color:#D3A638;font-weight:600;">Rs. 15,000/mo</td>
+                  <td style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:14px;color:#D4A73A;font-weight:600;">Rs. 15,000/mo</td>
                   <td style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:13px;color:#9ca3af;">Growing brands (8 members)</td>
                 </tr>
                 <tr>
                   <td style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:14px;color:#ffffff;font-weight:600;">Professional</td>
-                  <td style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:14px;color:#D3A638;font-weight:600;">Rs. 25,000/mo</td>
+                  <td style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:14px;color:#D4A73A;font-weight:600;">Rs. 25,000/mo</td>
                   <td style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:13px;color:#9ca3af;">Established brands (15 members)</td>
                 </tr>
                 <tr>
                   <td style="padding:12px 16px;font-size:14px;color:#ffffff;font-weight:600;">Enterprise</td>
-                  <td style="padding:12px 16px;font-size:14px;color:#D3A638;font-weight:600;">Custom</td>
+                  <td style="padding:12px 16px;font-size:14px;color:#D4A73A;font-weight:600;">Custom</td>
                   <td style="padding:12px 16px;font-size:13px;color:#9ca3af;">Unlimited scale</td>
                 </tr>
               </table>
@@ -1698,7 +1698,7 @@ export function getConsultationInquiryEmailHtml(data: ConsultationInquiryEmailDa
           <!-- CTA -->
           <tr>
             <td style="padding:28px 32px 0;" align="center">
-              <a href="${data.consultationUrl}" target="_blank" style="display:inline-block;background:linear-gradient(135deg,#D3A638 0%,#B79028 100%);color:#151A26;text-decoration:none;font-size:15px;font-weight:700;padding:14px 40px;border-radius:10px;">Schedule Free Consultation</a>
+              <a href="${data.consultationUrl}" target="_blank" style="display:inline-block;background:linear-gradient(135deg,#D4A73A 0%,#B8942F 100%);color:#161B26;text-decoration:none;font-size:15px;font-weight:700;padding:14px 40px;border-radius:10px;">Schedule Free Consultation</a>
             </td>
           </tr>
 
@@ -1707,7 +1707,7 @@ export function getConsultationInquiryEmailHtml(data: ConsultationInquiryEmailDa
             <td style="padding:20px 32px 0;">
               <div style="background:rgba(211,166,56,0.06);border:1px solid rgba(211,166,56,0.12);border-radius:8px;padding:14px 18px;">
                 <p style="margin:0;font-size:13px;color:#9ca3af;line-height:1.5;">
-                  <strong style="color:#D3A638;">Free consultation:</strong> Our consultation is completely free with no obligations. We will walk you through a live demo, discuss your specific needs, and recommend the best plan for your business.
+                  <strong style="color:#D4A73A;">Free consultation:</strong> Our consultation is completely free with no obligations. We will walk you through a live demo, discuss your specific needs, and recommend the best plan for your business.
                 </p>
               </div>
             </td>
@@ -1727,7 +1727,7 @@ export function getConsultationInquiryEmailHtml(data: ConsultationInquiryEmailDa
             <td style="padding:28px 32px 8px;">
               <p style="margin:0;font-size:15px;color:#ffffff;">
                 Looking forward to speaking with you,<br>
-                <strong style="color:#D3A638;">${data.platformName} Team</strong><br>
+                <strong style="color:#D4A73A;">${data.platformName} Team</strong><br>
                 <span style="font-size:13px;color:#6b6b7b;">${data.companyEmail} | ${data.companyPhone || data.platformWebsite}</span>
               </p>
             </td>
@@ -1781,9 +1781,9 @@ export function getSetupFeeRequestEmailHtml(data: SetupFeeRequestEmailData): str
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Account Setup Fee - ${data.platformName}</title>
 </head>
-<body style="margin:0;padding:0;background:#151A26;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;">
+<body style="margin:0;padding:0;background:#161B26;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;">
 
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#151A26;min-height:100vh;padding:40px 16px;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#161B26;min-height:100vh;padding:40px 16px;">
     <tr>
       <td align="center">
         <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#12121a;border:1px solid rgba(255,255,255,0.06);border-radius:16px;overflow:hidden;">
@@ -1794,7 +1794,7 @@ export function getSetupFeeRequestEmailHtml(data: SetupFeeRequestEmailData): str
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td>
-                    <div style="font-size:24px;font-weight:700;color:#D3A638;letter-spacing:-0.5px;margin-bottom:4px;">${data.platformName}</div>
+                    <div style="font-size:24px;font-weight:700;color:#D4A73A;letter-spacing:-0.5px;margin-bottom:4px;">${data.platformName}</div>
                     <div style="font-size:12px;color:#6b6b7b;text-transform:uppercase;letter-spacing:1.5px;">Account Setup Fee Request</div>
                   </td>
                   <td align="right">
@@ -1810,7 +1810,7 @@ export function getSetupFeeRequestEmailHtml(data: SetupFeeRequestEmailData): str
             <td style="padding:32px 32px 0;">
               <p style="margin:0;font-size:18px;color:#ffffff;font-weight:600;margin-bottom:16px;">Dear ${data.clientName},</p>
               <p style="margin:0;font-size:15px;color:#9ca3af;line-height:1.6;">
-                Following our consultation, we are delighted to confirm your selection of the <strong style="color:#D3A638;">${data.selectedPlan}</strong> plan. To proceed with your account setup, we kindly request the one-time setup fee as outlined below.
+                Following our consultation, we are delighted to confirm your selection of the <strong style="color:#D4A73A;">${data.selectedPlan}</strong> plan. To proceed with your account setup, we kindly request the one-time setup fee as outlined below.
               </p>
             </td>
           </tr>
@@ -1819,7 +1819,7 @@ export function getSetupFeeRequestEmailHtml(data: SetupFeeRequestEmailData): str
           <tr>
             <td style="padding:24px 32px 0;">
               <p style="margin:0;font-size:14px;color:#9ca3af;font-weight:600;margin-bottom:14px;">Your Selected Plan:</p>
-              <table width="100%" cellpadding="0" cellspacing="0" style="background:#151A26;border:1px solid rgba(211,166,56,0.12);border-radius:12px;overflow:hidden;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#161B26;border:1px solid rgba(211,166,56,0.12);border-radius:12px;overflow:hidden;">
                 <tr>
                   <td style="padding:16px 20px;border-bottom:1px solid rgba(255,255,255,0.04);">
                     <table width="100%" cellpadding="0" cellspacing="0"><tr>
@@ -1832,7 +1832,7 @@ export function getSetupFeeRequestEmailHtml(data: SetupFeeRequestEmailData): str
                     <table width="100%" cellpadding="0" cellspacing="0"><tr>
                       <td style="font-size:11px;color:#6b6b7b;text-transform:uppercase;letter-spacing:1px;padding-bottom:4px;">Monthly Price</td>
                     </tr><tr>
-                      <td style="font-size:16px;color:#D3A638;font-weight:700;">${data.planPrice}</td>
+                      <td style="font-size:16px;color:#D4A73A;font-weight:700;">${data.planPrice}</td>
                     </tr></table>
                   </td>
                 </tr>
@@ -1841,7 +1841,7 @@ export function getSetupFeeRequestEmailHtml(data: SetupFeeRequestEmailData): str
                     <table width="100%" cellpadding="0" cellspacing="0"><tr>
                       <td style="font-size:11px;color:#6b6b7b;text-transform:uppercase;letter-spacing:1px;padding-bottom:4px;">One-Time Setup Fee</td>
                     </tr><tr>
-                      <td style="font-size:18px;color:#D3A638;font-weight:700;">${data.setupFee}</td>
+                      <td style="font-size:18px;color:#D4A73A;font-weight:700;">${data.setupFee}</td>
                     </tr></table>
                   </td>
                   <td style="padding:16px 20px;">
@@ -1862,7 +1862,7 @@ export function getSetupFeeRequestEmailHtml(data: SetupFeeRequestEmailData): str
             <td style="padding:20px 32px 0;">
               <div style="background:rgba(211,166,56,0.06);border:1px solid rgba(211,166,56,0.12);border-radius:8px;padding:14px 18px;">
                 <p style="margin:0;font-size:13px;color:#9ca3af;line-height:1.5;">
-                  <strong style="color:#D3A638;">Setup fee covers:</strong> ${data.setupFeeDetails}
+                  <strong style="color:#D4A73A;">Setup fee covers:</strong> ${data.setupFeeDetails}
                 </p>
               </div>
             </td>
@@ -1872,17 +1872,17 @@ export function getSetupFeeRequestEmailHtml(data: SetupFeeRequestEmailData): str
           <tr>
             <td style="padding:28px 32px 0;">
               <p style="margin:0;font-size:14px;color:#9ca3af;font-weight:600;margin-bottom:14px;">Accepted Payment Methods:</p>
-              <table width="100%" cellpadding="0" cellspacing="0" style="background:#151A26;border:1px solid rgba(255,255,255,0.06);border-radius:12px;overflow:hidden;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#161B26;border:1px solid rgba(255,255,255,0.06);border-radius:12px;overflow:hidden;">
 
                 ${data.bankName ? `
                 <tr>
                   <td style="padding:20px 20px;border-bottom:1px solid rgba(255,255,255,0.04);">
-                    <p style="margin:0 0 12px;font-size:13px;color:#D3A638;text-transform:uppercase;letter-spacing:1px;font-weight:700;">&#127974; Bank Transfer</p>
+                    <p style="margin:0 0 12px;font-size:13px;color:#D4A73A;text-transform:uppercase;letter-spacing:1px;font-weight:700;">&#127974; Bank Transfer</p>
                     <table width="100%" cellpadding="0" cellspacing="0">
                       <tr><td style="padding:4px 0;font-size:13px;color:#6b6b7b;">Bank Name:</td><td style="padding:4px 0;font-size:14px;color:#ffffff;font-weight:600;text-align:right;">${data.bankName}</td></tr>
                       <tr><td style="padding:4px 0;font-size:13px;color:#6b6b7b;">Account Title:</td><td style="padding:4px 0;font-size:14px;color:#ffffff;font-weight:600;text-align:right;">${data.bankAccountTitle}</td></tr>
-                      <tr><td style="padding:4px 0;font-size:13px;color:#6b6b7b;">Account Number:</td><td style="padding:4px 0;font-size:14px;color:#D3A638;font-weight:600;text-align:right;font-family:monospace;">${data.bankAccountNumber}</td></tr>
-                      ${data.bankIban ? `<tr><td style="padding:4px 0;font-size:13px;color:#6b6b7b;">IBAN:</td><td style="padding:4px 0;font-size:14px;color:#D3A638;font-weight:600;text-align:right;font-family:monospace;">${data.bankIban}</td></tr>` : ''}
+                      <tr><td style="padding:4px 0;font-size:13px;color:#6b6b7b;">Account Number:</td><td style="padding:4px 0;font-size:14px;color:#D4A73A;font-weight:600;text-align:right;font-family:monospace;">${data.bankAccountNumber}</td></tr>
+                      ${data.bankIban ? `<tr><td style="padding:4px 0;font-size:13px;color:#6b6b7b;">IBAN:</td><td style="padding:4px 0;font-size:14px;color:#D4A73A;font-weight:600;text-align:right;font-family:monospace;">${data.bankIban}</td></tr>` : ''}
                     </table>
                   </td>
                 </tr>` : ""}
@@ -1892,7 +1892,7 @@ export function getSetupFeeRequestEmailHtml(data: SetupFeeRequestEmailData): str
                   <td style="padding:16px 20px;border-bottom:1px solid rgba(255,255,255,0.04);">
                     <table width="100%" cellpadding="0" cellspacing="0">
                       <tr>
-                        <td><p style="margin:0;font-size:13px;color:#D3A638;text-transform:uppercase;letter-spacing:1px;font-weight:700;">&#128241; JazzCash</p></td>
+                        <td><p style="margin:0;font-size:13px;color:#D4A73A;text-transform:uppercase;letter-spacing:1px;font-weight:700;">&#128241; JazzCash</p></td>
                         <td style="text-align:right;"><p style="margin:0;font-size:14px;color:#ffffff;font-weight:600;font-family:monospace;">${data.jazzcashNumber}</p></td>
                       </tr>
                     </table>
@@ -1904,7 +1904,7 @@ export function getSetupFeeRequestEmailHtml(data: SetupFeeRequestEmailData): str
                   <td style="padding:16px 20px;">
                     <table width="100%" cellpadding="0" cellspacing="0">
                       <tr>
-                        <td><p style="margin:0;font-size:13px;color:#D3A638;text-transform:uppercase;letter-spacing:1px;font-weight:700;">&#128241; EasyPaisa</p></td>
+                        <td><p style="margin:0;font-size:13px;color:#D4A73A;text-transform:uppercase;letter-spacing:1px;font-weight:700;">&#128241; EasyPaisa</p></td>
                         <td style="text-align:right;"><p style="margin:0;font-size:14px;color:#ffffff;font-weight:600;font-family:monospace;">${data.easypaisaNumber}</p></td>
                       </tr>
                     </table>
@@ -1920,7 +1920,7 @@ export function getSetupFeeRequestEmailHtml(data: SetupFeeRequestEmailData): str
             <td style="padding:20px 32px 0;">
               <div style="background:rgba(211,166,56,0.06);border:1px solid rgba(211,166,56,0.12);border-radius:8px;padding:14px 18px;">
                 <p style="margin:0;font-size:13px;color:#9ca3af;line-height:1.5;">
-                  <strong style="color:#D3A638;">Important:</strong> Please send the payment receipt to <a href="mailto:${data.companyEmail}" style="color:#D3A638;">${data.companyEmail}</a> or share it via WhatsApp at <strong style="color:#ffffff;">${data.companyPhone || data.platformWebsite}</strong>. Your account will be activated within 24 hours of payment confirmation.
+                  <strong style="color:#D4A73A;">Important:</strong> Please send the payment receipt to <a href="mailto:${data.companyEmail}" style="color:#D4A73A;">${data.companyEmail}</a> or share it via WhatsApp at <strong style="color:#ffffff;">${data.companyPhone || data.platformWebsite}</strong>. Your account will be activated within 24 hours of payment confirmation.
                 </p>
               </div>
             </td>
@@ -1940,7 +1940,7 @@ export function getSetupFeeRequestEmailHtml(data: SetupFeeRequestEmailData): str
             <td style="padding:28px 32px 8px;">
               <p style="margin:0;font-size:15px;color:#ffffff;">
                 Thank you for choosing ${data.platformName},<br>
-                <strong style="color:#D3A638;">${data.platformName} Team</strong><br>
+                <strong style="color:#D4A73A;">${data.platformName} Team</strong><br>
                 <span style="font-size:13px;color:#6b6b7b;">${data.companyEmail} | ${data.companyPhone || data.platformWebsite}</span>
               </p>
             </td>
@@ -1985,7 +1985,7 @@ function _reminderHeader(title: string, pn: string, icon: string): string {
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td>
-                    <div style="font-size:24px;font-weight:700;color:#D3A638;letter-spacing:-0.5px;margin-bottom:4px;">${pn}</div>
+                    <div style="font-size:24px;font-weight:700;color:#D4A73A;letter-spacing:-0.5px;margin-bottom:4px;">${pn}</div>
                     <div style="font-size:12px;color:#6b6b7b;text-transform:uppercase;letter-spacing:1.5px;">${title}</div>
                   </td>
                   <td align="right">
@@ -2004,7 +2004,7 @@ function _reminderFooter(pn: string, ce: string, cp: string | null, pw: string):
             <td style="padding:28px 32px 8px;">
               <p style="margin:0;font-size:15px;color:#ffffff;">
                 We look forward to connecting with you,<br>
-                <strong style="color:#D3A638;">${pn} Team</strong><br>
+                <strong style="color:#D4A73A;">${pn} Team</strong><br>
                 <span style="font-size:13px;color:#6b6b7b;">${ce}${cp ? ' | ' + cp : ''}</span>
               </p>
             </td>
@@ -2013,7 +2013,7 @@ function _reminderFooter(pn: string, ce: string, cp: string | null, pw: string):
             <td style="padding:24px 32px;border-top:1px solid rgba(255,255,255,0.06);">
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
-                  <td style="font-size:12px;color:#4b4b5b;line-height:1.5;">&copy; ${y} ${pn}. All rights reserved.<br><a href="${pw}" style="color:#D3A638;text-decoration:none;">${pw}</a></td>
+                  <td style="font-size:12px;color:#4b4b5b;line-height:1.5;">&copy; ${y} ${pn}. All rights reserved.<br><a href="${pw}" style="color:#D4A73A;text-decoration:none;">${pw}</a></td>
                   <td align="right" style="font-size:11px;color:#4b4b5b;">Confidential</td>
                 </tr>
               </table>
@@ -2042,17 +2042,17 @@ function _reminderDetailRows(d: ConsultationReminderEmailData): string {
 
 export function generateConsultationReminderHtml(data: ConsultationReminderEmailData): string {
   return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Consultation Reminder - ${data.platformName}</title></head>
-<body style="margin:0;padding:0;background:#151A26;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#151A26;min-height:100vh;padding:40px 16px;"><tr><td align="center">
+<body style="margin:0;padding:0;background:#161B26;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#161B26;min-height:100vh;padding:40px 16px;"><tr><td align="center">
 <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#12121a;border:1px solid rgba(255,255,255,0.06);border-radius:16px;overflow:hidden;">
 ${_reminderHeader('Consultation Reminder', data.platformName, '&#128197;')}
 <tr><td style="padding:32px 32px 0;">
   <p style="margin:0;font-size:18px;color:#ffffff;font-weight:600;margin-bottom:16px;">Dear ${data.clientName},</p>
-  <p style="margin:0;font-size:15px;color:#9ca3af;line-height:1.6;">This is a friendly reminder that your upcoming consultation with <strong style="color:#D3A638;">${data.platformName}</strong> is coming up soon. We look forward to discussing ${data.interest || 'your business needs'}${data.company ? ` at ${data.company}` : ''}.</p>
+  <p style="margin:0;font-size:15px;color:#9ca3af;line-height:1.6;">This is a friendly reminder that your upcoming consultation with <strong style="color:#D4A73A;">${data.platformName}</strong> is coming up soon. We look forward to discussing ${data.interest || 'your business needs'}${data.company ? ` at ${data.company}` : ''}.</p>
 </td></tr>
-${data.scheduledDate ? `<tr><td style="padding:24px 32px 0;"><table width="100%" cellpadding="0" cellspacing="0" style="background:#151A26;border:1px solid rgba(255,255,255,0.06);border-radius:12px;overflow:hidden;">${_reminderDetailRows(data)}</table></td></tr>` : ''}
+${data.scheduledDate ? `<tr><td style="padding:24px 32px 0;"><table width="100%" cellpadding="0" cellspacing="0" style="background:#161B26;border:1px solid rgba(255,255,255,0.06);border-radius:12px;overflow:hidden;">${_reminderDetailRows(data)}</table></td></tr>` : ''}
 <tr><td style="padding:20px 32px 0;"><div style="background:rgba(211,166,56,0.06);border:1px solid rgba(211,166,56,0.12);border-radius:8px;padding:14px 18px;">
-  <p style="margin:0;font-size:13px;color:#9ca3af;line-height:1.5;"><strong style="color:#D3A638;">Tips:</strong> Please ensure you have a stable internet connection. If you need to reschedule, reply to this email or contact us at <a href="mailto:${data.companyEmail}" style="color:#D3A638;">${data.companyEmail}</a>.</p>
+  <p style="margin:0;font-size:13px;color:#9ca3af;line-height:1.5;"><strong style="color:#D4A73A;">Tips:</strong> Please ensure you have a stable internet connection. If you need to reschedule, reply to this email or contact us at <a href="mailto:${data.companyEmail}" style="color:#D4A73A;">${data.companyEmail}</a>.</p>
 </div></td></tr>
 ${_reminderFooter(data.platformName, data.companyEmail, data.companyPhone ?? null, data.platformWebsite)}
 </table></td></tr></table></body></html>`;
@@ -2060,8 +2060,8 @@ ${_reminderFooter(data.platformName, data.companyEmail, data.companyPhone ?? nul
 
 export function generateConsultationFollowUpHtml(data: ConsultationReminderEmailData): string {
   return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Following Up - ${data.platformName}</title></head>
-<body style="margin:0;padding:0;background:#151A26;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#151A26;min-height:100vh;padding:40px 16px;"><tr><td align="center">
+<body style="margin:0;padding:0;background:#161B26;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#161B26;min-height:100vh;padding:40px 16px;"><tr><td align="center">
 <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#12121a;border:1px solid rgba(255,255,255,0.06);border-radius:16px;overflow:hidden;">
 ${_reminderHeader('Following Up', data.platformName, '&#128172;')}
 <tr><td style="padding:32px 32px 0;">
@@ -2069,17 +2069,17 @@ ${_reminderHeader('Following Up', data.platformName, '&#128172;')}
   <p style="margin:0;font-size:15px;color:#9ca3af;line-height:1.6;">We hope this message finds you well! We wanted to follow up${data.company ? ` on behalf of ${data.company}` : ''} to see if you had any questions or if there is anything we can help you with regarding ${data.interest || 'your business needs'}.</p>
 </td></tr>
 <tr><td style="padding:24px 32px 0;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#151A26;border:1px solid rgba(211,166,56,0.12);border-radius:12px;overflow:hidden;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#161B26;border:1px solid rgba(211,166,56,0.12);border-radius:12px;overflow:hidden;">
     <tr><td style="padding:20px 20px;">
-      <p style="margin:0;font-size:13px;color:#D3A638;text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:12px;">How Can We Help?</p>
-      <p style="margin:0 0 8px 0;font-size:14px;color:#e5e7eb;line-height:1.5;"><strong style="color:#D3A638;">1.</strong> Schedule a free consultation to discuss your requirements</p>
-      <p style="margin:0 0 8px 0;font-size:14px;color:#e5e7eb;line-height:1.5;"><strong style="color:#D3A638;">2.</strong> Get a personalized proposal tailored to your business</p>
-      <p style="margin:0 0 0 0;font-size:14px;color:#e5e7eb;line-height:1.5;"><strong style="color:#D3A638;">3.</strong> Explore our plans and pricing options</p>
+      <p style="margin:0;font-size:13px;color:#D4A73A;text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:12px;">How Can We Help?</p>
+      <p style="margin:0 0 8px 0;font-size:14px;color:#e5e7eb;line-height:1.5;"><strong style="color:#D4A73A;">1.</strong> Schedule a free consultation to discuss your requirements</p>
+      <p style="margin:0 0 8px 0;font-size:14px;color:#e5e7eb;line-height:1.5;"><strong style="color:#D4A73A;">2.</strong> Get a personalized proposal tailored to your business</p>
+      <p style="margin:0 0 0 0;font-size:14px;color:#e5e7eb;line-height:1.5;"><strong style="color:#D4A73A;">3.</strong> Explore our plans and pricing options</p>
     </td></tr>
   </table>
 </td></tr>
 <tr><td style="padding:28px 32px 0;" align="center">
-  <a href="${data.platformWebsite}" target="_blank" style="display:inline-block;background:linear-gradient(135deg,#D3A638 0%,#B79028 100%);color:#151A26;text-decoration:none;font-size:15px;font-weight:700;padding:14px 40px;border-radius:10px;">Get Started</a>
+  <a href="${data.platformWebsite}" target="_blank" style="display:inline-block;background:linear-gradient(135deg,#D4A73A 0%,#B8942F 100%);color:#161B26;text-decoration:none;font-size:15px;font-weight:700;padding:14px 40px;border-radius:10px;">Get Started</a>
 </td></tr>
 <tr><td style="padding:20px 32px 0;text-align:center;">
   <p style="margin:0;font-size:13px;color:#6b6b7b;line-height:1.5;">Or reply to this email to schedule a call directly.</p>
@@ -2090,8 +2090,8 @@ ${_reminderFooter(data.platformName, data.companyEmail, data.companyPhone ?? nul
 
 export function generateConsultationRescheduleHtml(data: ConsultationReminderEmailData): string {
   return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Reschedule Your Consultation - ${data.platformName}</title></head>
-<body style="margin:0;padding:0;background:#151A26;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#151A26;min-height:100vh;padding:40px 16px;"><tr><td align="center">
+<body style="margin:0;padding:0;background:#161B26;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#161B26;min-height:100vh;padding:40px 16px;"><tr><td align="center">
 <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#12121a;border:1px solid rgba(255,255,255,0.06);border-radius:16px;overflow:hidden;">
 ${_reminderHeader('Reschedule Your Consultation', data.platformName, '&#128260;')}
 <tr><td style="padding:32px 32px 0;">
@@ -2100,19 +2100,19 @@ ${_reminderHeader('Reschedule Your Consultation', data.platformName, '&#128260;'
 </td></tr>
 <tr><td style="padding:24px 32px 0;">
   <p style="margin:0;font-size:14px;color:#9ca3af;font-weight:600;margin-bottom:14px;">To reschedule, please:</p>
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#151A26;border:1px solid rgba(255,255,255,0.06);border-radius:12px;overflow:hidden;">
-    <tr><td style="padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.04);"><table width="100%" cellpadding="0" cellspacing="0"><tr><td style="vertical-align:top;"><div style="width:24px;height:24px;border-radius:6px;background:rgba(211,166,56,0.1);border:1px solid rgba(211,166,56,0.2);text-align:center;line-height:24px;font-size:12px;font-weight:700;color:#D3A638;">1</div></td><td style="padding-left:14px;font-size:14px;color:#e5e7eb;line-height:1.5;">Reply to this email with your preferred date and time</td></tr></table></td></tr>
-    <tr><td style="padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.04);"><table width="100%" cellpadding="0" cellspacing="0"><tr><td style="vertical-align:top;"><div style="width:24px;height:24px;border-radius:6px;background:rgba(211,166,56,0.1);border:1px solid rgba(211,166,56,0.2);text-align:center;line-height:24px;font-size:12px;font-weight:700;color:#D3A638;">2</div></td><td style="padding-left:14px;font-size:14px;color:#e5e7eb;line-height:1.5;">Include your timezone for easy scheduling</td></tr></table></td></tr>
-    <tr><td style="padding:14px 20px;"><table width="100%" cellpadding="0" cellspacing="0"><tr><td style="vertical-align:top;"><div style="width:24px;height:24px;border-radius:6px;background:rgba(211,166,56,0.1);border:1px solid rgba(211,166,56,0.2);text-align:center;line-height:24px;font-size:12px;font-weight:700;color:#D3A638;">3</div></td><td style="padding-left:14px;font-size:14px;color:#e5e7eb;line-height:1.5;">Mention your preferred consultation method (video, phone, in-person)</td></tr></table></td></tr>
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#161B26;border:1px solid rgba(255,255,255,0.06);border-radius:12px;overflow:hidden;">
+    <tr><td style="padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.04);"><table width="100%" cellpadding="0" cellspacing="0"><tr><td style="vertical-align:top;"><div style="width:24px;height:24px;border-radius:6px;background:rgba(211,166,56,0.1);border:1px solid rgba(211,166,56,0.2);text-align:center;line-height:24px;font-size:12px;font-weight:700;color:#D4A73A;">1</div></td><td style="padding-left:14px;font-size:14px;color:#e5e7eb;line-height:1.5;">Reply to this email with your preferred date and time</td></tr></table></td></tr>
+    <tr><td style="padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.04);"><table width="100%" cellpadding="0" cellspacing="0"><tr><td style="vertical-align:top;"><div style="width:24px;height:24px;border-radius:6px;background:rgba(211,166,56,0.1);border:1px solid rgba(211,166,56,0.2);text-align:center;line-height:24px;font-size:12px;font-weight:700;color:#D4A73A;">2</div></td><td style="padding-left:14px;font-size:14px;color:#e5e7eb;line-height:1.5;">Include your timezone for easy scheduling</td></tr></table></td></tr>
+    <tr><td style="padding:14px 20px;"><table width="100%" cellpadding="0" cellspacing="0"><tr><td style="vertical-align:top;"><div style="width:24px;height:24px;border-radius:6px;background:rgba(211,166,56,0.1);border:1px solid rgba(211,166,56,0.2);text-align:center;line-height:24px;font-size:12px;font-weight:700;color:#D4A73A;">3</div></td><td style="padding-left:14px;font-size:14px;color:#e5e7eb;line-height:1.5;">Mention your preferred consultation method (video, phone, in-person)</td></tr></table></td></tr>
   </table>
 </td></tr>
 <tr><td style="padding:24px 32px 0;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#151A26;border:1px solid rgba(255,255,255,0.06);border-radius:12px;overflow:hidden;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#161B26;border:1px solid rgba(255,255,255,0.06);border-radius:12px;overflow:hidden;">
     <tr><td style="padding:16px 20px;">
       <table width="100%" cellpadding="0" cellspacing="0">
         <tr><td style="font-size:11px;color:#6b6b7b;text-transform:uppercase;letter-spacing:1px;padding-bottom:4px;">Contact Us</td></tr>
-        <tr><td style="font-size:14px;color:#ffffff;font-weight:600;"><a href="mailto:${data.companyEmail}" style="color:#D3A638;text-decoration:none;">${data.companyEmail}</a>${data.companyPhone ? ` &bull; ${data.companyPhone}` : ''}</td></tr>
-        <tr><td style="font-size:14px;color:#D3A638;font-weight:600;"><a href="${data.platformWebsite}" style="color:#D3A638;text-decoration:none;">${data.platformWebsite}</a></td></tr>
+        <tr><td style="font-size:14px;color:#ffffff;font-weight:600;"><a href="mailto:${data.companyEmail}" style="color:#D4A73A;text-decoration:none;">${data.companyEmail}</a>${data.companyPhone ? ` &bull; ${data.companyPhone}` : ''}</td></tr>
+        <tr><td style="font-size:14px;color:#D4A73A;font-weight:600;"><a href="${data.platformWebsite}" style="color:#D4A73A;text-decoration:none;">${data.platformWebsite}</a></td></tr>
       </table>
     </td></tr>
   </table>
@@ -2158,9 +2158,9 @@ export function getBetaInviteEmailHtml(data: BetaInviteEmailData): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Exclusive Beta Access - ${data.platformName}</title>
 </head>
-<body style="margin:0;padding:0;background:#151A26;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;">
+<body style="margin:0;padding:0;background:#161B26;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;">
 
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#151A26;min-height:100vh;padding:40px 16px;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#161B26;min-height:100vh;padding:40px 16px;">
     <tr>
       <td align="center">
 
@@ -2173,16 +2173,16 @@ export function getBetaInviteEmailHtml(data: BetaInviteEmailData): string {
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td>
-                    <div style="font-size:11px;color:#D3A638;text-transform:uppercase;letter-spacing:3px;font-weight:700;margin-bottom:8px;">Exclusive Beta Access</div>
-                    <div style="font-size:28px;font-weight:800;color:#D3A638;letter-spacing:-0.5px;margin-bottom:6px;">
+                    <div style="font-size:11px;color:#D4A73A;text-transform:uppercase;letter-spacing:3px;font-weight:700;margin-bottom:8px;">Exclusive Beta Access</div>
+                    <div style="font-size:28px;font-weight:800;color:#D4A73A;letter-spacing:-0.5px;margin-bottom:6px;">
                       ${data.platformName}
                     </div>
                     <div style="font-size:13px;color:#8b8b9b;text-transform:uppercase;letter-spacing:2px;">
-                      Premium Brand Management Portal
+                      COMMEND YOUR BRAND UNIVERSE
                     </div>
                   </td>
                   <td align="right" valign="top">
-                    <div style="display:inline-block;width:48px;height:48px;background:linear-gradient(135deg,#D3A638 0%,#B79028 100%);border-radius:14px;text-align:center;line-height:48px;font-size:22px;font-weight:800;color:#151A26;">
+                    <div style="display:inline-block;width:48px;height:48px;background:linear-gradient(135deg,#D4A73A 0%,#B8942F 100%);border-radius:14px;text-align:center;line-height:48px;font-size:22px;font-weight:800;color:#161B26;">
                       V
                     </div>
                   </td>
@@ -2197,7 +2197,7 @@ export function getBetaInviteEmailHtml(data: BetaInviteEmailData): string {
               <table width="100%" cellpadding="0" cellspacing="0" style="background:linear-gradient(135deg,rgba(211,166,56,0.1) 0%,rgba(211,166,56,0.03) 100%);border:1px solid rgba(211,166,56,0.15);border-radius:12px;">
                 <tr>
                   <td style="padding:16px 20px;text-align:center;">
-                    <div style="font-size:16px;color:#D3A638;font-weight:700;margin-bottom:4px;">&#9733; VIP Beta Invitation &#9733;</div>
+                    <div style="font-size:16px;color:#D4A73A;font-weight:700;margin-bottom:4px;">&#9733; VIP Beta Invitation &#9733;</div>
                     <div style="font-size:13px;color:#8b8b9b;">You've been selected for early access to our premium platform</div>
                   </td>
                 </tr>
@@ -2212,7 +2212,7 @@ export function getBetaInviteEmailHtml(data: BetaInviteEmailData): string {
                 Dear Brand Owner,
               </p>
               <p style="margin:0;font-size:15px;color:#9ca3af;line-height:1.7;">
-                Congratulations! You've been exclusively selected for <strong style="color:#D3A638;">beta access</strong> to <strong style="color:#ffffff;">${data.platformName}</strong> - Pakistan's premier brand management portal. This is a limited-time opportunity to experience our full-featured platform before public launch, completely free.
+                Congratulations! You've been exclusively selected for <strong style="color:#D4A73A;">beta access</strong> to <strong style="color:#ffffff;">${data.platformName}</strong> - Pakistan's premier brand management portal. This is a limited-time opportunity to experience our full-featured platform before public launch, completely free.
               </p>
             </td>
           </tr>
@@ -2220,14 +2220,14 @@ export function getBetaInviteEmailHtml(data: BetaInviteEmailData): string {
           <!-- Plan Details Card -->
           <tr>
             <td style="padding:24px 36px 0;">
-              <table width="100%" cellpadding="0" cellspacing="0" style="background:#151A26;border:1px solid rgba(211,166,56,0.12);border-radius:14px;overflow:hidden;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#161B26;border:1px solid rgba(211,166,56,0.12);border-radius:14px;overflow:hidden;">
                 <tr>
                   <td style="padding:20px 24px;border-bottom:1px solid rgba(211,166,56,0.08);">
                     <table width="100%" cellpadding="0" cellspacing="0">
                       <tr>
                         <td>
                           <div style="font-size:11px;color:#6b6b7b;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;">Your Plan</div>
-                          <div style="font-size:22px;color:#D3A638;font-weight:800;">${planLabel}</div>
+                          <div style="font-size:22px;color:#D4A73A;font-weight:800;">${planLabel}</div>
                         </td>
                         <td align="right">
                           <div style="font-size:11px;color:#6b6b7b;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;">Trial Period</div>
@@ -2239,12 +2239,12 @@ export function getBetaInviteEmailHtml(data: BetaInviteEmailData): string {
                 </tr>
                 <tr>
                   <td style="padding:20px 24px;">
-                    <div style="font-size:11px;color:#D3A638;text-transform:uppercase;letter-spacing:1.5px;font-weight:700;margin-bottom:14px;">What You Get</div>
+                    <div style="font-size:11px;color:#D4A73A;text-transform:uppercase;letter-spacing:1.5px;font-weight:700;margin-bottom:14px;">What You Get</div>
                     ${features.map(f => `
                     <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:8px;">
                       <tr>
                         <td style="width:20px;vertical-align:top;">
-                          <div style="width:18px;height:18px;border-radius:50%;background:rgba(211,166,56,0.15);border:1px solid rgba(211,166,56,0.3);text-align:center;line-height:18px;font-size:10px;color:#D3A638;">&#10003;</div>
+                          <div style="width:18px;height:18px;border-radius:50%;background:rgba(211,166,56,0.15);border:1px solid rgba(211,166,56,0.3);text-align:center;line-height:18px;font-size:10px;color:#D4A73A;">&#10003;</div>
                         </td>
                         <td style="padding-left:10px;font-size:14px;color:#e5e7eb;line-height:1.4;">${f}</td>
                       </tr>
@@ -2260,8 +2260,8 @@ export function getBetaInviteEmailHtml(data: BetaInviteEmailData): string {
             <td style="padding:32px 36px 0;" align="center">
               <a href="${data.inviteUrl}" target="_blank" style="
                 display:inline-block;
-                background:linear-gradient(135deg,#D3A638 0%,#B79028 100%);
-                color:#151A26;
+                background:linear-gradient(135deg,#D4A73A 0%,#B8942F 100%);
+                color:#161B26;
                 text-decoration:none;
                 font-size:16px;
                 font-weight:800;
@@ -2279,7 +2279,7 @@ export function getBetaInviteEmailHtml(data: BetaInviteEmailData): string {
           <tr>
             <td style="padding:12px 36px 0;text-align:center;">
               <p style="margin:0;font-size:12px;color:#6b6b7b;line-height:1.5;">
-                Or copy this link: <a href="${data.inviteUrl}" style="color:#D3A638;word-break:break-all;">${data.inviteUrl}</a>
+                Or copy this link: <a href="${data.inviteUrl}" style="color:#D4A73A;word-break:break-all;">${data.inviteUrl}</a>
               </p>
             </td>
           </tr>
@@ -2288,7 +2288,7 @@ export function getBetaInviteEmailHtml(data: BetaInviteEmailData): string {
           <tr>
             <td style="padding:28px 36px 0;">
               <p style="margin:0;font-size:14px;color:#9ca3af;font-weight:600;margin-bottom:14px;">Why Join Our Beta?</p>
-              <table width="100%" cellpadding="0" cellspacing="0" style="background:#151A26;border:1px solid rgba(255,255,255,0.06);border-radius:12px;overflow:hidden;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#161B26;border:1px solid rgba(255,255,255,0.06);border-radius:12px;overflow:hidden;">
                 ${[
                   { icon: '&#9733;', t: 'Free premium access during the entire beta period' },
                   { icon: '&#9889;', t: 'Shape the product with your feedback - your voice matters' },
@@ -2300,7 +2300,7 @@ export function getBetaInviteEmailHtml(data: BetaInviteEmailData): string {
                     <table width="100%" cellpadding="0" cellspacing="0">
                       <tr>
                         <td style="vertical-align:top;width:24px;">
-                          <div style="font-size:16px;color:#D3A638;text-align:center;line-height:1.3;">${item.icon}</div>
+                          <div style="font-size:16px;color:#D4A73A;text-align:center;line-height:1.3;">${item.icon}</div>
                         </td>
                         <td style="padding-left:12px;font-size:14px;color:#e5e7eb;line-height:1.5;">${item.t}</td>
                       </tr>
@@ -2316,7 +2316,7 @@ export function getBetaInviteEmailHtml(data: BetaInviteEmailData): string {
             <td style="padding:20px 36px 0;">
               <div style="background:rgba(211,166,56,0.06);border:1px solid rgba(211,166,56,0.1);border-radius:10px;padding:14px 18px;">
                 <p style="margin:0;font-size:12px;color:#9ca3af;line-height:1.5;">
-                  <strong style="color:#D3A638;">Limited spots available.</strong> Beta access is by invitation only and may close without notice. Your ${data.trialDays}-day trial begins when you activate your account.
+                  <strong style="color:#D4A73A;">Limited spots available.</strong> Beta access is by invitation only and may close without notice. Your ${data.trialDays}-day trial begins when you activate your account.
                 </p>
               </div>
             </td>
@@ -2327,7 +2327,7 @@ export function getBetaInviteEmailHtml(data: BetaInviteEmailData): string {
             <td style="padding:28px 36px 8px;">
               <p style="margin:0;font-size:15px;color:#ffffff;">
                 We're building something extraordinary,<br>
-                <strong style="color:#D3A638;">and we want you to be part of it.</strong><br><br>
+                <strong style="color:#D4A73A;">and we want you to be part of it.</strong><br><br>
                 <span style="font-size:13px;color:#6b6b7b;">${data.platformName} Team</span><br>
                 <span style="font-size:12px;color:#4b4b5b;">${data.companyEmail}${data.companyPhone ? ' | ' + data.companyPhone : ''}</span>
               </p>
@@ -2433,19 +2433,19 @@ export function getPasswordResetOtpEmailHtml(data: PasswordResetOtpEmailData): s
         <table width="100%" cellpadding="0" cellspacing="0" style="max-width:580px;">
           <!-- Top gold accent line -->
           <tr>
-            <td style="height:3px;background:linear-gradient(90deg,transparent 0%,#D3A638 30%,#E8D48B 50%,#D3A638 70%,transparent 100%);border-radius:3px 3px 0 0;"></td>
+            <td style="height:3px;background:linear-gradient(90deg,transparent 0%,#D4A73A 30%,#E8D48B 50%,#D4A73A 70%,transparent 100%);border-radius:3px 3px 0 0;"></td>
           </tr>
 
           <!-- Main card -->
           <tr>
-            <td style="background:linear-gradient(165deg,#1C2333 0%,#0c0c12 50%,#151A26 100%);border:1px solid rgba(211,166,56,0.1);border-top:none;border-radius:0 0 20px 20px;overflow:hidden;">
+            <td style="background:linear-gradient(165deg,#1D2437 0%,#0d0d14 50%,#161B26 100%);border:1px solid rgba(211,166,56,0.1);border-top:none;border-radius:0 0 20px 20px;overflow:hidden;">
 
               <!-- Header with logo -->
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td style="padding:36px 40px 28px;text-align:center;">
                     <img src="https://valtriox.com/valtriox-logo.png" alt="${data.platformName}" width="140" style="display:block;margin:0 auto 16px;opacity:0.95;" />
-                    <div style="width:60px;height:1px;background:linear-gradient(90deg,transparent,#D3A638,transparent);margin:0 auto 14px;"></div>
+                    <div style="width:60px;height:1px;background:linear-gradient(90deg,transparent,#D4A73A,transparent);margin:0 auto 14px;"></div>
                     <div style="font-size:11px;color:#6b6b7b;text-transform:uppercase;letter-spacing:3px;font-weight:500;">Password Reset</div>
                   </td>
                 </tr>
@@ -2457,7 +2457,7 @@ export function getPasswordResetOtpEmailHtml(data: PasswordResetOtpEmailData): s
                   <td style="padding:0 40px;">
                     <p style="margin:0 0 8px;font-size:20px;color:#ffffff;font-weight:600;">Hi ${data.userName},</p>
                     <p style="margin:0 0 28px;font-size:15px;color:#8b8b9b;line-height:1.7;">
-                      We received a request to reset your password for your <strong style="color:#D3A638;font-weight:600;">${data.platformName}</strong> account. Use the verification code below to proceed.
+                      We received a request to reset your password for your <strong style="color:#D4A73A;font-weight:600;">${data.platformName}</strong> account. Use the verification code below to proceed.
                     </p>
                   </td>
                 </tr>
@@ -2471,7 +2471,7 @@ export function getPasswordResetOtpEmailHtml(data: PasswordResetOtpEmailData): s
                       <tr>
                         <td align="center">
                           <div style="font-size:14px;color:#6b6b7b;text-transform:uppercase;letter-spacing:2px;margin-bottom:14px;font-weight:500;">Verification Code</div>
-                          <div style="font-size:42px;font-weight:800;color:#D3A638;font-family:'SF Mono','Fira Code','Courier New',monospace;letter-spacing:14px;text-shadow:0 0 30px rgba(211,166,56,0.15);">
+                          <div style="font-size:42px;font-weight:800;color:#D4A73A;font-family:'SF Mono','Fira Code','Courier New',monospace;letter-spacing:14px;text-shadow:0 0 30px rgba(211,166,56,0.15);">
                             ${data.otp}
                           </div>
                           <div style="font-size:12px;color:#5a5a6a;margin-top:14px;">
@@ -2491,7 +2491,7 @@ export function getPasswordResetOtpEmailHtml(data: PasswordResetOtpEmailData): s
                     <table width="100%" cellpadding="0" cellspacing="0" style="background:rgba(211,166,56,0.04);border:1px solid rgba(211,166,56,0.08);border-radius:12px;">
                       <tr>
                         <td style="padding:18px 22px;">
-                          <p style="margin:0 0 4px;font-size:11px;color:#D3A638;text-transform:uppercase;letter-spacing:1.5px;font-weight:700;">&#9888; Security Notice</p>
+                          <p style="margin:0 0 4px;font-size:11px;color:#D4A73A;text-transform:uppercase;letter-spacing:1.5px;font-weight:700;">&#9888; Security Notice</p>
                           <p style="margin:0;font-size:13px;color:#6b6b7b;line-height:1.7;">
                             If you did not request a password reset, please ignore this email. Your account remains secure. <strong style="color:#8b8b9b;">Do not share this code with anyone.</strong>
                           </p>
@@ -2511,7 +2511,7 @@ export function getPasswordResetOtpEmailHtml(data: PasswordResetOtpEmailData): s
                       <tr>
                         <td style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
                           <table cellpadding="0" cellspacing="0"><tr>
-                            <td style="font-size:13px;color:#D3A638;font-weight:700;padding-right:14px;">01</td>
+                            <td style="font-size:13px;color:#D4A73A;font-weight:700;padding-right:14px;">01</td>
                             <td style="font-size:14px;color:#9ca3af;">Enter the 6-digit code on the password reset page</td>
                           </tr></table>
                         </td>
@@ -2519,7 +2519,7 @@ export function getPasswordResetOtpEmailHtml(data: PasswordResetOtpEmailData): s
                       <tr>
                         <td style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
                           <table cellpadding="0" cellspacing="0"><tr>
-                            <td style="font-size:13px;color:#D3A638;font-weight:700;padding-right:14px;">02</td>
+                            <td style="font-size:13px;color:#D4A73A;font-weight:700;padding-right:14px;">02</td>
                             <td style="font-size:14px;color:#9ca3af;">Create a new password (min 8 chars, 1 uppercase, 1 number)</td>
                           </tr></table>
                         </td>
@@ -2527,7 +2527,7 @@ export function getPasswordResetOtpEmailHtml(data: PasswordResetOtpEmailData): s
                       <tr>
                         <td style="padding:8px 0;">
                           <table cellpadding="0" cellspacing="0"><tr>
-                            <td style="font-size:13px;color:#D3A638;font-weight:700;padding-right:14px;">03</td>
+                            <td style="font-size:13px;color:#D4A73A;font-weight:700;padding-right:14px;">03</td>
                             <td style="font-size:14px;color:#9ca3af;">Sign in with your new password</td>
                           </tr></table>
                         </td>
@@ -2543,7 +2543,7 @@ export function getPasswordResetOtpEmailHtml(data: PasswordResetOtpEmailData): s
                   <td style="padding:36px 40px 16px;text-align:center;">
                     <div style="width:60px;height:1px;background:linear-gradient(90deg,transparent,rgba(211,166,56,0.2),transparent);margin:0 auto 20px;"></div>
                     <p style="margin:0 0 4px;font-size:14px;color:#4b4b5b;">Stay secure,</p>
-                    <p style="margin:0 0 12px;font-size:15px;color:#D3A638;font-weight:600;">${data.platformName} Team</p>
+                    <p style="margin:0 0 12px;font-size:15px;color:#D4A73A;font-weight:600;">${data.platformName} Team</p>
                     <p style="margin:0;font-size:12px;color:#3d3d4d;">
                       <a href="mailto:${data.supportEmail}" style="color:#6b6b7b;text-decoration:none;">${data.supportEmail}</a>
                       <span style="color:#2a2a3a;margin:0 8px;">|</span>

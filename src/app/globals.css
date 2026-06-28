@@ -58,7 +58,7 @@
   --color-amber-300: #fcd34d;
   --color-amber-400: #fbbf24;
   --color-amber-500: #f59e0b;
-  --color-amber-600: #D3A638;
+  --color-amber-600: #D4A73A;
   --color-amber-700: #b45309;
   --color-slate-50: #f8fafc;
   --color-slate-100: #f1f5f9;
@@ -70,7 +70,7 @@
   --color-slate-700: #334155;
   --color-slate-800: #1e293b;
   --color-slate-900: #0f172a;
-  --color-slate-950: #0F1419;
+  --color-slate-950: #10151E;
 }
 
 :root {
@@ -108,13 +108,13 @@
   --sidebar-ring: oklch(0.78 0.15 85);
 
   /* Valtriox Dynamic Brand Theme Variables */
-  --brand-accent: #D3A638;
-  --brand-accent-light: #E7BC55;
-  --brand-accent-dark: #B79028;
-  --brand-gradient: linear-gradient(135deg, #D3A638 0%, #B79028 50%, #E7BC55 100%);
-  --brand-glow: rgba(211, 166, 56, 0.4);
+  --brand-accent: #D4A73A;
+  --brand-accent-light: #E8BD58;
+  --brand-accent-dark: #B8942F;
+  --brand-gradient: linear-gradient(135deg, #D4A73A 0%, #B8942F 50%, #E8BD58 100%);
+  --brand-glow: rgba(212, 167, 58, 0.4);
   --brand-bg: #fffbeb;
-  --brand-surface: linear-gradient(135deg, rgba(211, 166, 56, 0.05) 0%, rgba(183, 144, 40, 0.02) 100%);
+  --brand-surface: linear-gradient(135deg, rgba(212, 167, 58, 0.05) 0%, rgba(184, 148, 47, 0.02) 100%);
 }
 
 .dark {
@@ -151,13 +151,13 @@
   --sidebar-ring: oklch(0.78 0.15 85);
 
   /* Dark theme brand variables — gold */
-  --brand-accent: #D3A638;
-  --brand-accent-light: #E7BC55;
-  --brand-accent-dark: #B79028;
-  --brand-gradient: linear-gradient(135deg, #D3A638 0%, #B79028 50%, #E7BC55 100%);
-  --brand-glow: rgba(211, 166, 56, 0.4);
-  --brand-bg: rgba(211, 166, 56, 0.05);
-  --brand-surface: linear-gradient(135deg, rgba(211, 166, 56, 0.05) 0%, rgba(183, 144, 40, 0.02) 100%);
+  --brand-accent: #D4A73A;
+  --brand-accent-light: #E8BD58;
+  --brand-accent-dark: #B8942F;
+  --brand-gradient: linear-gradient(135deg, #D4A73A 0%, #B8942F 50%, #E8BD58 100%);
+  --brand-glow: rgba(212, 167, 58, 0.4);
+  --brand-bg: rgba(212, 167, 58, 0.05);
+  --brand-surface: linear-gradient(135deg, rgba(212, 167, 58, 0.05) 0%, rgba(184, 148, 47, 0.02) 100%);
 }
 
 /* ============================================================================
@@ -165,46 +165,46 @@
    ============================================================================ */
 
 .premium-dark {
-  --background: #151A26;
-  --foreground: #F9FAFB;
-  --card: #1C2333;
+  --background: #161B26;
+  --foreground: #FAFAFA;
+  --card: #1D2437;
   --card-foreground: #ffffff;
-  --popover: #1C2333;
-  --popover-foreground: #F9FAFB;
-  --primary: #D3A638;
+  --popover: #1D2437;
+  --popover-foreground: #FAFAFA;
+  --primary: #D4A73A;
   --primary-foreground: #000000;
   --secondary: #1F2937;
-  --secondary-foreground: #F9FAFB;
+  --secondary-foreground: #FAFAFA;
   --muted: #1F2937;
   --muted-foreground: #94a3b8;
   --accent: #1F2937;
-  --accent-foreground: #F9FAFB;
+  --accent-foreground: #FAFAFA;
   --destructive: oklch(0.704 0.191 22.216);
   --border: rgba(255, 255, 255, 0.08);
   --input: rgba(255, 255, 255, 0.1);
-  --ring: #D3A638;
-  --chart-1: #D3A638;
-  --chart-2: #E7BC55;
-  --chart-3: #B79028;
-  --chart-4: #E7BC55;
-  --chart-5: #C39E48;
+  --ring: #D4A73A;
+  --chart-1: #D4A73A;
+  --chart-2: #E8BD58;
+  --chart-3: #B8942F;
+  --chart-4: #E8BD58;
+  --chart-5: #C4A24C;
   --sidebar: #111827;
-  --sidebar-foreground: #F9FAFB;
-  --sidebar-primary: #D3A638;
+  --sidebar-foreground: #FAFAFA;
+  --sidebar-primary: #D4A73A;
   --sidebar-primary-foreground: #000000;
   --sidebar-accent: #1F2937;
-  --sidebar-accent-foreground: #F9FAFB;
+  --sidebar-accent-foreground: #FAFAFA;
   --sidebar-border: rgba(255, 255, 255, 0.06);
-  --sidebar-ring: #D3A638;
+  --sidebar-ring: #D4A73A;
 
   /* Premium Gold brand variables */
-  --brand-accent: #D3A638;
-  --brand-accent-light: #E7BC55;
-  --brand-accent-dark: #B79028;
-  --brand-gradient: linear-gradient(135deg, #D3A638 0%, #E7BC55 50%, #B79028 100%);
-  --brand-glow: rgba(211, 166, 56, 0.3);
-  --brand-bg: rgba(211, 166, 56, 0.05);
-  --brand-surface: linear-gradient(135deg, rgba(211, 166, 56, 0.05) 0%, rgba(183, 144, 40, 0.02) 100%);
+  --brand-accent: #D4A73A;
+  --brand-accent-light: #E8BD58;
+  --brand-accent-dark: #B8942F;
+  --brand-gradient: linear-gradient(135deg, #D4A73A 0%, #E8BD58 50%, #B8942F 100%);
+  --brand-glow: rgba(212, 167, 58, 0.3);
+  --brand-bg: rgba(212, 167, 58, 0.05);
+  --brand-surface: linear-gradient(135deg, rgba(212, 167, 58, 0.05) 0%, rgba(184, 148, 47, 0.02) 100%);
 }
 
 @layer base {
@@ -261,7 +261,7 @@ html {
 
 @keyframes pulse-glow {
   0%, 100% { box-shadow: 0 0 20px var(--brand-glow); }
-  50% { box-shadow: 0 0 40px var(--brand-glow), 0 0 60px rgba(211, 166, 56, 0.2); }
+  50% { box-shadow: 0 0 40px var(--brand-glow), 0 0 60px rgba(212, 167, 58, 0.2); }
 }
 
 @keyframes scroll-left {
@@ -383,8 +383,8 @@ html {
 /* Gradient mesh backgrounds */
 .hero-gradient {
   background:
-    radial-gradient(ellipse at 20% 50%, rgba(211, 166, 56, 0.15) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 20%, rgba(183, 144, 40, 0.1) 0%, transparent 50%),
+    radial-gradient(ellipse at 20% 50%, rgba(212, 167, 58, 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(184, 148, 47, 0.1) 0%, transparent 50%),
     radial-gradient(ellipse at 40% 80%, rgba(217, 119, 6, 0.08) 0%, transparent 50%);
 }
 
@@ -403,7 +403,7 @@ html {
    Dashboard Dark Sidebar
    ========================================== */
 .dashboard-sidebar {
-  background: linear-gradient(180deg, #151A26 0%, #0F1419 100%);
+  background: linear-gradient(180deg, #161B26 0%, #10151E 100%);
   border-right: 1px solid rgba(255, 255, 255, 0.06);
 }
 
@@ -447,8 +447,8 @@ html {
 }
 
 .sla-safe {
-  color: #D3A638;
-  background: rgba(211, 166, 56, 0.1);
+  color: #D4A73A;
+  background: rgba(212, 167, 58, 0.1);
 }
 
 .sla-warning {
@@ -551,7 +551,7 @@ html {
 }
 
 .kanban-column.drag-over {
-  background-color: rgba(211, 166, 56, 0.05);
+  background-color: rgba(212, 167, 58, 0.05);
   border: 2px dashed var(--brand-accent-light);
   border-radius: 12px;
 }
@@ -653,12 +653,12 @@ html {
   box-shadow:
     0 20px 40px rgba(0, 0, 0, 0.08),
     0 8px 16px rgba(0, 0, 0, 0.04),
-    0 0 0 1px rgba(211, 166, 56, 0.1);
+    0 0 0 1px rgba(212, 167, 58, 0.1);
 }
 
 /* Premium input focus */
 .input-premium:focus {
-  box-shadow: 0 0 0 3px rgba(211, 166, 56, 0.15), 0 0 0 1px var(--brand-accent);
+  box-shadow: 0 0 0 3px rgba(212, 167, 58, 0.15), 0 0 0 1px var(--brand-accent);
   border-color: var(--brand-accent);
 }
 
@@ -671,8 +671,8 @@ html {
 }
 
 .status-dot-online {
-  background: #D3A638;
-  box-shadow: 0 0 8px rgba(211, 166, 56, 0.5);
+  background: #D4A73A;
+  box-shadow: 0 0 8px rgba(212, 167, 58, 0.5);
 }
 
 .status-dot-away {
@@ -699,7 +699,7 @@ html {
 }
 .dark .gradient-border-inner,
 .premium-dark .gradient-border-inner {
-  background: #1C2333;
+  background: #1D2437;
 }
 
 /* Skeleton shimmer for loading */
@@ -758,7 +758,7 @@ html {
    Ultra Premium: Gold Selection
    ========================================== */
 .premium-dark ::selection {
-  background: rgba(211, 166, 56, 0.3);
+  background: rgba(212, 167, 58, 0.3);
   color: #fff;
 }
 
@@ -783,7 +783,7 @@ html {
    Ultra Premium: Gold focus rings for premium-dark
    ========================================== */
 .premium-dark *:focus-visible {
-  outline: 2px solid rgba(211, 166, 56, 0.5);
+  outline: 2px solid rgba(212, 167, 58, 0.5);
   outline-offset: 2px;
   border-radius: 4px;
 }
@@ -799,7 +799,7 @@ html {
 }
 .premium-card:hover {
   background: rgba(255,255,255,0.05);
-  border-color: rgba(211, 166, 56, 0.15);
+  border-color: rgba(212, 167, 58, 0.15);
   box-shadow: 0 8px 32px rgba(0,0,0,0.3), 0 0 0 1px rgba(211,166,56,0.1);
   transform: translateY(-1px);
 }
@@ -808,7 +808,7 @@ html {
    Ultra Premium: Gold gradient text
    ========================================== */
 .gold-gradient-text {
-  background: linear-gradient(135deg, #D3A638 0%, #E7BC55 50%, #B79028 100%);
+  background: linear-gradient(135deg, #D4A73A 0%, #E8BD58 50%, #B8942F 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -856,16 +856,16 @@ html {
    Ultra Premium: Gold button
    ========================================== */
 .btn-gold {
-  background: linear-gradient(135deg, #B79028 0%, #D3A638 40%, #E7BC55 60%, #D3A638 100%);
+  background: linear-gradient(135deg, #B8942F 0%, #D4A73A 40%, #E8BD58 60%, #D4A73A 100%);
   background-size: 200% 200%;
-  color: #151A26;
+  color: #161B26;
   font-weight: 700;
   border: none;
   transition: all 0.3s;
   animation: gradient-shift 3s ease infinite;
 }
 .btn-gold:hover {
-  background: linear-gradient(135deg, #D3A638 0%, #E7BC55 40%, #ffe082 60%, #E7BC55 100%);
+  background: linear-gradient(135deg, #D4A73A 0%, #E8BD58 40%, #ffe082 60%, #E8BD58 100%);
   background-size: 200% 200%;
   box-shadow: 0 4px 20px rgba(211,166,56,0.4), 0 0 40px rgba(211,166,56,0.1);
   transform: translateY(-1px);
@@ -887,7 +887,7 @@ html {
   width: 4px;
   height: 4px;
   border-radius: 50%;
-  background: radial-gradient(circle, #D3A638, transparent);
+  background: radial-gradient(circle, #D4A73A, transparent);
   animation: float-particle 4s ease-in-out infinite;
   pointer-events: none;
 }
@@ -1003,22 +1003,22 @@ html {
   [class*="text-amber-400"],
   [class*="text-amber-500"],
   [class*="text-amber-600"] {
-    color: #D3A638 !important;
+    color: #D4A73A !important;
     -webkit-print-color-adjust: exact !important;
   }
 
   /* KPI Cards — premium dark with gold top border */
   [class*="bg-white/[0.03]"] {
     background: rgba(255, 255, 255, 0.03) !important;
-    border: 1px solid rgba(211, 166, 56, 0.15) !important;
+    border: 1px solid rgba(212, 167, 58, 0.15) !important;
     -webkit-print-color-adjust: exact !important;
   }
 
   /* Table headers — dark with gold underline */
   table thead th {
-    background: rgba(211, 166, 56, 0.08) !important;
-    color: #D3A638 !important;
-    border-bottom: 2px solid rgba(211, 166, 56, 0.3) !important;
+    background: rgba(212, 167, 58, 0.08) !important;
+    color: #D4A73A !important;
+    border-bottom: 2px solid rgba(212, 167, 58, 0.3) !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
@@ -1026,7 +1026,7 @@ html {
   /* Table borders — subtle gold */
   table td,
   table th {
-    border-color: rgba(211, 166, 56, 0.1) !important;
+    border-color: rgba(212, 167, 58, 0.1) !important;
     color: #e2e8f0 !important;
     -webkit-print-color-adjust: exact !important;
   }
@@ -1065,7 +1065,7 @@ html {
     text-align: center;
     font-size: 24px;
     font-weight: 800;
-    color: #D3A638;
+    color: #D4A73A;
     margin-bottom: 8px;
     letter-spacing: 2px;
     text-transform: uppercase;
@@ -1091,13 +1091,13 @@ html {
   /* Borders — gold tint */
   [class*="border-slate-"],
   [class*="border-white/"] {
-    border-color: rgba(211, 166, 56, 0.1) !important;
+    border-color: rgba(212, 167, 58, 0.1) !important;
   }
 
   /* Separator */
   [class*="border-b border-slate-200"],
   hr {
-    border-color: rgba(211, 166, 56, 0.15) !important;
+    border-color: rgba(212, 167, 58, 0.15) !important;
   }
 
   /* Scrollable areas — remove scroll, show all */
@@ -1127,7 +1127,7 @@ html {
 
   /* Progress bars — ensure colors print */
   [class*="bg-amber-500"] {
-    background: #D3A638 !important;
+    background: #D4A73A !important;
     -webkit-print-color-adjust: exact !important;
   }
 

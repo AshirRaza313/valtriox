@@ -83,7 +83,7 @@ export function TeamPage() {
   // Theme helpers
   const textPrimary = isDark ? "text-slate-100" : "text-slate-800";
   const textSecondary = isDark ? "text-slate-400" : "text-slate-500";
-  const cardBg = isGold ? "bg-[#1C2333] border-white/8" : isDark ? "bg-slate-800/50 border-slate-700/50" : "bg-white border-slate-200";
+  const cardBg = isGold ? "bg-[#1D2437] border-white/8" : isDark ? "bg-slate-800/50 border-slate-700/50" : "bg-white border-slate-200";
   const hoverBg = isDark ? "hover:bg-white/5" : "hover:bg-slate-50";
   const inputBg = isDark ? "bg-white/5 border-white/10 text-white" : "";
   const accentClass = isGold ? "text-amber-400" : isDark ? "text-amber-400" : "text-amber-600";
@@ -525,7 +525,7 @@ export function TeamPage() {
                       {/* Online/Offline status dot */}
                       <span className={cn(
                         "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2",
-                        isDark ? "border-[#1C2333]" : "border-white",
+                        isDark ? "border-[#1D2437]" : "border-white",
                         getMemberStatus(member) === "online"
                           ? "bg-emerald-500"
                           : getMemberStatus(member) === "away"
@@ -603,7 +603,7 @@ export function TeamPage() {
 
       {/* ── Invite Dialog ── */}
       <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
-        <DialogContent className={cn("sm:max-w-lg max-h-[90vh] overflow-y-auto", isDark ? "bg-[#1C2333] border-white/10" : "")}>
+        <DialogContent className={cn("sm:max-w-lg max-h-[90vh] overflow-y-auto", isDark ? "bg-[#1D2437] border-white/10" : "")}>
           <DialogHeader>
             <DialogTitle className={cn("text-sm sm:text-base flex items-center gap-2", textPrimary)}>
               <UserPlus className={cn("h-4 w-4", accentClass)} />
@@ -767,7 +767,7 @@ export function TeamPage() {
 
       {/* ── Edit Role Dialog ── */}
       <Dialog open={editRoleOpen} onOpenChange={setEditRoleOpen}>
-        <DialogContent className={cn("sm:max-w-md", isDark ? "bg-[#1C2333] border-white/10" : "")}>
+        <DialogContent className={cn("sm:max-w-md", isDark ? "bg-[#1D2437] border-white/10" : "")}>
           <DialogHeader>
             <DialogTitle className={cn("text-sm flex items-center gap-2", textPrimary)}>
               <Pencil className={cn("h-4 w-4", accentClass)} />
@@ -808,7 +808,7 @@ export function TeamPage() {
 
       {/* ── Remove Confirmation Dialog ── */}
       <Dialog open={!!removeMember} onOpenChange={() => setRemoveMember(null)}>
-        <DialogContent className={cn("sm:max-w-md", isDark ? "bg-[#1C2333] border-white/10" : "")}>
+        <DialogContent className={cn("sm:max-w-md", isDark ? "bg-[#1D2437] border-white/10" : "")}>
           <DialogHeader>
             <DialogTitle className={cn("text-sm flex items-center gap-2 text-red-400")}>
               <Trash2 className="h-4 w-4" />

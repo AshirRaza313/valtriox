@@ -285,7 +285,7 @@ export function SubscriptionInvoiceView({ invoice, open, onClose }: Subscription
 
     .invoice-title-section { text-align: right; }
     .invoice-title-section h2 {
-      font-size: 32px; font-weight: 800; color: #D3A638;
+      font-size: 32px; font-weight: 800; color: #D4A73A;
       letter-spacing: 1px; text-transform: uppercase;
     }
     .invoice-number { font-size: 12px; color: #64748b; margin-top: 4px; font-family: 'Courier New', monospace; }
@@ -360,7 +360,7 @@ export function SubscriptionInvoiceView({ invoice, open, onClose }: Subscription
       padding: 12px 0 0;
     }
     .total-label { font-size: 14px; font-weight: 700; color: #334155; text-transform: uppercase; letter-spacing: 0.5px; }
-    .total-value { font-size: 28px; font-weight: 800; color: #D3A638; }
+    .total-value { font-size: 28px; font-weight: 800; color: #D4A73A; }
 
     /* Payment Info */
     .payment-info {
@@ -463,7 +463,7 @@ export function SubscriptionInvoiceView({ invoice, open, onClose }: Subscription
               )}
               <div>
                 <h1 className="text-xl font-extrabold tracking-tight text-slate-900">{displayBrand}</h1>
-                <p className="text-[11px] text-slate-400 italic">{invoice.platformTagline || "The Universal Brand Management Portal"}</p>
+                <p className="text-[11px] text-slate-400 italic">{invoice.platformTagline || "COMMEND YOUR BRAND UNIVERSE"}</p>
                 {(invoice.platformEmail || invoice.platformPhone || invoice.platformWebsite) && (
                   <p className="text-[11px] text-slate-400 mt-1">
                     {[invoice.platformEmail, invoice.platformPhone, invoice.platformWebsite].filter(Boolean).join("  |  ")}

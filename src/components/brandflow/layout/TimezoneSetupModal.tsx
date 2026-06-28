@@ -303,7 +303,7 @@ export function TimezoneSetupModal() {
               {/* ── Header gradient strip ── */}
               <div className="relative h-32 overflow-hidden">
                 <div className="absolute inset-0" style={{
-                  background: "linear-gradient(135deg, #0F1419 0%, #0f172a 50%, #1e293b 100%)"
+                  background: "linear-gradient(135deg, #10151E 0%, #0f172a 50%, #1e293b 100%)"
                 }} />
                 {/* Animated globe decoration */}
                 <div className="absolute inset-0 flex items-center justify-center opacity-20">
@@ -329,7 +329,7 @@ export function TimezoneSetupModal() {
                 {/* Logo / Branding */}
                 <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex flex-col items-center">
                   <div className="flex h-12 w-12 items-center justify-center rounded-xl shadow-lg"
-                    style={{ background: "linear-gradient(135deg, #D3A638, #D3A638, #B79028)" }}>
+                    style={{ background: "linear-gradient(135deg, #D4A73A, #D4A73A, #B8942F)" }}>
                     <Globe className="h-6 w-6 text-white" />
                   </div>
                 </div>
@@ -435,7 +435,7 @@ export function TimezoneSetupModal() {
                           onClick={detectTimezone}
                           className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all shadow-lg"
                           style={{
-                            background: "linear-gradient(135deg, #D3A638, #D3A638, #B79028)",
+                            background: "linear-gradient(135deg, #D4A73A, #D4A73A, #B8942F)",
                             boxShadow: "0 4px 15px rgba(212,175,55,0.3)"
                           }}
                         >
@@ -489,7 +489,7 @@ export function TimezoneSetupModal() {
                       )}>
                         <div className="flex items-center gap-3 mb-3">
                           <div className="flex h-10 w-10 items-center justify-center rounded-lg"
-                            style={{ background: "linear-gradient(135deg, #D3A638, #D3A638)" }}>
+                            style={{ background: "linear-gradient(135deg, #D4A73A, #D4A73A)" }}>
                             <Globe className="h-5 w-5 text-white" />
                           </div>
                           <div>
@@ -557,7 +557,7 @@ export function TimezoneSetupModal() {
                           onClick={confirmTimezone}
                           className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all shadow-lg"
                           style={{
-                            background: "linear-gradient(135deg, #D3A638, #D3A638, #B79028)",
+                            background: "linear-gradient(135deg, #D4A73A, #D4A73A, #B8942F)",
                             boxShadow: "0 4px 15px rgba(212,175,55,0.3)"
                           }}
                         >

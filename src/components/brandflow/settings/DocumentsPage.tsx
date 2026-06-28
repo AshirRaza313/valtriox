@@ -249,23 +249,23 @@ function generateRteStyles(isDark: boolean): string {
   if (isDark) {
     return `
 .rte-content{word-break:break-word;overflow-wrap:break-word;max-width:100%}
-.rte-content h1{font-size:1.5em;font-weight:700;margin:0.5em 0 0.3em;color:#D3A638}
+.rte-content h1{font-size:1.5em;font-weight:700;margin:0.5em 0 0.3em;color:#D4A73A}
 .rte-content h2{font-size:1.3em;font-weight:600;margin:0.5em 0 0.3em;color:#e2e8f0}
 .rte-content h3{font-size:1.15em;font-weight:600;margin:0.5em 0 0.3em;color:#cbd5e1}
 .rte-content p{margin:0.35em 0;word-break:break-word;overflow-wrap:break-word;max-width:100%}
 .rte-content ul,.rte-content ol{padding-left:1.5em;margin:0.4em 0}
 .rte-content li{margin:0.15em 0}
-.rte-content li::marker{color:#D3A638}
-.rte-content blockquote{border-left:3px solid #D3A638;padding-left:1em;margin:0.5em 0;color:#94a3b8;font-style:italic}
+.rte-content li::marker{color:#D4A73A}
+.rte-content blockquote{border-left:3px solid #D4A73A;padding-left:1em;margin:0.5em 0;color:#94a3b8;font-style:italic}
 .rte-content pre{background:rgba(0,0,0,0.35);padding:0.75em;border-radius:0.375em;font-family:monospace;font-size:0.85em;margin:0.5em 0;overflow-x:auto;white-space:pre-wrap;max-width:100%;word-break:break-word}
 .rte-content code{background:rgba(255,255,255,0.06);padding:0.15em 0.4em;border-radius:0.25em;font-family:monospace;font-size:0.85em}
 .rte-content pre code{background:none;padding:0}
 .rte-content hr{border:none;border-top:1px solid rgba(255,255,255,0.08);margin:1em 0}
-.rte-content a{color:#D3A638;text-decoration:underline;word-break:break-all}
+.rte-content a{color:#D4A73A;text-decoration:underline;word-break:break-all}
 .rte-content strong{font-weight:600;color:#f1f5f9}
 .rte-content s{text-decoration:line-through;opacity:0.6}
 .rte-content .table-row{font-family:monospace;font-size:0.8em;padding:2px 0;color:#64748b}
-.rte-content input[type="checkbox"]{margin-right:8px;pointer-events:none;accent-color:#D3A638}
+.rte-content input[type="checkbox"]{margin-right:8px;pointer-events:none;accent-color:#D4A73A}
 `;
   }
   return `
@@ -532,7 +532,7 @@ function RichTextEditor({
               ? "text-gray-200 bg-[#12121a]"
               : "text-slate-800 bg-white"
           )}
-          style={{ caretColor: isDark ? "#D3A638" : undefined }}
+          style={{ caretColor: isDark ? "#D4A73A" : undefined }}
         />
       </div>
     </div>
