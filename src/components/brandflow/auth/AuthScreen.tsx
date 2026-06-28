@@ -139,7 +139,7 @@ export function AuthScreen() {
           transition={{ delay: 0.3, duration: 0.6 }}
         >
           <div className="inline-flex items-center justify-center">
-            <img src={displayLogo} alt="Logo" className="h-16 w-16 sm:h-20 sm:w-20 object-contain" />
+            <img src={displayLogo} alt="Logo" className="h-12 sm:h-16 w-auto max-w-[200px] sm:max-w-[260px] object-contain" />
           </div>
 
           <motion.h1
