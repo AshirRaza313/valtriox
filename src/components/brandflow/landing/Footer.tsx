@@ -58,7 +58,7 @@ export function Footer({ onLegalClick }: FooterProps) {
           {/* Brand */}
           <div className="col-span-2 sm:col-span-3 lg:col-span-1">
             <div className="flex items-center gap-2 mb-4">
-              <img src="/valtriox-logo.png" alt={companyName} className="h-10 w-auto object-contain" />
+              <img src="/valtriox-logo.png" alt={companyName} className="h-16 w-auto object-contain" />
             </div>
             <p className="text-sm text-slate-500 leading-relaxed mb-6">
               Command Your Brand Universe. All-in-one operations portal for modern brands.

@@ -28,9 +28,11 @@ export function AuthScreen() {
   const [loginData, setLoginData] = useState({ email: "", password: "" });
   const [pinLoginData, setPinLoginData] = useState({ email: "", pin: "" });
 
-  // Use platform identity logo (server-fetched), NOT stale localStorage brandLogo
-  // On auth screens, user isn't logged in — always show current platform logo or default
-  const displayLogo = identity.logoUrl || "/valtriox-logo.png";
+  // Auth screens: ALWAYS use /valtriox-logo.png directly — no flicker, no API dependency
+  // The identity.logoUrl from API may return an old/stale uploaded logo from DB,
+  // causing a flicker (new logo shows → API responds → old logo replaces it).
+  // Auth screens are for the VALTRIOX platform itself, so always show the default logo.
+  const displayLogo = "/valtriox-logo.png";
   const displayName = identity.companyName || "Valtriox";
   const displayTagline = identity.tagline || "Command Your Brand Universe";
 
@@ -139,23 +141,15 @@ export function AuthScreen() {
           transition={{ delay: 0.3, duration: 0.6 }}
         >
           <div className="inline-flex items-center justify-center">
-            <img src={displayLogo} alt="Logo" className="h-12 sm:h-16 w-auto max-w-[200px] sm:max-w-[260px] object-contain" />
+            <img src={displayLogo} alt="Logo" className="h-24 sm:h-32 w-auto max-w-[180px] sm:max-w-[240px] object-contain" />
           </div>
 
-          <motion.h1
-            className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2 mt-4 sm:mt-6"
-            style={{ fontFamily: "'Cinzel', serif" }}
+          {/* Tagline below vertical logo */}
+          <motion.p
+            className="text-sm text-slate-500 tracking-wide mt-4 sm:mt-6"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5 }}
-          >
-            <span className="gold-gradient-text">{displayName}</span>
-          </motion.h1>
-          <motion.p
-            className="text-sm text-slate-500 tracking-wide"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.6 }}
           >
             {displayTagline}
           </motion.p>

@@ -1,9 +1,9 @@
 // ── Valtriox Service Worker v2 ──
 // Handles push notifications, offline caching, background sync, and app shell precaching.
 
-const CACHE_NAME = 'valtriox-v7';
-const STATIC_CACHE = 'valtriox-static-v7';
-const API_CACHE = 'valtriox-api-v7';
+const CACHE_NAME = 'valtriox-v8';
+const STATIC_CACHE = 'valtriox-static-v8';
+const API_CACHE = 'valtriox-api-v8';
 
 // ── App Shell: critical pages and assets to precache ──
 const APP_SHELL = [

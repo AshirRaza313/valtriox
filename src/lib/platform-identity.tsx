@@ -52,7 +52,7 @@ interface PlatformIdentityContextType {
 const DEFAULT_IDENTITY: PlatformIdentity = {
   companyName: "Valtriox",
   tagline: "Command Your Brand Universe",
-  logoUrl: "/valtriox-logo.png",
+  logoUrl: null,
   faviconUrl: null,
   primaryColor: "#D3A638",
   secondaryColor: "#D3A638",
@@ -104,7 +104,7 @@ export function PlatformIdentityProvider({ children }: { children: ReactNode }) 
         const mapped: PlatformIdentity = {
           companyName: data.companyName || "Valtriox",
           tagline: data.tagline || "Command Your Brand Universe",
-          logoUrl: data.logoUrl || "/valtriox-logo.png",
+          logoUrl: data.logoUrl || null,
           faviconUrl: data.faviconUrl || null,
           primaryColor: data.primaryBrandColor || "#D3A638",
           secondaryColor: data.secondaryBrandColor || "#D3A638",
@@ -160,7 +160,7 @@ export function PlatformIdentityProvider({ children }: { children: ReactNode }) 
       const mapped: PlatformIdentity = {
         companyName: s.companyName || "Valtriox",
         tagline: s.tagline || "Command Your Brand Universe",
-        logoUrl: s.logoUrl || "/valtriox-logo.png",
+        logoUrl: s.logoUrl || null,
         faviconUrl: s.faviconUrl || null,
         primaryColor: s.primaryBrandColor || "#D3A638",
         secondaryColor: s.secondaryBrandColor || "#D3A638",
