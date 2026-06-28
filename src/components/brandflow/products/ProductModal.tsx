@@ -370,7 +370,7 @@ export function ProductModal({ open, onClose, onSaved, organizationId, product }
               className={cn(
                 "flex-1",
                 isGold
-                  ? "bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 text-black font-bold hover:shadow-[0_4px_20px_rgba(212,167,58,0.3)]"
+                  ? "bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 text-black font-bold hover:shadow-[0_4px_20px_rgba(211,166,56,0.3)]"
                   : "bg-amber-600 hover:bg-amber-700 text-white"
               )}
             >

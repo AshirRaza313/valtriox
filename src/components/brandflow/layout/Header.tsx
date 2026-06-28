@@ -294,10 +294,10 @@ export function Header() {
                   style={{
                     background:
                       appTheme === "premium-dark"
-                        ? "linear-gradient(135deg, #D4A73A, #B8922E)"
+                        ? "linear-gradient(135deg, #D3A638, #B79028)"
                         : appTheme === "dark"
-                        ? "#D4A73A"
-                        : "#D4A73A",
+                        ? "#D3A638"
+                        : "#D3A638",
                   }}
                 >
                   <span className="text-white font-bold text-[9px] leading-none">
@@ -703,8 +703,8 @@ export function Header() {
                       style={{
                         background:
                           appTheme === "premium-dark"
-                            ? "linear-gradient(135deg, #D4A73A, #B8922E)"
-                            : "linear-gradient(135deg, #D4A73A, #D4A73A)",
+                            ? "linear-gradient(135deg, #D3A638, #B79028)"
+                            : "linear-gradient(135deg, #D3A638, #D3A638)",
                       }}
                     >
                       {initials}
@@ -776,8 +776,8 @@ export function Header() {
                         style={{
                           background:
                             appTheme === "premium-dark"
-                              ? "linear-gradient(135deg, #D4A73A, #B8922E)"
-                              : "linear-gradient(135deg, #D4A73A, #D4A73A)",
+                              ? "linear-gradient(135deg, #D3A638, #B79028)"
+                              : "linear-gradient(135deg, #D3A638, #D3A638)",
                         }}
                       >
                         {initials}
@@ -868,7 +868,7 @@ export function Header() {
             className={cn(
               "sm:hidden fixed inset-0 z-50 backdrop-blur-xl p-4 pt-6",
               appTheme === "premium-dark"
-                ? "bg-[#161B26]/95"
+                ? "bg-[#151A26]/95"
                 : appTheme === "dark"
                 ? "bg-slate-950/95"
                 : "bg-white/95"

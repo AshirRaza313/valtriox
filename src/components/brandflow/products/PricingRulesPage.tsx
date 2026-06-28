@@ -284,7 +284,7 @@ export function PricingRulesPage() {
                     <YAxis tick={{ fill: "#64748b", fontSize: 12 }} tickFormatter={(v) => `PKR ${v}`} />
                     <Tooltip contentStyle={{ borderRadius: 8, border: "1px solid #e2e8f0" }} formatter={(v: number) => [`PKR ${v}`, ""]} />
                     <Legend />
-                    <Line type="monotone" dataKey="Glow Serum" stroke="#D4A73A" strokeWidth={2} dot={{ r: 4 }} />
+                    <Line type="monotone" dataKey="Glow Serum" stroke="#D3A638" strokeWidth={2} dot={{ r: 4 }} />
                     <Line type="monotone" dataKey="Vitamin C Cream" stroke="#6366f1" strokeWidth={2} dot={{ r: 4 }} />
                     <Line type="monotone" dataKey="Hydra Moisturizer" stroke="#f59e0b" strokeWidth={2} dot={{ r: 4 }} />
                     <Line type="monotone" dataKey="Retinol Night Oil" stroke="#ec4899" strokeWidth={2} dot={{ r: 4 }} />

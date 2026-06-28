@@ -152,10 +152,10 @@ const C = {
   bg2: "#fafaf9",
   bg3: "#f5f5f4",
   // Gold Accent Hierarchy
-  goldBright: "#B8922E",
-  gold: "#D4A73A",
-  goldMid: "#D4A73A",
-  goldDim: "#A68B2F",
+  goldBright: "#B79028",
+  gold: "#D3A638",
+  goldMid: "#D3A638",
+  goldDim: "#A58829",
   goldFaint: "#785e0a",
   goldUltraFaint: "#5c4808",
   // Card backgrounds (soft cream/warm whites)

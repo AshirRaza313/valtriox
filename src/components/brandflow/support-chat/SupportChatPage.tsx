@@ -826,7 +826,7 @@ function CallOverlay({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-50 flex flex-col items-center justify-center"
-      style={{ backgroundColor: isDark ? "#161B26" : "#1a1a2e" }}
+      style={{ backgroundColor: isDark ? "#151A26" : "#1a1a2e" }}
     >
       {/* Decorative background circles */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">

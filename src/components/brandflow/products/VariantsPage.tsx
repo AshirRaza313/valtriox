@@ -337,7 +337,7 @@ export function VariantsPage() {
                       <Legend />
                       <Bar dataKey="Rose" fill="#f43f5e" radius={[4, 4, 0, 0]} />
                       <Bar dataKey="Lavender" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="Clear" fill="#D4A73A" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="Clear" fill="#D3A638" radius={[4, 4, 0, 0]} />
                       <Bar dataKey="Peach" fill="#f59e0b" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
@@ -359,7 +359,7 @@ export function VariantsPage() {
                       <Legend />
                       <Bar dataKey="Glass" fill="#64748b" radius={[4, 4, 0, 0]} />
                       <Bar dataKey="Plastic" fill="#0ea5e9" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="Recyclable" fill="#D4A73A" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="Recyclable" fill="#D3A638" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>

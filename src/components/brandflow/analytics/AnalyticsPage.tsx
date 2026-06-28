@@ -53,7 +53,7 @@ const channelData = [
   { name: "Phone", value: 10 },
 ];
 
-const pieColors = ["#D4A73A", "#8b5cf6", "#3b82f6", "#f59e0b"];
+const pieColors = ["#D3A638", "#8b5cf6", "#3b82f6", "#f59e0b"];
 
 export function AnalyticsPage() {
   const { appTheme } = useValtrioxStore();
@@ -93,12 +93,12 @@ export function AnalyticsPage() {
                 <div className="h-[200px] sm:h-[250px] lg:h-72">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={monthlyRevenue}>
-                      <defs><linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#D4A73A" stopOpacity={0.2} /><stop offset="95%" stopColor="#D4A73A" stopOpacity={0} /></linearGradient></defs>
+                      <defs><linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#D3A638" stopOpacity={0.2} /><stop offset="95%" stopColor="#D3A638" stopOpacity={0} /></linearGradient></defs>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                       <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="#94a3b8" />
                       <YAxis tick={{ fontSize: 12 }} stroke="#94a3b8" />
                       <Tooltip contentStyle={{ borderRadius: "8px", border: "1px solid #e2e8f0", fontSize: "12px" }} formatter={(v: number) => [`Rs. ${v.toLocaleString()}`, ""]} />
-                      <Area type="monotone" dataKey="revenue" stroke="#D4A73A" strokeWidth={2} fill="url(#revGrad)" />
+                      <Area type="monotone" dataKey="revenue" stroke="#D3A638" strokeWidth={2} fill="url(#revGrad)" />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
@@ -140,7 +140,7 @@ export function AnalyticsPage() {
                     <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="#94a3b8" />
                     <YAxis tick={{ fontSize: 12 }} stroke="#94a3b8" />
                     <Tooltip contentStyle={{ borderRadius: "8px", fontSize: "12px" }} />
-                    <Bar dataKey="new" fill="#D4A73A" radius={[4, 4, 0, 0]} name="New" />
+                    <Bar dataKey="new" fill="#D3A638" radius={[4, 4, 0, 0]} name="New" />
                     <Bar dataKey="returning" fill="#3b82f6" radius={[4, 4, 0, 0]} name="Returning" />
                   </BarChart>
                 </ResponsiveContainer>

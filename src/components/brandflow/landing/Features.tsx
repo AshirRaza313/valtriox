@@ -76,7 +76,7 @@ export function Features() {
   const companyName = identity.companyName;
 
   return (
-    <section id="features" className="py-24 bg-[#161B26]">
+    <section id="features" className="py-24 bg-[#151A26]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

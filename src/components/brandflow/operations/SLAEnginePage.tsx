@@ -140,7 +140,7 @@ export function SLAEnginePage() {
   const cardClassHover = isDark ? "bg-white/[0.03] border-white/[0.08] hover:border-amber-500/20" : "bg-white border-slate-200 hover:border-slate-300";
   const borderColor = isDark ? "border-white/[0.08]" : "border-slate-200";
   const inputClass = isDark ? "border-white/[0.08] bg-white/[0.03] focus-visible:border-amber-500/50 placeholder:text-slate-500" : "";
-  const goldBtn = isGold ? "bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 text-black hover:shadow-[0_4px_20px_rgba(212,167,58,0.3)] hover:-translate-y-0.5" : "bg-amber-600 hover:bg-amber-700 text-white";
+  const goldBtn = isGold ? "bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 text-black hover:shadow-[0_4px_20px_rgba(211,166,56,0.3)] hover:-translate-y-0.5" : "bg-amber-600 hover:bg-amber-700 text-white";
 
   // ── Tab State ──
   const [activeTab, setActiveTab] = useState("rules");

@@ -185,7 +185,7 @@ export function Sidebar() {
     setSidebarOpen(false);
   }, [setActiveSection, userRole, setSidebarOpen]);
 
-  const accentColor = appTheme === "premium-dark" ? "#D4A73A" : "#D4A73A";
+  const accentColor = appTheme === "premium-dark" ? "#D3A638" : "#D3A638";
   const isCollapsed = sidebarCollapsed;
 
   // Pre-compute group visibility to avoid hiding groups with no visible items
@@ -286,7 +286,7 @@ export function Sidebar() {
         sidebarOpen ? "translate-x-0 w-[280px] max-w-[85vw]" : "-translate-x-full w-[280px] max-w-[85vw]",
         "lg:translate-x-0",
         isCollapsed ? "lg:w-[60px]" : "lg:w-[260px]",
-      )} style={{ background: "linear-gradient(180deg, #0F1419 0%, #161B26 40%, #1e293b 100%)" } as React.CSSProperties}>
+      )} style={{ background: "linear-gradient(180deg, #0F1419 0%, #151A26 40%, #1e293b 100%)" } as React.CSSProperties}>
         {/* Accent line */}
         <div className="h-[2px] w-full shrink-0" style={{ background: `linear-gradient(90deg, transparent, ${accentColor}, transparent)`, opacity: 0.8 }} />
 
@@ -296,8 +296,8 @@ export function Sidebar() {
             <div className="relative flex-shrink-0">
               <div className="absolute -inset-[1px] rounded-xl bg-gradient-to-br opacity-80 blur-[0.5px]"
                 style={{ background: appTheme === "premium-dark"
-                  ? "linear-gradient(135deg, #D4A73A, #E8BE5A, #B8922E)"
-                  : "linear-gradient(135deg, #D4A73A, #D4A73A, #B8922E)" }} />
+                  ? "linear-gradient(135deg, #D3A638, #E7BC55, #B79028)"
+                  : "linear-gradient(135deg, #D3A638, #D3A638, #B79028)" }} />
               <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 shadow-lg overflow-hidden">
                 <img src={brandLogo || "/valtriox-logo.png"} alt="Logo" className="h-8 w-8 rounded-lg object-contain" />
               </div>
@@ -443,8 +443,8 @@ export function Sidebar() {
                                   )}>
                                     {isActive && <motion.div layoutId="active-accent" className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full"
                                       style={{ background: appTheme === "premium-dark"
-                                        ? "linear-gradient(to bottom, #D4A73A, #B8922E)"
-                                        : "linear-gradient(to bottom, #E8D48B, #D4A73A)" }}
+                                        ? "linear-gradient(to bottom, #D3A638, #B79028)"
+                                        : "linear-gradient(to bottom, #E8D48B, #D3A638)" }}
                                       transition={{ type: "spring", stiffness: 350, damping: 30 }} />}
                                     <span className={cn("flex-shrink-0 transition-colors", isActive
                                       ? appTheme === "premium-dark" ? "text-amber-400" : "text-amber-400"
@@ -476,7 +476,7 @@ export function Sidebar() {
                                     )}
                                     {badge ? (
                                       <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[10px] font-bold leading-none text-white"
-                                        style={{ background: appTheme === "premium-dark" ? "rgba(212,167,58,0.9)" : "rgba(16,185,129,0.9)" }}>
+                                        style={{ background: appTheme === "premium-dark" ? "rgba(211,166,56,0.9)" : "rgba(16,185,129,0.9)" }}>
                                         {badge > 99 ? "99+" : badge}
                                       </span>
                                     ) : null}
@@ -555,20 +555,20 @@ export function Sidebar() {
               <div className="relative flex-shrink-0">
                 <div className="absolute -inset-[1px] rounded-full opacity-60"
                   style={{ background: appTheme === "premium-dark"
-                    ? "linear-gradient(135deg, #D4A73A, #B8922E)"
-                    : "linear-gradient(135deg, #D4A73A, #D4A73A)" }} />
+                    ? "linear-gradient(135deg, #D3A638, #B79028)"
+                    : "linear-gradient(135deg, #D3A638, #D3A638)" }} />
                 <Avatar className="relative h-8 w-8 ring-2 ring-slate-900">
                   {user?.image ? <AvatarImage src={user.image} /> : null}
                   <AvatarFallback className="text-[11px] font-bold text-white"
                     style={{ background: appTheme === "premium-dark"
-                      ? "linear-gradient(135deg, #D4A73A, #B8922E)"
-                      : "linear-gradient(135deg, #D4A73A, #D4A73A)" }}>
+                      ? "linear-gradient(135deg, #D3A638, #B79028)"
+                      : "linear-gradient(135deg, #D3A638, #D3A638)" }}>
                     {userInitials}
                   </AvatarFallback>
                 </Avatar>
                 <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-slate-900"
-                  style={{ background: appTheme === "premium-dark" ? "#D4A73A" : "#D4A73A",
-                    boxShadow: appTheme === "premium-dark" ? "0 0 6px rgba(212,167,58,0.6)" : "0 0 6px rgba(16,185,129,0.6)" }} />
+                  style={{ background: appTheme === "premium-dark" ? "#D3A638" : "#D3A638",
+                    boxShadow: appTheme === "premium-dark" ? "0 0 6px rgba(211,166,56,0.6)" : "0 0 6px rgba(16,185,129,0.6)" }} />
               </div>
               {!isCollapsed && (
                 <div className="min-w-0 flex-1">
@@ -603,7 +603,7 @@ export function Sidebar() {
           </div>
           <div className={cn("flex items-center justify-between px-5 pb-3", isCollapsed && "lg:hidden")}>
             <span className="flex items-center gap-1.5 text-[10px] font-medium text-slate-400">
-              <Sparkles className="h-3 w-3" style={{ color: appTheme === "premium-dark" ? "rgba(212,167,58,0.6)" : "rgba(16,185,129,0.6)" }} />
+              <Sparkles className="h-3 w-3" style={{ color: appTheme === "premium-dark" ? "rgba(211,166,56,0.6)" : "rgba(16,185,129,0.6)" }} />
               <span>v3.0</span>
             </span>
             <span className="text-[10px] font-medium text-slate-400">{visibleGroups.length} groups</span>

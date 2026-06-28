@@ -216,14 +216,14 @@ function buildTextDocumentEmail(title: string, content: string, ph: Record<strin
   const escapedContent = content.replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>");
   return `
     <div style="font-family: Arial, Helvetica, sans-serif; max-width: 640px; margin: 0 auto; padding: 24px; color: #334155;">
-      <div style="border-bottom: 3px solid #D4A73A; padding-bottom: 16px; margin-bottom: 24px;">
+      <div style="border-bottom: 3px solid #D3A638; padding-bottom: 16px; margin-bottom: 24px;">
         <h1 style="color: #1a1a2e; margin: 0; font-size: 24px;">Valtriox</h1>
         <p style="color: #64748b; margin: 4px 0 0 0; font-size: 13px;">Command Your Brand Universe</p>
       </div>
       <p style="color: #334155; font-size: 15px;">Hello <strong>${ph.client_name}</strong>,</p>
       <p style="color: #334155; font-size: 15px;">Please find below the document <strong>"${title}"</strong> prepared for <strong>${ph.company_name}</strong>.</p>
       <div style="background: #fafaf9; border: 1px solid #e8dcc8; border-radius: 10px; padding: 24px; margin: 20px 0; font-size: 14px; color: #1a1a2e; line-height: 1.7; white-space: pre-wrap;">${escapedContent}</div>
-      <p style="color: #64748b; font-size: 13px;">If you have any questions, reply to this email or contact <a href="mailto:ashir@valtriox.com" style="color: #D4A73A;">ashir@valtriox.com</a></p>
+      <p style="color: #64748b; font-size: 13px;">If you have any questions, reply to this email or contact <a href="mailto:ashir@valtriox.com" style="color: #D3A638;">ashir@valtriox.com</a></p>
       <div style="border-top: 1px solid #e8dcc8; padding-top: 16px; margin-top: 24px; text-align: center;">
         <p style="color: #94a3b8; font-size: 11px; margin: 0;">Valtriox Platform &bull; ashir@valtriox.com &bull; valtriox.com</p>
       </div>
@@ -242,7 +242,7 @@ function buildFileDocumentEmail(
   const typeLabel = file.fileType.toUpperCase();
   return `
     <div style="font-family: Arial, Helvetica, sans-serif; max-width: 640px; margin: 0 auto; padding: 24px; color: #334155;">
-      <div style="border-bottom: 3px solid #D4A73A; padding-bottom: 16px; margin-bottom: 24px;">
+      <div style="border-bottom: 3px solid #D3A638; padding-bottom: 16px; margin-bottom: 24px;">
         <h1 style="color: #1a1a2e; margin: 0; font-size: 24px;">Valtriox</h1>
         <p style="color: #64748b; margin: 4px 0 0 0; font-size: 13px;">Command Your Brand Universe</p>
       </div>
@@ -252,11 +252,11 @@ function buildFileDocumentEmail(
         <div style="font-size: 36px; margin-bottom: 8px;">${fileIcon}</div>
         <p style="color: #1a1a2e; font-weight: 600; font-size: 16px; margin: 0 0 4px 0;">${file.title}</p>
         <p style="color: #64748b; font-size: 12px; margin: 0 0 16px 0;">${file.fileName} &bull; ${typeLabel} &bull; ${fileSize}</p>
-        <a href="${downloadUrl}" target="_blank" style="display: inline-block; background: linear-gradient(135deg, #D4A73A, #d4a843); color: #000; font-weight: 600; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-size: 14px;">
+        <a href="${downloadUrl}" target="_blank" style="display: inline-block; background: linear-gradient(135deg, #D3A638, #d4a843); color: #000; font-weight: 600; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-size: 14px;">
           Download Document
         </a>
       </div>
-      <p style="color: #64748b; font-size: 13px;">If you have any questions, reply to this email or contact <a href="mailto:ashir@valtriox.com" style="color: #D4A73A;">ashir@valtriox.com</a></p>
+      <p style="color: #64748b; font-size: 13px;">If you have any questions, reply to this email or contact <a href="mailto:ashir@valtriox.com" style="color: #D3A638;">ashir@valtriox.com</a></p>
       <div style="border-top: 1px solid #e8dcc8; padding-top: 16px; margin-top: 24px; text-align: center;">
         <p style="color: #94a3b8; font-size: 11px; margin: 0;">Valtriox Platform &bull; ashir@valtriox.com &bull; valtriox.com</p>
       </div>

@@ -245,7 +245,7 @@ export function Pricing({ onAuthClick }: PricingProps) {
                 >
                   {/* Badge */}
                   {plan.badge && (
-                    <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-amber-500 to-amber-600 text-white text-xs font-semibold rounded-full shadow-[0_0_12px_rgba(212,167,58,0.4)]">
+                    <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-amber-500 to-amber-600 text-white text-xs font-semibold rounded-full shadow-[0_0_12px_rgba(211,166,56,0.4)]">
                       {plan.badge}
                     </div>
                   )}
@@ -296,7 +296,7 @@ export function Pricing({ onAuthClick }: PricingProps) {
                     <Button
                       className={`w-full rounded-xl group text-sm ${
                         plan.highlighted
-                          ? "bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-[0_0_20px_rgba(212,167,58,0.3)]"
+                          ? "bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-[0_0_20px_rgba(211,166,56,0.3)]"
                           : "bg-white/[0.06] hover:bg-white/[0.1] text-white border border-white/[0.1] hover:border-amber-500/30"
                       }`}
                       onClick={() => { window.location.href = '/contact'; }}

@@ -185,7 +185,7 @@ export const GET = withAuth(async (req, authCtx) => {
       confirmed: "#3b82f6",
       packing: "#8b5cf6",
       dispatched: "#06b6d4",
-      delivered: "#D4A73A",
+      delivered: "#D3A638",
       cancelled: "#ef4444",
       returned: "#f97316",
     };

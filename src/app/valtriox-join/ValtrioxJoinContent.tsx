@@ -130,7 +130,7 @@ export default function ValtrioxJoinContent() {
   };
 
   return (
-    <div className="min-h-screen bg-[#161B26] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[#151A26] flex items-center justify-center p-4">
       {/* Background subtle gradient */}
       <div className="fixed inset-0 bg-gradient-to-br from-amber-500/[0.03] via-transparent to-transparent pointer-events-none" />
       <div className="fixed top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-amber-500/[0.02] rounded-full blur-[120px] pointer-events-none" />

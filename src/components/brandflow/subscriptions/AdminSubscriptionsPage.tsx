@@ -489,7 +489,7 @@ export function AdminSubscriptionsPage() {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setShowActionModal(false)}>
             <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
-              className={cn("w-full max-w-md rounded-xl border p-6", isDark ? "bg-[#161B26] border-white/[0.1]" : "bg-white border-slate-200")}
+              className={cn("w-full max-w-md rounded-xl border p-6", isDark ? "bg-[#151A26] border-white/[0.1]" : "bg-white border-slate-200")}
               onClick={(e) => e.stopPropagation()}>
               <h3 className={cn("text-lg font-bold mb-4", textPrimary)}>
                 {actionType === "change_plan" && "Change Plan"}

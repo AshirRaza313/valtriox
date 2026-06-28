@@ -465,12 +465,12 @@ for (const tz of TIMEZONES) {
 // ============================================================================
 
 const SAMPLE_ACTIVE_EVENTS = [
-  { id: 1, name: "Eid al-Fitr", type: "Islamic", color: "#D4A73A", icon: "🌙", status: "active" },
+  { id: 1, name: "Eid al-Fitr", type: "Islamic", color: "#D3A638", icon: "🌙", status: "active" },
   { id: 2, name: "Diwali Festival of Lights", type: "Hindu", color: "#D97706", icon: "🪔", status: "active" },
 ];
 
 const SAMPLE_UPCOMING_EVENTS = [
-  { id: 3, name: "Eid al-Adha", type: "Islamic", color: "#D4A73A", icon: "🐑", date: "Jul 07, 2025", daysAway: 42 },
+  { id: 3, name: "Eid al-Adha", type: "Islamic", color: "#D3A638", icon: "🐑", date: "Jul 07, 2025", daysAway: 42 },
   { id: 4, name: "Christmas", type: "Christian", color: "#DC2626", icon: "🎄", date: "Dec 25, 2025", daysAway: 203 },
   { id: 5, name: "Holi", type: "Hindu", color: "#E11D48", icon: "🎨", date: "Mar 14, 2026", daysAway: 282 },
   { id: 6, name: "Vesak", type: "Buddhist", color: "#7C3AED", icon: "🪷", date: "May 12, 2025", daysAway: 15 },
@@ -484,7 +484,7 @@ const SAMPLE_UPCOMING_EVENTS = [
 // ============================================================================
 
 const presetColors = [
-  { name: "Gold", value: "#D4A73A" },
+  { name: "Gold", value: "#D3A638" },
   { name: "Blue", value: "#2563eb" },
   { name: "Purple", value: "#7c3aed" },
   { name: "Rose", value: "#e11d48" },
@@ -1508,7 +1508,7 @@ export function SettingsPage() {
                     disabled={saving}
                     className={cn(
                       isGold
-                        ? "bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 text-black hover:shadow-[0_4px_20px_rgba(212,167,58,0.3)]"
+                        ? "bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 text-black hover:shadow-[0_4px_20px_rgba(211,166,56,0.3)]"
                         : "bg-amber-600 hover:bg-amber-700 text-white"
                     )}
                   >
@@ -1638,7 +1638,7 @@ export function SettingsPage() {
                             updateGradient();
                           }}
                           className="w-28 font-mono text-sm"
-                          placeholder="#D4A73A"
+                          placeholder="#D3A638"
                         />
                         <div
                           className="h-9 px-3 rounded-lg text-white font-medium text-sm flex items-center"
@@ -1836,7 +1836,7 @@ export function SettingsPage() {
                     disabled={saving}
                     className={cn(
                       isGold
-                        ? "bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 text-black hover:shadow-[0_4px_20px_rgba(212,167,58,0.3)]"
+                        ? "bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 text-black hover:shadow-[0_4px_20px_rgba(211,166,56,0.3)]"
                         : "bg-amber-600 hover:bg-amber-700 text-white"
                     )}
                   >
@@ -2189,7 +2189,7 @@ export function SettingsPage() {
                   disabled={saving}
                   className={cn(
                     isGold
-                      ? "bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 text-black hover:shadow-[0_4px_20px_rgba(212,167,58,0.3)]"
+                      ? "bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 text-black hover:shadow-[0_4px_20px_rgba(211,166,56,0.3)]"
                       : "bg-amber-600 hover:bg-amber-700 text-white"
                   )}
                 >

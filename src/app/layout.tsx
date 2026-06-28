@@ -27,7 +27,7 @@ const cinzel = Cinzel({
 });
 
 export const viewport: Viewport = {
-  themeColor: "#D4A73A",
+  themeColor: "#D3A638",
   width: "device-width",
   initialScale: 1,
  viewportFit: "cover",

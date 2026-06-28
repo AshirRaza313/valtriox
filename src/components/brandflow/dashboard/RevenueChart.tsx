@@ -97,14 +97,14 @@ export function RevenueChart({ data }: RevenueChartProps) {
                 <AreaChart data={data} margin={{ top: 8, right: 4, left: -8, bottom: 0 }}>
                   <defs>
                     <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={isGold ? "#D4A73A" : "#f59e0b"} stopOpacity={0.35} />
-                      <stop offset="60%" stopColor={isGold ? "#D4A73A" : "#f59e0b"} stopOpacity={0.08} />
-                      <stop offset="100%" stopColor={isGold ? "#D4A73A" : "#f59e0b"} stopOpacity={0} />
+                      <stop offset="0%" stopColor={isGold ? "#D3A638" : "#f59e0b"} stopOpacity={0.35} />
+                      <stop offset="60%" stopColor={isGold ? "#D3A638" : "#f59e0b"} stopOpacity={0.08} />
+                      <stop offset="100%" stopColor={isGold ? "#D3A638" : "#f59e0b"} stopOpacity={0} />
                     </linearGradient>
                     <linearGradient id="lineGradient" x1="0" y1="0" x2="1" y2="0">
-                      <stop offset="0%" stopColor={isGold ? "#D4A73A" : "#f59e0b"} />
+                      <stop offset="0%" stopColor={isGold ? "#D3A638" : "#f59e0b"} />
                       <stop offset="50%" stopColor={isGold ? "#f5c842" : "#fbbf24"} />
-                      <stop offset="100%" stopColor={isGold ? "#D4A73A" : "#f59e0b"} />
+                      <stop offset="100%" stopColor={isGold ? "#D3A638" : "#f59e0b"} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid
@@ -137,7 +137,7 @@ export function RevenueChart({ data }: RevenueChartProps) {
                   <Tooltip
                     content={<CustomTooltip isDark={isDark} isGold={isGold} />}
                     cursor={{
-                      stroke: isGold ? "rgba(212,167,58,0.3)" : "rgba(245,158,11,0.3)",
+                      stroke: isGold ? "rgba(211,166,56,0.3)" : "rgba(245,158,11,0.3)",
                       strokeWidth: 1,
                       strokeDasharray: "4 4",
                     }}
@@ -151,7 +151,7 @@ export function RevenueChart({ data }: RevenueChartProps) {
                     dot={false}
                     activeDot={{
                       r: 5,
-                      fill: isGold ? "#D4A73A" : "#f59e0b",
+                      fill: isGold ? "#D3A638" : "#f59e0b",
                       stroke: isGold ? "#000" : "#fff",
                       strokeWidth: 2,
                     }}

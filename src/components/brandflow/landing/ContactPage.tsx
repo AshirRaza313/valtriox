@@ -265,10 +265,10 @@ export function ContactPage() {
   // ═══════════════════════════════════════════════════════════════════════════
   if (submitted) {
     return (
-      <div className="min-h-screen bg-[#161B26] flex flex-col">
+      <div className="min-h-screen bg-[#151A26] flex flex-col">
         {/* Thank You Hero */}
         <section className="relative pt-24 pb-12 sm:pt-32 sm:pb-16">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(212,167,58,0.12),transparent_60%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(211,166,56,0.12),transparent_60%)]" />
           <div className="relative max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <motion.div
               initial={{ opacity: 0, y: 30 }}
@@ -601,10 +601,10 @@ export function ContactPage() {
   //  PAGE 1: LEAD FORM (default view)
   // ═══════════════════════════════════════════════════════════════════════════
   return (
-    <div className="min-h-screen bg-[#161B26]">
+    <div className="min-h-screen bg-[#151A26]">
       {/* Hero Header */}
       <section className="relative pt-28 pb-16 sm:pt-32 sm:pb-20">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(212,167,58,0.08),transparent_60%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(211,166,56,0.08),transparent_60%)]" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}

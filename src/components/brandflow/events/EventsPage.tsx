@@ -452,7 +452,7 @@ function CustomEventDialog({
     emoji: editEvent?.emoji || "🎉",
     description: editEvent?.description || "",
     category: editEvent?.category || "cultural" as RegionEvent["category"],
-    primaryColor: editEvent?.theme?.primary || "#D4A73A",
+    primaryColor: editEvent?.theme?.primary || "#D3A638",
     secondaryColor: editEvent?.theme?.secondary || "#f59e0b",
     promotionalMessage: editEvent?.promotionalMessage || "",
   });
@@ -473,7 +473,7 @@ function CustomEventDialog({
         emoji: editEvent?.emoji || "🎉",
         description: editEvent?.description || "",
         category: editEvent?.category || "cultural" as RegionEvent["category"],
-        primaryColor: editEvent?.theme?.primary || "#D4A73A",
+        primaryColor: editEvent?.theme?.primary || "#D3A638",
         secondaryColor: editEvent?.theme?.secondary || "#f59e0b",
         promotionalMessage: editEvent?.promotionalMessage || "",
       });

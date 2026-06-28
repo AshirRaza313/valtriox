@@ -122,10 +122,10 @@ export const POST = withAuth(async (req, authCtx) => {
       autoDetectDaysBefore: 7,
       category: (category as RegionEvent["category"]) || "cultural",
       theme: theme || {
-        primary: "#D4A73A",
+        primary: "#D3A638",
         secondary: "#f59e0b",
-        gradient: "linear-gradient(135deg, #D4A73A, #B8922E, #f59e0b)",
-        bgPattern: "rgba(212,167,58,0.04)",
+        gradient: "linear-gradient(135deg, #D3A638, #B79028, #f59e0b)",
+        bgPattern: "rgba(211,166,56,0.04)",
       },
     };
 

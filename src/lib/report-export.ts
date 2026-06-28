@@ -29,7 +29,7 @@ export function generateReportBranding(options: ReportExportOptions) {
         <p style="font-size:13px;color:#6b7280;margin:4px 0 0 0;">${options.reportTitle}</p>
         <p style="font-size:11px;color:#9ca3af;margin:2px 0 0 0;">${options.dateRange}</p>
       </div>
-      ${options.clientLogo ? `<img src="${options.clientLogo}" style="height:48px;width:auto;border-radius:8px;" alt="${options.clientName}" />` : `<div style="width:48px;height:48px;background:linear-gradient(135deg,#D4A73A,#b45309);border-radius:8px;display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:18px;">${options.clientName.charAt(0).toUpperCase()}</div>`}
+      ${options.clientLogo ? `<img src="${options.clientLogo}" style="height:48px;width:auto;border-radius:8px;" alt="${options.clientName}" />` : `<div style="width:48px;height:48px;background:linear-gradient(135deg,#D3A638,#b45309);border-radius:8px;display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:18px;">${options.clientName.charAt(0).toUpperCase()}</div>`}
     </div>
   `;
 
@@ -37,7 +37,7 @@ export function generateReportBranding(options: ReportExportOptions) {
     ? `
     <div style="padding:16px 32px;text-align:center;border-top:1px solid #f3f4f6;background:#fafafa;">
       <p style="font-size:10px;color:#d1d5db;margin:0;">
-        Powered by <strong style="color:#D4A73A;">${brandName}</strong> - Command Your Brand Universe
+        Powered by <strong style="color:#D3A638;">${brandName}</strong> - Command Your Brand Universe
       </p>
     </div>
   `

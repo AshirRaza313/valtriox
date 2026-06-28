@@ -154,7 +154,7 @@ const pageVariants = {
 };
 
 const presetColors = [
-  "#D4A73A", "#D4A73A", "#dc2626", "#7c3aed", "#ec4899",
+  "#D3A638", "#D3A638", "#dc2626", "#7c3aed", "#ec4899",
   "#0891b2", "#475569", "#ea580c", "#0d9488", "#2563eb",
   "#db2777", "#65a30d",
 ];
@@ -234,8 +234,8 @@ export function PlatformSettingsPage() {
     currency: "PKR",
     logoUrl: "",
     faviconUrl: "",
-    primaryBrandColor: "#D4A73A",
-    secondaryBrandColor: "#D4A73A",
+    primaryBrandColor: "#D3A638",
+    secondaryBrandColor: "#D3A638",
     currencySymbol: "Rs.",
     customCss: "",
     emailFooterText: "",
@@ -437,8 +437,8 @@ export function PlatformSettingsPage() {
     currency: "PKR",
     logoUrl: "",
     faviconUrl: "",
-    primaryBrandColor: "#D4A73A",
-    secondaryBrandColor: "#D4A73A",
+    primaryBrandColor: "#D3A638",
+    secondaryBrandColor: "#D3A638",
     currencySymbol: "Rs.",
     customCss: "",
     emailFooterText: "",
@@ -2472,7 +2472,7 @@ export function PlatformSettingsPage() {
                       value={settings.primaryBrandColor}
                       onChange={(e) => setSettings((p) => ({ ...p, primaryBrandColor: e.target.value }))}
                       className={cn("w-32 font-mono text-sm", inputBg)}
-                      placeholder="#D4A73A"
+                      placeholder="#D3A638"
                     />
                     <input
                       type="color"
@@ -2518,7 +2518,7 @@ export function PlatformSettingsPage() {
                       value={settings.secondaryBrandColor}
                       onChange={(e) => setSettings((p) => ({ ...p, secondaryBrandColor: e.target.value }))}
                       className={cn("w-32 font-mono text-sm", inputBg)}
-                      placeholder="#D4A73A"
+                      placeholder="#D3A638"
                     />
                     <input
                       type="color"

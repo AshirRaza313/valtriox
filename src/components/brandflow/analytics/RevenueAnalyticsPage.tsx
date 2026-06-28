@@ -127,7 +127,7 @@ interface RevenueData {
 // ─── Constants ──────────────────────────────────────────────────────────
 
 const PIE_COLORS = [
-  "#D4A73A",
+  "#D3A638",
   "#8b5cf6",
   "#ec4899",
   "#06b6d4",
@@ -565,8 +565,8 @@ export function RevenueAnalyticsPage() {
                       <AreaChart data={data.revenueByMonth} margin={{ top: 10, right: 20, left: 10, bottom: 5 }}>
                         <defs>
                           <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor={isGold ? "#D4A73A" : "#D4A73A"} stopOpacity={0.3} />
-                            <stop offset="95%" stopColor={isGold ? "#D4A73A" : "#D4A73A"} stopOpacity={0} />
+                            <stop offset="5%" stopColor={isGold ? "#D3A638" : "#D3A638"} stopOpacity={0.3} />
+                            <stop offset="95%" stopColor={isGold ? "#D3A638" : "#D3A638"} stopOpacity={0} />
                           </linearGradient>
                           <linearGradient id="profitGradient" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
@@ -591,7 +591,7 @@ export function RevenueAnalyticsPage() {
                           }}
                           wrapperStyle={{ fontSize: "12px" }}
                         />
-                        <Area type="monotone" dataKey="revenue" stroke={isGold ? "#D4A73A" : "#D4A73A"} fill="url(#revenueGradient)" strokeWidth={2} />
+                        <Area type="monotone" dataKey="revenue" stroke={isGold ? "#D3A638" : "#D3A638"} fill="url(#revenueGradient)" strokeWidth={2} />
                         <Area type="monotone" dataKey="expenses" stroke="#ef4444" fill="transparent" strokeWidth={2} strokeDasharray="5 5" />
                         <Area type="monotone" dataKey="profit" stroke="#10b981" fill="url(#profitGradient)" strokeWidth={2} />
                       </AreaChart>
@@ -693,7 +693,7 @@ export function RevenueAnalyticsPage() {
                           return [value, "Count"];
                         }}
                       />
-                      <Bar dataKey="revenue" fill={isGold ? "#D4A73A" : "#D4A73A"} radius={[0, 6, 6, 0]} barSize={20} />
+                      <Bar dataKey="revenue" fill={isGold ? "#D3A638" : "#D3A638"} radius={[0, 6, 6, 0]} barSize={20} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>

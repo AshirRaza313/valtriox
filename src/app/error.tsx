@@ -48,7 +48,7 @@ export default function GlobalError({
   const isDbError = errorMessage.includes("DATABASE_URL") || errorMessage.includes("Database connection") || errorMessage.includes("prisma");
 
   return (
-    <div className="min-h-screen bg-[#161B26] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[#151A26] flex items-center justify-center p-4">
       <div className="w-full max-w-md text-center">
         {/* Error Icon */}
         <div className="mx-auto mb-6 h-16 w-16 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
@@ -93,7 +93,7 @@ export default function GlobalError({
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Button
             onClick={handleReset}
-            className="btn-gold rounded-xl text-sm shadow-[0_0_20px_rgba(212,167,58,0.3)]"
+            className="btn-gold rounded-xl text-sm shadow-[0_0_20px_rgba(211,166,56,0.3)]"
           >
             <RefreshCw className="mr-2 h-4 w-4" />
             Go to Home

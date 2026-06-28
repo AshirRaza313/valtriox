@@ -285,7 +285,7 @@ export function SubscriptionInvoiceView({ invoice, open, onClose }: Subscription
 
     .invoice-title-section { text-align: right; }
     .invoice-title-section h2 {
-      font-size: 32px; font-weight: 800; color: #D4A73A;
+      font-size: 32px; font-weight: 800; color: #D3A638;
       letter-spacing: 1px; text-transform: uppercase;
     }
     .invoice-number { font-size: 12px; color: #64748b; margin-top: 4px; font-family: 'Courier New', monospace; }
@@ -360,7 +360,7 @@ export function SubscriptionInvoiceView({ invoice, open, onClose }: Subscription
       padding: 12px 0 0;
     }
     .total-label { font-size: 14px; font-weight: 700; color: #334155; text-transform: uppercase; letter-spacing: 0.5px; }
-    .total-value { font-size: 28px; font-weight: 800; color: #D4A73A; }
+    .total-value { font-size: 28px; font-weight: 800; color: #D3A638; }
 
     /* Payment Info */
     .payment-info {

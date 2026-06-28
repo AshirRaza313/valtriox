@@ -435,7 +435,7 @@ export function AuditLogPage() {
               className={cn(
                 "rounded-xl",
                 isGold
-                  ? "btn-gold shadow-[0_0_20px_rgba(212,167,58,0.3)]"
+                  ? "btn-gold shadow-[0_0_20px_rgba(211,166,56,0.3)]"
                   : "bg-amber-600 hover:bg-amber-700"
               )}
             >
@@ -499,7 +499,7 @@ export function AuditLogPage() {
             className={cn(
               "rounded-lg",
               isGold
-                ? "btn-gold shadow-[0_0_15px_rgba(212,167,58,0.2)]"
+                ? "btn-gold shadow-[0_0_15px_rgba(211,166,56,0.2)]"
                 : "bg-amber-600 hover:bg-amber-700"
             )}
           >

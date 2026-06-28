@@ -67,7 +67,7 @@ export function ConfirmDialog({
               isGold
                 ? variant === "destructive"
                   ? "bg-gradient-to-r from-red-600 to-red-500 hover:from-red-700 hover:to-red-600 text-white"
-                  : "bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 text-black hover:shadow-[0_4px_20px_rgba(212,167,58,0.3)]"
+                  : "bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 text-black hover:shadow-[0_4px_20px_rgba(211,166,56,0.3)]"
                 : variant === "destructive"
                   ? "bg-red-600 hover:bg-red-700"
                   : "bg-amber-600 hover:bg-amber-700"

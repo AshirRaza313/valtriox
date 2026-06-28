@@ -44,9 +44,9 @@ export function About() {
   ];
 
   return (
-    <section id="about" className="relative bg-[#161B26] py-24 sm:py-32">
+    <section id="about" className="relative bg-[#151A26] py-24 sm:py-32">
       {/* Background accents */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(212,167,58,0.04),transparent_70%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(211,166,56,0.04),transparent_70%)]" />
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
