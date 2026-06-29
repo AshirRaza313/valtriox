@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, withRetry, isDbUnavailable, dbErrorResponse, ensureDb } from "@/lib/db";
+import { db, withRetry, isDbUnavailable, dbErrorResponse } from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
+import { withRateLimit } from "@/lib/rate-limit";
 
 // GET /api/integrations?orgId=... — List all integration connections for the org
 export const GET = withAuth(async (req: NextRequest, authCtx) => {
   try {
-    await ensureDb();
     const { searchParams } = new URL(req.url);
     const orgId = searchParams.get("orgId") || authCtx.organizationId;
 
@@ -17,8 +17,9 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
       db.integrationConnection.findMany({
         where: { organizationId: orgId },
         orderBy: { updatedAt: "desc" },
-      })
-    , 2, 500);
+      take: 100,
+    })
+  , 2, 500);
 
     return NextResponse.json({ connections });
   } catch (error: any) {
@@ -29,9 +30,8 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
 }, { requireOrg: true });
 
 // POST /api/integrations — Create or update (upsert) an integration connection
-export const POST = withAuth(async (req: NextRequest, authCtx) => {
+export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   try {
-    await ensureDb();
     const body = await req.json();
     const { type, provider, name, config, metadata } = body;
     const orgId = authCtx.organizationId;
@@ -86,6 +86,6 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error("[Integrations DELETE] Error:", error?.message || error);
-    return NextResponse.json({ error: "Failed to disconnect" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to disconnect" }, { status: 500 }, { maxRequests: 10, windowSeconds: 60 });
   }
 }

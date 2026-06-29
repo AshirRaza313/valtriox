@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, ensurePlatformSettingsColumns, withRetry } from "@/lib/db";
+import { db, ensurePlatformSettingsColumns, withRetry } from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
 
@@ -266,7 +266,7 @@ export const PUT = withAuth(async (req: NextRequest, authCtx) => {
     return NextResponse.json({
       success: false,
       error: `Could not save settings: ${msg}`,
-      details: msg,
+      details: process.env.NODE_ENV === "production" ? undefined : msg,
     }, { status: 500 });
   }
 }, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });

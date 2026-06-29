@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ensureDb, dbErrorResponse, db, isDbUnavailable, withRetry} from "@/lib/db";
+import { dbErrorResponse, db, isDbUnavailable, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
 
@@ -8,8 +8,6 @@ export const GET = withAuth(async (req: NextRequest, authCtx, context) => {
   const { id } = await context.params;
   logger.info("[Admin Client Detail] GET request", { userId: authCtx.userId, clientId: id });
   try {
-    await ensureDb();
-
     // Fetch org with counts
     const org = await withRetry(async () => {
       return await db.organization.findUnique({
@@ -182,7 +180,7 @@ export const GET = withAuth(async (req: NextRequest, authCtx, context) => {
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
-    return NextResponse.json({ error: "Failed to fetch client details", details: error?.message }, { status: 500 });
+    return NextResponse.json({ error: "Failed to fetch client details", details: process.env.NODE_ENV === "production" ? undefined : error?.message }, { status: 500 });
   }
 }, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
 
@@ -191,8 +189,6 @@ export const PUT = withAuth(async (req: NextRequest, authCtx, context) => {
   const { id } = await context.params;
   logger.info("[Admin Client Manage] PUT request", { userId: authCtx.userId, clientId: id });
   try {
-    await ensureDb();
-
     const body = await req.json();
     const { action, ...data } = body;
 
@@ -364,7 +360,7 @@ export const PUT = withAuth(async (req: NextRequest, authCtx, context) => {
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
-    return NextResponse.json({ error: "Failed to manage client", details: error?.message }, { status: 500 });
+    return NextResponse.json({ error: "Failed to manage client", details: process.env.NODE_ENV === "production" ? undefined : error?.message }, { status: 500 });
   }
 }, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
 
@@ -373,8 +369,6 @@ export const DELETE = withAuth(async (req: NextRequest, authCtx, context) => {
   const { id } = await context.params;
   logger.info("[Admin Client Delete] DELETE request", { userId: authCtx.userId, clientId: id });
   try {
-    await ensureDb();
-
     // Verify org exists
     const org = await withRetry(async () => {
       return await db.organization.findUnique({ where: { id } })
@@ -468,6 +462,6 @@ export const DELETE = withAuth(async (req: NextRequest, authCtx, context) => {
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
-    return NextResponse.json({ error: "Failed to delete client", details: error?.message }, { status: 500 });
+    return NextResponse.json({ error: "Failed to delete client", details: process.env.NODE_ENV === "production" ? undefined : error?.message }, { status: 500 });
   }
 }, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });

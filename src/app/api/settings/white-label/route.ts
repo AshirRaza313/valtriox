@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, isDbUnavailable, withRetry } from "@/lib/db";
+import { db, isDbUnavailable, withRetry } from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import { sanitizeObject } from "@/lib/sanitize";
 import logger from "@/lib/logger";
@@ -46,9 +46,6 @@ export const GET = withAuth(async (req, authCtx) => {
     if (!orgId) {
       return NextResponse.json({ error: "Organization ID required" }, { status: 400 });
     }
-
-    await ensureDb();
-
     const result = await withRetry(async () => {
       const setting = await db.systemSetting.findUnique({
         where: { key: `white_label:${orgId}` },
@@ -119,9 +116,6 @@ export const PUT = withAuth(async (req, authCtx) => {
         settings[field] = sanitized[field];
       }
     }
-
-    await ensureDb();
-
     const result = await withRetry(async () => {
       const jsonValue = JSON.stringify(settings);
 
@@ -161,9 +155,6 @@ export async function ALL(req: NextRequest) {
     if (!authHeader || !["platform_owner", "platform_admin", "owner", "admin"].includes(authHeader)) {
       return NextResponse.json({ error: "Access denied. Platform owner only." }, { status: 403 });
     }
-
-    await ensureDb();
-
     const result = await withRetry(async () => {
       const allSettings = await db.systemSetting.findMany({
         where: { category: "white_label" },

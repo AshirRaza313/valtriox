@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, withRetry} from "@/lib/db";
+import { db, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
 import { isPlatformRole } from "@/lib/roles";
@@ -28,9 +28,6 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
     if (!isPlatformRole(authCtx.role)) {
       return NextResponse.json({ error: "Admin access required" }, { status: 403 });
     }
-
-    await ensureDb();
-
     const body = await req.json();
     const { gateway } = body; // "paypro" or "safepay"
 

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
+import { db, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import { sanitizeObject } from "@/lib/sanitize";
 import logger from "@/lib/logger";
@@ -9,7 +9,6 @@ import type { RegionEvent } from "@/lib/events-library";
 // GET - Returns events for org's country + religion (with optional preview params)
 export const GET = withAuth(async (req, authCtx) => {
   try {
-    await ensureDb();
     const { searchParams } = new URL(req.url);
 
     const orgId = authCtx.organizationId;
@@ -79,7 +78,6 @@ export const GET = withAuth(async (req, authCtx) => {
 // POST - Create a custom event for the org
 export const POST = withAuth(async (req, authCtx) => {
   try {
-    await ensureDb();
     const orgId = authCtx.organizationId;
     if (!orgId) {
       return NextResponse.json({ error: "Organization required" }, { status: 400 });
@@ -160,7 +158,6 @@ export const POST = withAuth(async (req, authCtx) => {
 // DELETE - Delete a custom event by ID
 export const DELETE = withAuth(async (req, authCtx) => {
   try {
-    await ensureDb();
     const orgId = authCtx.organizationId;
     if (!orgId) {
       return NextResponse.json({ error: "Organization required" }, { status: 400 });

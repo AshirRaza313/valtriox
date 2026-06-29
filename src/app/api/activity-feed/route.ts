@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, isDbUnavailable, withRetry } from "@/lib/db";
+import { db, isDbUnavailable, withRetry } from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
 
@@ -33,7 +33,6 @@ async function safeQuery<T>(fn: () => Promise<T>): Promise<T | null> {
 export const GET = withAuth(async (req: NextRequest, authCtx) => {
   try {
     logger.info("[Activity Feed] GET request", { userId: authCtx.userId });
-    await ensureDb();
     const { searchParams } = new URL(req.url);
     const orgId = searchParams.get("orgId") || authCtx.organizationId!;
     const limit = parseInt(searchParams.get("limit") || "25");

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, dbErrorResponse, isDbUnavailable, withRetry } from "@/lib/db";
+import { db, dbErrorResponse, isDbUnavailable, withRetry } from "@/lib/db";
 import { generateInvoicePDF } from "@/lib/pdf-generator";
 import { withAuth, RouteContext, isPlatformRole } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
@@ -24,7 +24,6 @@ export const GET = withAuth(async (
 ) => {
   try {
     logger.info("[Invoices] GET request", { userId: authCtx.userId, orgId: authCtx.organizationId });
-    await ensureDb();
     const { id } = await ctx.params;
     const format = req.nextUrl.searchParams.get("format"); // "pdf" or null for JSON
 
@@ -124,6 +123,6 @@ export const GET = withAuth(async (
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
-    return NextResponse.json({ error: "Failed to fetch invoice", details: error?.message }, { status: 500 });
+    return NextResponse.json({ error: "Failed to fetch invoice", details: process.env.NODE_ENV === "production" ? undefined : error?.message }, { status: 500 });
   }
 });

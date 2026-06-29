@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, withRetry} from "@/lib/db";
+import { db, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
 
@@ -22,7 +22,6 @@ export const GET = withAuth(async (_req: NextRequest, authCtx) => {
   logger.info("[Admin Calendly] GET request", { userId: authCtx.userId });
 
   try {
-    await ensureDb();
     const setting = await withRetry(async () => {
       return await db.systemSetting.findFirst({
       where: { key: CALENDLY_KEY },
@@ -45,7 +44,6 @@ export const PUT = withAuth(async (req: NextRequest, authCtx) => {
   logger.info("[Admin Calendly] PUT request", { userId: authCtx.userId });
 
   try {
-    await ensureDb();
     const body = await req.json();
 
     const settings = {

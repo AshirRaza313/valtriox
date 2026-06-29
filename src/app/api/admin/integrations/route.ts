@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, dbErrorResponse, isDbUnavailable, withRetry } from "@/lib/db";
+import { db, dbErrorResponse, isDbUnavailable, withRetry } from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 
 // GET /api/admin/integrations - Admin-only: return all integration data across orgs
 export const GET = withAuth(async (req: NextRequest, authCtx) => {
   try {
-    await ensureDb();
-
     // Fetch all organizations with safer retry (3 retries, 600ms base) and a limit
     // Wrapped individually to handle missing tables/columns gracefully
     let organizations: any[] = [];

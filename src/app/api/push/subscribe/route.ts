@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
+import { db, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import { sanitizeObject } from "@/lib/sanitize";
 import logger from "@/lib/logger";
@@ -34,7 +34,6 @@ async function ensurePushTable() {
 export const POST = withAuth(async (req: NextRequest, authCtx) => {
   try {
     logger.info("[Push Subscribe] POST request", { userId: authCtx.userId });
-    await ensureDb();
     await ensurePushTable();
 
     const body = await req.json();
@@ -80,7 +79,6 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
 export const DELETE = withAuth(async (req: NextRequest, authCtx) => {
   try {
     logger.info("[Push Subscribe] DELETE request", { userId: authCtx.userId });
-    await ensureDb();
     await ensurePushTable();
 
     const { searchParams } = new URL(req.url);

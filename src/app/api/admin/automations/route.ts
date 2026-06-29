@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
+import { db, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
 
 // GET /api/admin/automations - List all automations
 export const GET = withAuth(async (req: NextRequest) => {
   try {
-    await ensureDb();
-
     const automations = await withRetry(async () => {
       return await db.automation.findMany({
       orderBy: { createdAt: "desc" },
@@ -25,14 +23,13 @@ export const GET = withAuth(async (req: NextRequest) => {
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
-    return NextResponse.json({ error: "Failed to fetch automations", details: error?.message }, { status: 500 });
+    return NextResponse.json({ error: "Failed to fetch automations", details: process.env.NODE_ENV === "production" ? undefined : error?.message }, { status: 500 });
   }
 }, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
 
 // POST /api/admin/automations - Create automation
 export const POST = withAuth(async (req: NextRequest) => {
   try {
-    await ensureDb();
     const body = await req.json();
     const { name, description, trigger, triggerConfig, templateId, action, actionConfig, delayMinutes, enabled } = body;
 
@@ -70,14 +67,13 @@ export const POST = withAuth(async (req: NextRequest) => {
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
-    return NextResponse.json({ error: "Failed to create automation", details: error?.message }, { status: 500 });
+    return NextResponse.json({ error: "Failed to create automation", details: process.env.NODE_ENV === "production" ? undefined : error?.message }, { status: 500 });
   }
 }, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
 
 // PUT /api/admin/automations - Update automation (toggle enable/disable, update config, run now)
 export const PUT = withAuth(async (req: NextRequest) => {
   try {
-    await ensureDb();
     const body = await req.json();
     const { id, ...updateData } = body;
 
@@ -147,14 +143,13 @@ export const PUT = withAuth(async (req: NextRequest) => {
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
-    return NextResponse.json({ error: "Failed to update automation", details: error?.message }, { status: 500 });
+    return NextResponse.json({ error: "Failed to update automation", details: process.env.NODE_ENV === "production" ? undefined : error?.message }, { status: 500 });
   }
 }, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
 
 // DELETE /api/admin/automations - Delete automation
 export const DELETE = withAuth(async (req: NextRequest) => {
   try {
-    await ensureDb();
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
 
@@ -170,6 +165,6 @@ export const DELETE = withAuth(async (req: NextRequest) => {
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
-    return NextResponse.json({ error: "Failed to delete automation", details: error?.message }, { status: 500 });
+    return NextResponse.json({ error: "Failed to delete automation", details: process.env.NODE_ENV === "production" ? undefined : error?.message }, { status: 500 });
   }
 }, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });

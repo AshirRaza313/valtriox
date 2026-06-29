@@ -3,17 +3,15 @@ import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
 import { sanitizeEmail, validatePassword } from "@/lib/sanitize";
 import { withRateLimit } from "@/lib/rate-limit";
+import { validateBody, resetPasswordSchema } from "@/lib/validations";
+import { z } from "zod";
 
 export const POST = withRateLimit(async (req: NextRequest) => {
   try {
-    const body = await req.json();
-    const rawEmail = body?.email;
-    const resetToken = body?.resetToken;
-    const newPassword = body?.newPassword;
-
-    if (!rawEmail || !resetToken || !newPassword) {
-      return NextResponse.json({ error: "Email, reset token, and new password are required" }, { status: 400 });
-    }
+    // Phase 3: Zod validation
+    const bodyResult = await validateBody(req, resetPasswordSchema.extend({ resetToken: z.string().min(1) }));
+    if (!bodyResult.success) return bodyResult.response;
+    const { email: rawEmail, otp: resetToken, newPassword } = bodyResult.data;
 
     const email = sanitizeEmail(rawEmail);
 

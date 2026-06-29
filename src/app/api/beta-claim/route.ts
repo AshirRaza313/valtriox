@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, withRetry } from "@/lib/db";
+import { db, withRetry } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import { sanitizeEmail, sanitizeString, validatePassword } from "@/lib/sanitize";
 import { withRateLimit } from "@/lib/rate-limit";
@@ -21,7 +21,6 @@ async function findBetaInvite(email: string, token: string) {
 
 export const POST = withRateLimit(async (req: NextRequest) => {
   try {
-    await ensureDb();
     const body = await req.json();
     const { action, email, code, name, password, brandName } = body;
 

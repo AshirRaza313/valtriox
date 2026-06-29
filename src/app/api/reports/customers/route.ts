@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
+import { db, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
 import { getCurrencyForCountry } from "@/lib/currency";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
@@ -8,7 +8,6 @@ import logger from "@/lib/logger";
 export const GET = withAuth(async (req: NextRequest, authCtx) => {
   try {
     logger.info("[Reports Customers] GET request", { userId: authCtx.userId });
-    await ensureDb();
     const orgId = req.nextUrl.searchParams.get("orgId") || authCtx.organizationId!;
 
     if (orgId !== authCtx.organizationId) {

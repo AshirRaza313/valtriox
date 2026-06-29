@@ -80,6 +80,6 @@ export const POST = withAuth(async (req: NextRequest) => {
     });
   } catch (error: any) {
     logger.error("[Send Email] POST error", error);
-    return NextResponse.json({ error: "Failed to send email", details: error?.message }, { status: 500 });
+    return NextResponse.json({ error: "Failed to send email", details: process.env.NODE_ENV === "production" ? undefined : error?.message }, { status: 500 });
   }
 }, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });

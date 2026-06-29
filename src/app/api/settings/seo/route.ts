@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth-middleware";
-import { ensureDb, isDbUnavailable, dbErrorResponse, withRetry } from "@/lib/db";
+import { isDbUnavailable, dbErrorResponse, withRetry } from "@/lib/db";
 
 // GET /api/settings/seo?orgId=... — Retrieve stored SEO meta tags
 export const GET = withAuth(async (req: NextRequest, authCtx) => {
   try {
-    await ensureDb();
     const { searchParams } = new URL(req.url);
     const orgId = searchParams.get("orgId") || authCtx.organizationId;
 
@@ -36,7 +35,6 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
 // POST /api/settings/seo — Save SEO meta tags
 export const POST = withAuth(async (req: NextRequest, authCtx) => {
   try {
-    await ensureDb();
     const body = await req.json();
     const { url, title, description, orgId: bodyOrgId } = body;
     const orgId = bodyOrgId || authCtx.organizationId;

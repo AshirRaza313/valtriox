@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
+import { db, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 
 // PUT /api/admin/integrations/[orgId] - Admin-only: manage integration for an org
 export const PUT = withAuth(async (req: NextRequest, authCtx, context) => {
   const { orgId } = await context.params;
   try {
-    await ensureDb();
-
     const body = await req.json();
     const { action, integrationType } = body;
 

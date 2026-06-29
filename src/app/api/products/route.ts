@@ -4,6 +4,7 @@ import { withAuth } from "@/lib/auth-middleware";
 import { validateBody, validateQuery, createProductSchema, paginationQuerySchema } from "@/lib/validations";
 import logger from "@/lib/logger";
 import { z } from "zod";
+import { withRateLimit } from "@/lib/rate-limit";
 
 // Phase 3: Query validation schema for GET /products
 const productsQuerySchema = paginationQuerySchema.extend({
@@ -85,7 +86,7 @@ export const GET = withAuth(async (req, authCtx) => {
   }
 });
 
-export const POST = withAuth(async (req, authCtx) => {
+export const POST = withRateLimit(withAuth(async (req, authCtx) => {
   try {
     // Phase 3: Zod validation replaces raw req.json() + manual checks
     const bodyResult = await validateBody(req, createProductSchema);
@@ -121,4 +122,4 @@ export const POST = withAuth(async (req, authCtx) => {
     }
     return NextResponse.json({ error: "Failed to create product" }, { status: 500 });
   }
-});
+}, { maxRequests: 30, windowSeconds: 60 });

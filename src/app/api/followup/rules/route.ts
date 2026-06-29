@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
+import { db, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import { sanitizeObject } from "@/lib/sanitize";
 import logger from "@/lib/logger";
@@ -69,7 +69,6 @@ function getDefaultRules(): FollowUpRule[] {
 export const GET = withAuth(async (req: NextRequest, authCtx) => {
   try {
     logger.info("[FollowUp Rules] GET request", { userId: authCtx.userId, orgId: authCtx.organizationId });
-    await ensureDb();
     const orgId = authCtx.organizationId!;
 
     const setting = await withRetry(async () => {
@@ -97,7 +96,6 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
 export const POST = withAuth(async (req: NextRequest, authCtx) => {
   try {
     logger.info("[FollowUp Rules] POST request", { userId: authCtx.userId, orgId: authCtx.organizationId });
-    await ensureDb();
     const body = await req.json();
     Object.assign(body, sanitizeObject(body));
     const orgId = authCtx.organizationId!;
@@ -157,7 +155,6 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
 export const PUT = withAuth(async (req: NextRequest, authCtx) => {
   try {
     logger.info("[FollowUp Rules] PUT request", { userId: authCtx.userId, orgId: authCtx.organizationId });
-    await ensureDb();
     const body = await req.json();
     Object.assign(body, sanitizeObject(body));
     const orgId = authCtx.organizationId!;

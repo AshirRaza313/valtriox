@@ -9,7 +9,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth-middleware";
-import { db, ensureDb, isDbUnavailable, dbErrorResponse, withRetry } from "@/lib/db";
+import { db, isDbUnavailable, dbErrorResponse, withRetry } from "@/lib/db";
 import { checkStorageLimit } from "@/lib/storage-tracker";
 
 export const GET = withAuth(async (req: NextRequest, authCtx) => {
@@ -23,9 +23,6 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
         { status: 400 }
       );
     }
-
-    await ensureDb();
-
     // Fetch org plan from the DB with retry
     const org = await withRetry(async () => {
       const organization = await db.organization.findUnique({

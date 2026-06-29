@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, dbErrorResponse, withRetry} from "@/lib/db";
+import { db, dbErrorResponse, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import { sanitizeObject } from "@/lib/sanitize";
 import logger from "@/lib/logger";
 
 export const POST = withAuth(async (req, authCtx) => {
   try {
-    await ensureDb();
     const body = await req.json();
     Object.assign(body, sanitizeObject(body));
     const { userId, organizationId, status, clockIn, clockOut, lateReason, leaveReason } = body;
@@ -142,7 +141,6 @@ export const POST = withAuth(async (req, authCtx) => {
 
 export const GET = withAuth(async (req, authCtx) => {
   try {
-    await ensureDb();
     const { searchParams } = new URL(req.url);
     const orgId = searchParams.get("orgId") || authCtx.organizationId;
     const userId = searchParams.get("userId");
@@ -179,6 +177,7 @@ export const GET = withAuth(async (req, authCtx) => {
       return await db.attendance.findMany({
       where,
       orderBy: { date: "desc" },
+      take: 100,
     })
     }, 2, 500);
 

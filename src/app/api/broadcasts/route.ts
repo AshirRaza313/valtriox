@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
+import { db, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import { sanitizeObject } from "@/lib/sanitize";
 import logger from "@/lib/logger";
+import { withRateLimit } from "@/lib/rate-limit";
 
 interface Broadcast {
   id: string;
@@ -45,7 +46,6 @@ async function saveBroadcasts(orgId: string, broadcasts: Broadcast[]) {
 
 export const GET = withAuth(async (req, authCtx) => {
   try {
-    await ensureDb();
     const orgId = authCtx.organizationId;
     if (!orgId) return NextResponse.json({ error: "orgId required" }, { status: 400 });
 
@@ -60,9 +60,8 @@ export const GET = withAuth(async (req, authCtx) => {
   }
 });
 
-export const POST = withAuth(async (req, authCtx) => {
+export const POST = withRateLimit(withAuth(async (req, authCtx) => {
   try {
-    await ensureDb();
     const orgId = authCtx.organizationId;
     if (!orgId) return NextResponse.json({ error: "orgId required" }, { status: 400 });
 
@@ -99,11 +98,10 @@ export const POST = withAuth(async (req, authCtx) => {
     }
     return NextResponse.json({ error: "Failed to create broadcast" }, { status: 500 });
   }
-});
+}, { maxRequests: 5, windowSeconds: 60 });
 
 export const PUT = withAuth(async (req, authCtx) => {
   try {
-    await ensureDb();
     const orgId = authCtx.organizationId;
     if (!orgId) return NextResponse.json({ error: "orgId required" }, { status: 400 });
 
@@ -132,7 +130,6 @@ export const PUT = withAuth(async (req, authCtx) => {
 
 export const DELETE = withAuth(async (req, authCtx) => {
   try {
-    await ensureDb();
     const orgId = authCtx.organizationId;
     if (!orgId) return NextResponse.json({ error: "orgId required" }, { status: 400 });
 

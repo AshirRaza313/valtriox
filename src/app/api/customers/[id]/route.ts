@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, dbErrorResponse, withRetry } from "@/lib/db";
+import { db, dbErrorResponse, withRetry } from "@/lib/db";
 import { notFoundOrUnauthorizedResponse } from "@/lib/api-utils";
 import { withAuth, RouteContext } from "@/lib/auth-middleware";
 import { sanitizeObject, sanitizeEmail, sanitizePhone } from "@/lib/sanitize";
@@ -12,7 +12,6 @@ export const GET = withAuth(async (
 ) => {
   try {
     logger.info("[Customers] GET request", { userId: authCtx.userId, orgId: authCtx.organizationId });
-    await ensureDb();
     const { id } = await ctx.params;
     const orgId = authCtx.organizationId!;
 
@@ -45,7 +44,6 @@ export const PATCH = withAuth(async (
 ) => {
   try {
     logger.info("[Customers] PATCH request", { userId: authCtx.userId, orgId: authCtx.organizationId });
-    await ensureDb();
     const { id } = await ctx.params;
     const orgId = authCtx.organizationId!;
 
@@ -91,7 +89,6 @@ export const DELETE = withAuth(async (
 ) => {
   try {
     logger.info("[Customers] DELETE request", { userId: authCtx.userId, orgId: authCtx.organizationId });
-    await ensureDb();
     const { id } = await ctx.params;
     const orgId = authCtx.organizationId!;
 

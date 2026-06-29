@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, isDbUnavailable, withRetry } from "@/lib/db";
+import { db, isDbUnavailable, withRetry } from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import { sanitizeObject } from "@/lib/sanitize";
 import logger from "@/lib/logger";
+import { withRateLimit } from "@/lib/rate-limit";
 
 export const GET = withAuth(async (req, authCtx) => {
   try {
-    await ensureDb();
     const { searchParams } = new URL(req.url);
     const orgId = searchParams.get("orgId") || authCtx.organizationId;
 
@@ -18,7 +18,7 @@ export const GET = withAuth(async (req, authCtx) => {
     }
 
     const coupons = await withRetry(async () => {
-      return db.coupon.findMany({ where: { organizationId: orgId }, orderBy: { createdAt: "desc" } });
+      const [result, count] = await Promise.all([ db.coupon.findMany({ where: { organizationId: orgId }, orderBy: { createdAt: "desc" }, skip: 0, take: 100 }), db.coupon.count({ where: { organizationId: orgId } }) ]); return [result, count];
     }, 2, 500);
     return NextResponse.json({ coupons });
   } catch (error: any) {
@@ -30,9 +30,8 @@ export const GET = withAuth(async (req, authCtx) => {
   }
 });
 
-export const POST = withAuth(async (req, authCtx) => {
+export const POST = withRateLimit(withAuth(async (req, authCtx) => {
   try {
-    await ensureDb();
     const body = await req.json();
     Object.assign(body, sanitizeObject(body));
     const { organizationId, code, type, value, minOrder, usageLimit, expiresAt } = body;
@@ -69,4 +68,4 @@ export const POST = withAuth(async (req, authCtx) => {
     }
     return NextResponse.json({ error: "Failed to create coupon" }, { status: 500 });
   }
-});
+}, { maxRequests: 20, windowSeconds: 60 });

@@ -2,23 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { sanitizeEmail } from "@/lib/sanitize";
 import { withRateLimit } from "@/lib/rate-limit";
+import { validateBody, verifyOtpSchema } from "@/lib/validations";
 
 export const POST = withRateLimit(async (req: NextRequest) => {
   try {
-    const body = await req.json();
-    const rawEmail = body?.email;
-    const rawOtp = body?.otp;
-
-    if (!rawEmail || !rawOtp) {
-      return NextResponse.json({ error: "Email and OTP are required" }, { status: 400 });
-    }
+    // Phase 3: Zod validation
+    const bodyResult = await validateBody(req, verifyOtpSchema);
+    if (!bodyResult.success) return bodyResult.response;
+    const { email: rawEmail, otp } = bodyResult.data;
 
     const email = sanitizeEmail(rawEmail);
-    const otp = String(rawOtp).trim();
-
-    if (!/^\d{6}$/.test(otp)) {
-      return NextResponse.json({ error: "OTP must be exactly 6 digits" }, { status: 400 });
-    }
 
     const identifier = `password-reset:${email}`;
 

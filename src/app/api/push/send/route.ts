@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import webpush from "web-push";
-import { db, ensureDb, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
+import { db, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import { sanitizeObject } from "@/lib/sanitize";
 import logger from "@/lib/logger";
+import { withRateLimit } from "@/lib/rate-limit";
 
 // ── Configure VAPID ──
 
@@ -40,10 +41,9 @@ async function ensurePushTable() {
 
 // ── POST /api/push/send - Send a push notification ──
 
-export const POST = withAuth(async (req: NextRequest, authCtx) => {
+export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   try {
     logger.info("[Push Send] POST request", { userId: authCtx.userId });
-    await ensureDb();
     await ensurePushTable();
     const vapidOk = configureVapid();
     if (!vapidOk) {
@@ -152,4 +152,4 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
     }
     return NextResponse.json({ error: "Failed to send push notification" }, { status: 500 });
   }
-});
+}, { maxRequests: 10, windowSeconds: 60 });

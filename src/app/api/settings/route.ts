@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, isDbUnavailable, withRetry } from "@/lib/db";
+import { db, isDbUnavailable, withRetry } from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import { sanitizeObject } from "@/lib/sanitize";
 import logger from "@/lib/logger";
+import { withRateLimit } from "@/lib/rate-limit";
 
 // GET - Fetch organization settings from DB
 export const GET = withAuth(async (req, authCtx) => {
@@ -16,9 +17,6 @@ export const GET = withAuth(async (req, authCtx) => {
     if (orgId !== authCtx.organizationId) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
-
-    await ensureDb();
-
     const result = await withRetry(async () => {
     const org = await db.organization.findUnique({ where: { id: orgId } });
     if (!org) return { _status: 404, error: "Organization not found" };
@@ -82,7 +80,7 @@ export const GET = withAuth(async (req, authCtx) => {
 });
 
 // PUT - Update organization settings in DB
-export const PUT = withAuth(async (req, authCtx) => {
+export const PUT = withRateLimit(withAuth(async (req, authCtx) => {
   try {
     const body = await req.json();
     Object.assign(body, sanitizeObject(body));
@@ -167,4 +165,4 @@ export const PUT = withAuth(async (req, authCtx) => {
     }
     return NextResponse.json({ error: "Failed to update settings" }, { status: 500 });
   }
-});
+}, { maxRequests: 10, windowSeconds: 60 });

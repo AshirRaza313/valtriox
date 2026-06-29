@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ensureDb, dbErrorResponse, db, isDbUnavailable, withRetry} from "@/lib/db";
+import { dbErrorResponse, db, isDbUnavailable, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
 import { Prisma } from "@prisma/client";
@@ -9,8 +9,6 @@ export const GET = withAuth(async (req: NextRequest, authCtx, context) => {
   const { id } = await context.params;
   logger.info("[Admin Client Orders] GET request", { userId: authCtx.userId, clientId: id });
   try {
-    await ensureDb();
-
     // Parse query params
     const { searchParams } = new URL(req.url);
     const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
@@ -125,6 +123,6 @@ export const GET = withAuth(async (req: NextRequest, authCtx, context) => {
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
-    return NextResponse.json({ error: "Failed to fetch client orders", details: error?.message }, { status: 500 });
+    return NextResponse.json({ error: "Failed to fetch client orders", details: process.env.NODE_ENV === "production" ? undefined : error?.message }, { status: 500 });
   }
 }, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });

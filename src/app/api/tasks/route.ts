@@ -3,6 +3,7 @@ import { db, isDbUnavailable, withRetry } from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import { validateBody, createTaskSchema } from "@/lib/validations";
 import logger from "@/lib/logger";
+import { withRateLimit } from "@/lib/rate-limit";
 
 export const GET = withAuth(async (req, authCtx) => {
   try {
@@ -20,6 +21,7 @@ export const GET = withAuth(async (req, authCtx) => {
       return await db.teamTask.findMany({
         where: { organizationId: orgId },
         orderBy: { createdAt: "desc" },
+      take: 100,
       });
     }, 2, 500);
     return NextResponse.json({ tasks });
@@ -32,7 +34,7 @@ export const GET = withAuth(async (req, authCtx) => {
   }
 });
 
-export const POST = withAuth(async (req, authCtx) => {
+export const POST = withRateLimit(withAuth(async (req, authCtx) => {
   try {
     // Phase 3: Zod validation
     const bodyResult = await validateBody(req, createTaskSchema);
@@ -65,4 +67,4 @@ export const POST = withAuth(async (req, authCtx) => {
     }
     return NextResponse.json({ error: "Failed to create task" }, { status: 500 });
   }
-});
+}, { maxRequests: 30, windowSeconds: 60 });

@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
+import { db, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
 import { generateInvoiceNumber } from "@/lib/pdf-generator";
 import { getCurrencyForCountry } from "@/lib/currency";
 import { withAuth } from "@/lib/auth-middleware";
 import { sanitizeObject } from "@/lib/sanitize";
 import logger from "@/lib/logger";
+import { withRateLimit } from "@/lib/rate-limit";
 
 // POST /api/subscriptions/payment - Submit payment proof
 // ALL operations wrapped in a Prisma transaction to prevent dual plan purchases
-export const POST = withAuth(async (req: NextRequest, authCtx) => {
+export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   try {
     logger.info("[Subscriptions Payment] POST request", { userId: authCtx.userId });
-    await ensureDb();
     const body = await req.json();
     Object.assign(body, sanitizeObject(body));
     const { orgId, userId, planId, amount, transactionId, paymentMethod, screenshotUrl, billingCycle } = body;
@@ -325,4 +325,4 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
 
     return NextResponse.json({ error: "Failed to submit payment proof. Please try again." }, { status: 500 });
   }
-});
+}, { maxRequests: 5, windowSeconds: 60 });

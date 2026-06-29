@@ -276,7 +276,7 @@ export const POST = withAuth(async (req: NextRequest) => {
   } catch (error: any) {
     logger.error("[Consultation Reminders] POST error", error);
     return NextResponse.json(
-      { error: "Failed to send reminder", details: error?.message },
+      { error: "Failed to send reminder", details: process.env.NODE_ENV === "production" ? undefined : error?.message },
       { status: 500 }
     );
   }

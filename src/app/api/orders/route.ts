@@ -5,6 +5,7 @@ import { validateBody, validateQuery, createOrderSchema, paginationQuerySchema }
 import { getAdminEmail } from "@/lib/roles";
 import logger from "@/lib/logger";
 import { z } from "zod";
+import { withRateLimit } from "@/lib/rate-limit";
 
 // Phase 3: Query validation schema for GET /orders
 const ordersQuerySchema = paginationQuerySchema.extend({
@@ -95,7 +96,7 @@ export const GET = withAuth(async (req, authCtx) => {
   }
 });
 
-export const POST = withAuth(async (req, authCtx) => {
+export const POST = withRateLimit(withAuth(async (req, authCtx) => {
   try {
     // Phase 3: Zod validation replaces raw req.json() + manual checks
     const bodyResult = await validateBody(req, createOrderSchema);
@@ -255,4 +256,4 @@ export const POST = withAuth(async (req, authCtx) => {
     }
     return NextResponse.json({ error: "Failed to create order" }, { status: 500 });
   }
-});
+}, { maxRequests: 20, windowSeconds: 60 });

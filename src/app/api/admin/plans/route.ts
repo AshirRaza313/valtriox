@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, dbErrorResponse, withRetry} from "@/lib/db";
+import { db, dbErrorResponse, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
 
@@ -31,8 +31,6 @@ const PLAN_SEEDS = [
 export const POST = withAuth(async (_request: NextRequest, authCtx) => {
   logger.info("[Admin Plans] POST re-sync request", { userId: authCtx.userId });
   try {
-    await ensureDb();
-
     const results: any[] = [];
     for (const plan of PLAN_SEEDS) {
       const result = await withRetry(async () => {
@@ -71,7 +69,6 @@ export const POST = withAuth(async (_request: NextRequest, authCtx) => {
 export const GET = withAuth(async (_request: NextRequest, authCtx) => {
   logger.info("[Admin Plans] GET request", { userId: authCtx.userId });
   try {
-    await ensureDb();
     const plans = await withRetry(async () => {
       return await db.subscriptionPlan.findMany({
       where: { isActive: true },
@@ -90,7 +87,6 @@ export const GET = withAuth(async (_request: NextRequest, authCtx) => {
 export const PUT = withAuth(async (request: NextRequest, authCtx) => {
   logger.info("[Admin Plans] PUT request", { userId: authCtx.userId });
   try {
-    await ensureDb();
     const body = await request.json();
     const { planId, price, annualPrice, period, teamLimit, orderLimit, productLimit, trialDays, features } = body;
 

@@ -7,6 +7,7 @@ import { withAuth } from "@/lib/auth-middleware";
 import { validateBody, inviteTeamMemberSchema } from "@/lib/validations";
 import { z } from "zod";
 import { getAdminEmail } from "@/lib/roles";
+import { withRateLimit } from "@/lib/rate-limit";
 
 /**
  * POST /api/team - Add a team member via PIN-based invitation
@@ -67,6 +68,7 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
             roleDef: { select: { id: true, name: true, label: true, description: true, level: true, permissions: true } },
           },
           orderBy: { joinedAt: "asc" },
+      take: 100,
         });
       }, 2, 500);
     } catch (e: any) {
@@ -78,6 +80,7 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
         return db.teamInvitation.findMany({
           where: { organizationId: orgId, status: "pending" },
           orderBy: { invitedAt: "desc" },
+      take: 100,
         });
       }, 2, 500);
     } catch (e: any) {
@@ -106,7 +109,7 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
   }
 });
 
-export const POST = withAuth(async (req: NextRequest, authCtx) => {
+export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   try {
     logger.info("[Team] POST request", { userId: authCtx.userId });
     // Phase 3: Zod validation for team invitation body
@@ -152,7 +155,7 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
       });
     } catch (e: any) {
       logger.error("[Team] Failed to fetch organization:", e?.message);
-      return NextResponse.json({ error: "Failed to fetch organization details. Please try again.", _step: "fetch_org", _details: e?.message }, { status: 500 });
+      return NextResponse.json({ error: "Failed to fetch organization details. Please try again.", _step: "fetch_org", _details: process.env.NODE_ENV === "production" ? undefined : e?.message }, { status: 500 });
     }
 
     if (!org) {
@@ -257,7 +260,7 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
       });
     } catch (e: any) {
       logger.error("[Team] Failed to check existing user:", e?.message);
-      return NextResponse.json({ error: "Database error while checking user. Please try again.", _step: "check_user", _details: e?.message }, { status: 500 });
+      return NextResponse.json({ error: "Database error while checking user. Please try again.", _step: "check_user", _details: process.env.NODE_ENV === "production" ? undefined : e?.message }, { status: 500 });
     }
 
     if (existingUser) {
@@ -271,7 +274,7 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
         }
       } catch (e: any) {
         logger.error("[Team] Failed to check membership:", e?.message);
-        return NextResponse.json({ error: "Database error while checking membership. Please try again.", _step: "check_membership", _details: e?.message }, { status: 500 });
+        return NextResponse.json({ error: "Database error while checking membership. Please try again.", _step: "check_membership", _details: process.env.NODE_ENV === "production" ? undefined : e?.message }, { status: 500 });
       }
     }
 
@@ -285,7 +288,7 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
       }
     } catch (e: any) {
       logger.error("[Team] Failed to check invitation:", e?.message);
-      return NextResponse.json({ error: "Database error while checking invitations. Please try again.", _step: "check_invitation", _details: e?.message }, { status: 500 });
+      return NextResponse.json({ error: "Database error while checking invitations. Please try again.", _step: "check_invitation", _details: process.env.NODE_ENV === "production" ? undefined : e?.message }, { status: 500 });
     }
 
     // ── Create User (if doesn't exist) + OrganizationMember + Invitation ──
@@ -315,7 +318,7 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
         logger.info("New user created for team invitation", { userId: user.id, email: sanitizeEmail(email), role: targetRole });
       } catch (e: any) {
         logger.error("[Team] Failed to create user:", e?.message);
-        return NextResponse.json({ error: "Failed to create user account. Please try again.", _step: "create_user", _details: e?.message, _code: e?.code }, { status: 500 });
+        return NextResponse.json({ error: "Failed to create user account. Please try again.", _step: "create_user", _details: process.env.NODE_ENV === "production" ? undefined : e?.message, _code: process.env.NODE_ENV === "production" ? undefined : e?.code }, { status: 500 });
       }
     }
 
@@ -339,7 +342,7 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
       });
     } catch (e: any) {
       logger.error("[Team] Failed to create organization member:", e?.message, e?.code);
-      return NextResponse.json({ error: "Failed to add team member. Please try again.", _step: "create_member", _details: e?.message, _code: e?.code }, { status: 500 });
+      return NextResponse.json({ error: "Failed to add team member. Please try again.", _step: "create_member", _details: process.env.NODE_ENV === "production" ? undefined : e?.message, _code: process.env.NODE_ENV === "production" ? undefined : e?.code }, { status: 500 });
     }
 
     // Create invitation record — mark as "accepted" immediately since the member
@@ -411,7 +414,7 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
     }
     return NextResponse.json({ error: "Failed to add member" }, { status: 500 });
   }
-});
+}, { maxRequests: 10, windowSeconds: 60 });
 
 // DELETE - Remove a team member OR revoke a pending invitation
 export const DELETE = withAuth(async (req: NextRequest, authCtx) => {

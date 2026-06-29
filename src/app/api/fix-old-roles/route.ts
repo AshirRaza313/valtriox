@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, withRetry} from "@/lib/db";
+import { db, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
 
@@ -22,7 +22,6 @@ import logger from "@/lib/logger";
  */
 export const POST = withAuth(async (req: NextRequest, authCtx) => {
   try {
-    await ensureDb();
     logger.info("[Fix Old Roles] POST request", { userId: authCtx.userId });
 
     // Try body first, then env var

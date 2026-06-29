@@ -12,7 +12,7 @@
 // ============================================================================
 
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, withRetry, safeDbQuery } from "@/lib/db";
+import { db, withRetry, safeDbQuery } from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
 import { uploadFile, deleteFile, CLOUDINARY_BUCKETS } from "@/lib/cloudinary";
@@ -54,8 +54,6 @@ const MAX_FILE_SIZE = 50 * 1024 * 1024;
 
 export const GET = withAuth(async (_req: NextRequest, authCtx) => {
   try {
-    await ensureDb();
-
     const { data: files, error } = await safeDbQuery(async () => {
       return await db.platformDocument.findMany({
         where: { isActive: true },
@@ -87,8 +85,6 @@ export const GET = withAuth(async (_req: NextRequest, authCtx) => {
 
 export const POST = withAuth(async (req: NextRequest, authCtx) => {
   try {
-    await ensureDb();
-
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
     const title = (formData.get("title") as string) || "";
@@ -204,9 +200,6 @@ export const PUT = withAuth(async (req: NextRequest, authCtx) => {
     if (!id) {
       return NextResponse.json({ error: "File ID is required" }, { status: 400 });
     }
-
-    await ensureDb();
-
     const { data: updated, error } = await safeDbQuery(async () => {
       return await db.platformDocument.update({
         where: { id },
@@ -248,9 +241,6 @@ export const DELETE = withAuth(async (req: NextRequest, authCtx) => {
     if (!fileId) {
       return NextResponse.json({ error: "File ID is required" }, { status: 400 });
     }
-
-    await ensureDb();
-
     const { data: file, error: fetchError } = await safeDbQuery(async () => {
       return await db.platformDocument.findUnique({ where: { id: fileId } });
     }, 2, 500);

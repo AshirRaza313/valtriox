@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, isDbUnavailable, withRetry } from "@/lib/db";
+import { db, isDbUnavailable, withRetry } from "@/lib/db";
 import { generateInvoiceNumber } from "@/lib/pdf-generator";
 import { getCurrencyForCountry } from "@/lib/currency";
 import { withAuth, isPlatformRole } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
+import { withRateLimit } from "@/lib/rate-limit";
 
 // POST /api/invoices - Create a new invoice
-export const POST = withAuth(async (req: NextRequest, authCtx) => {
+export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   try {
     logger.info("[Invoices] POST request", { userId: authCtx.userId, orgId: authCtx.organizationId, role: authCtx.role });
-    await ensureDb();
     const body = await req.json();
     const {
       organizationId,
@@ -140,4 +140,4 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
     const unhandledDetail = process.env.NODE_ENV === 'production' ? undefined : error?.message;
     return NextResponse.json({ error: "Failed to create invoice", ...(unhandledDetail ? { details: unhandledDetail } : {}) }, { status: 500 });
   }
-});
+}, { maxRequests: 10, windowSeconds: 60 });

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, dbErrorResponse, isDbUnavailable, withRetry } from "@/lib/db";
+import { db, dbErrorResponse, isDbUnavailable, withRetry } from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
 
@@ -26,7 +26,6 @@ interface StockAlert {
 export const GET = withAuth(async (req: NextRequest, authCtx) => {
   try {
     logger.info("[Products] Stock Alerts GET request", { userId: authCtx.userId, orgId: authCtx.organizationId });
-    await ensureDb();
     const { searchParams } = new URL(req.url);
     const orgId = authCtx.organizationId!;
     const urgencyFilter = searchParams.get("urgency"); // optional: filter by urgency

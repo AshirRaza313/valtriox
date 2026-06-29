@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
+import { db, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
 
@@ -13,7 +13,6 @@ export const PUT = withAuth(async (
 ) => {
   logger.info("[Admin Payments] PUT request", { userId: authCtx.userId });
   try {
-    await ensureDb();
     const { id } = await params;
     const body = await req.json();
     const { status, adminNote } = body;
@@ -288,7 +287,7 @@ export const PUT = withAuth(async (
     if (error?.message?.includes("TARGET_PLAN_NOT_FOUND")) {
       return NextResponse.json({
         error: "Cannot approve payment: the selected plan no longer exists or has been renamed. Please contact support or ask the organization to select a different plan.",
-        details: error.message,
+        details: process.env.NODE_ENV === "production" ? undefined : error.message,
       }, { status: 400 });
     }
 

@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, dbErrorResponse, withRetry} from "@/lib/db";
+import { db, dbErrorResponse, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
 
 export const GET = withAuth(async (req: NextRequest, authCtx) => {
   logger.info("[Admin Invoices] GET request", { userId: authCtx.userId });
   try {
-    await ensureDb();
     const status = req.nextUrl.searchParams.get("status");
     const search = req.nextUrl.searchParams.get("search");
 

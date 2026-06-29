@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
+import { db, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
 import logger from "@/lib/logger";
 
 // ============================================================================
@@ -29,9 +29,6 @@ export async function POST(req: NextRequest) {
       status: payload.status,
       amount: payload.amount,
     });
-
-    await ensureDb();
-
     // ── Verify HMAC-SHA256 signature (MANDATORY) ──
     const payproSetting = await withRetry(async () => {
       return await db.systemSetting.findUnique({ where: { key: "gateway_paypro_config" } })

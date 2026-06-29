@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
+import { db, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
 import { withAuth, isPlatformRole } from "@/lib/auth-middleware";
 import { sanitizeObject } from "@/lib/sanitize";
 import logger from "@/lib/logger";
+import { withRateLimit } from "@/lib/rate-limit";
 
 // ============================================================================
 // GET /api/support-chat
@@ -17,7 +18,6 @@ import logger from "@/lib/logger";
 
 export const GET = withAuth(async (req, authCtx) => {
   try {
-    await ensureDb();
     const { searchParams } = new URL(req.url);
     const mode = searchParams.get("mode") || "messages";
     const conversationId = searchParams.get("conversationId");
@@ -28,6 +28,7 @@ export const GET = withAuth(async (req, authCtx) => {
       const conversations = await withRetry(async () => {
         return await db.supportConversation.findMany({
         orderBy: { lastMessageAt: "desc" },
+        take: 100,
         select: {
           id: true,
           organizationId: true,
@@ -57,8 +58,9 @@ export const GET = withAuth(async (req, authCtx) => {
         return await db.supportMessage.findMany({
         where: { conversationId },
         orderBy: { createdAt: "asc" },
-      })
-      }, 2, 500);
+      take: 200,
+    })
+    }, 2, 500);
 
       // Mark admin messages as read
       await withRetry(async () => {
@@ -104,8 +106,9 @@ export const GET = withAuth(async (req, authCtx) => {
       return await db.supportMessage.findMany({
       where: { conversationId: conversation.id },
       orderBy: { createdAt: "asc" },
-    })
-    }, 2, 500);
+    take: 200,
+  })
+  }, 2, 500);
 
     // Mark client messages as read
     await withRetry(async () => {
@@ -152,9 +155,8 @@ export const GET = withAuth(async (req, authCtx) => {
 // }
 // ============================================================================
 
-export const POST = withAuth(async (req, authCtx) => {
+export const POST = withRateLimit(withAuth(async (req, authCtx) => {
   try {
-    await ensureDb();
     const body = await req.json();
     const sanitizedBody = sanitizeObject(body);
     const {
@@ -272,7 +274,7 @@ export const POST = withAuth(async (req, authCtx) => {
     }
     return NextResponse.json({ error: "Failed to send message" }, { status: 500 });
   }
-});
+}, { maxRequests: 30, windowSeconds: 60 });
 
 // ============================================================================
 // DELETE /api/support-chat?messageId=xxx&conversationId=xxx
@@ -282,7 +284,6 @@ export const POST = withAuth(async (req, authCtx) => {
 
 export const DELETE = withAuth(async (req, authCtx) => {
   try {
-    await ensureDb();
     const { searchParams } = new URL(req.url);
     const messageId = searchParams.get("messageId");
     const conversationId = searchParams.get("conversationId");

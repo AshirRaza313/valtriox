@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { db, ensureDb, isDbUnavailable } from "@/lib/db";
+import { db, isDbUnavailable } from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
 
@@ -7,8 +7,6 @@ import logger from "@/lib/logger";
 export const POST = withAuth(async () => {
   try {
     logger.info("[Sync Plans] Starting plan sync to match landing page");
-    await ensureDb();
-
     const plans = [
       {
         name: "starter",

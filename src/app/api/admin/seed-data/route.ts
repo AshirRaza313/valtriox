@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, dbErrorResponse, createAllTables, isDbUnavailable, withRetry} from "@/lib/db";
+import { db, dbErrorResponse, createAllTables, isDbUnavailable, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
 
@@ -747,7 +747,6 @@ const SEED_AUTOMATIONS = [
 
 export const POST = withAuth(async (req: NextRequest) => {
   try {
-    await ensureDb();
     await createAllTables();
 
     const body = await req.json();
@@ -847,6 +846,6 @@ export const POST = withAuth(async (req: NextRequest) => {
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
-    return NextResponse.json({ error: "Failed to seed data", details: error?.message }, { status: 500 });
+    return NextResponse.json({ error: "Failed to seed data", details: process.env.NODE_ENV === "production" ? undefined : error?.message }, { status: 500 });
   }
 }, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });

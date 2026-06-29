@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
+import { db, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
+import { withRateLimit } from "@/lib/rate-limit";
 
 // ============================================================================
 // PayPro Subscription Billing - Create Payment Order
@@ -16,11 +17,9 @@ const PAYPRO_BASES: Record<string, string> = {
 };
 
 // POST /api/subscriptions/paypro/create-order
-export const POST = withAuth(async (req: NextRequest, authCtx) => {
+export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   try {
     logger.info("[PayPro SubBilling] POST request", { userId: authCtx.userId });
-    await ensureDb();
-
     const body = await req.json();
     const { planId, billingCycle } = body;
 
@@ -209,4 +208,4 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
     }
     return NextResponse.json({ error: "Failed to create payment order" }, { status: 500 });
   }
-});
+}, { maxRequests: 5, windowSeconds: 60 });

@@ -3,6 +3,7 @@ import { withAuth } from "@/lib/auth-middleware";
 import { db } from "@/lib/db";
 import { validateBody, createFeedbackSchema } from "@/lib/validations";
 import { z } from "zod";
+import { withRateLimit } from "@/lib/rate-limit";
 
 // Phase 3: Zod schemas for feedback
 const feedbackPatchSchema = z.object({
@@ -29,6 +30,7 @@ export const GET = withAuth(async (req, ctx) => {
     const feedbacks = await db.feedback.findMany({
       where,
       orderBy: { createdAt: "desc" },
+      take: 100,
       select: {
         id: true, type: true, rating: true, content: true,
         authorName: true, authorCompany: true, videoUrl: true,
@@ -44,7 +46,7 @@ export const GET = withAuth(async (req, ctx) => {
   }
 });
 
-export const POST = withAuth(async (req, ctx) => {
+export const POST = withRateLimit(withAuth(async (req, ctx) => {
   try {
     // Phase 3: Zod validation
     const feedbackBodySchema = z.object({
@@ -87,7 +89,7 @@ export const POST = withAuth(async (req, ctx) => {
     console.error("[Feedback POST] Error:", msg);
     return NextResponse.json({ error: "Failed to create feedback" }, { status: 500 });
   }
-});
+}, { maxRequests: 15, windowSeconds: 60 });
 
 export const PATCH = withAuth(async (req, ctx) => {
   try {

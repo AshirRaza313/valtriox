@@ -46,7 +46,7 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
     if (orgErr) {
       logger.error("[Invoice Generate] DB error fetching organization", { error: orgErr });
       return NextResponse.json(
-        { error: "Database error fetching organization", details: orgErr?.substring(0, 200) },
+        { error: "Database error fetching organization", details: process.env.NODE_ENV === "production" ? undefined : orgErr?.substring(0, 200) },
         { status: 503 }
       );
     }
@@ -104,7 +104,7 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
         return NextResponse.json({ error: "Invoice number conflict. Please retry." }, { status: 409 });
       }
       return NextResponse.json(
-        { error: "Failed to create invoice record", details: createErr?.substring(0, 200) },
+        { error: "Failed to create invoice record", details: process.env.NODE_ENV === "production" ? undefined : createErr?.substring(0, 200) },
         { status: 503 }
       );
     }
@@ -178,6 +178,6 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
     }
   } catch (error: any) {
     logger.error("[Invoice Generate] Unhandled error", { error: error?.message });
-    return NextResponse.json({ error: "Failed to generate invoice", details: error?.message }, { status: 500 });
+    return NextResponse.json({ error: "Failed to generate invoice", details: process.env.NODE_ENV === "production" ? undefined : error?.message }, { status: 500 });
   }
 }, { requireRole: ["platform_owner", "platform_admin", "owner", "admin"], requireOrg: false });

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, withRetry} from "@/lib/db";
+import { db, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import { sendEmail, isEmailConfigured } from "@/lib/email";
 import { getValtrioxInvitationHtml, generateWhatsAppInviteLink, generateInvitationPlainText } from "@/lib/email-templates";
@@ -18,8 +18,6 @@ const VALTROIX_ROLES = [
 // GET: List all Valtriox team members + pending invitations
 export const GET = withAuth(async (req, authCtx) => {
   try {
-    await ensureDb();
-
     const members = await withRetry(async () => {
       return await db.valtrioxTeamMember.findMany({
       orderBy: { createdAt: "asc" },
@@ -41,7 +39,7 @@ export const GET = withAuth(async (req, authCtx) => {
   } catch (error: any) {
     console.error("[Valtriox Team] GET error:", error?.message);
     return NextResponse.json(
-      { error: "Failed to fetch team data", details: error?.message },
+      { error: "Failed to fetch team data", details: process.env.NODE_ENV === "production" ? undefined : error?.message },
       { status: 500 }
     );
   }
@@ -50,8 +48,6 @@ export const GET = withAuth(async (req, authCtx) => {
 // POST: Invite new team member
 export const POST = withAuth(async (req, authCtx) => {
   try {
-    await ensureDb();
-
     const body = await req.json();
     const { name, email, role, department, phone } = body;
 
@@ -188,7 +184,7 @@ export const POST = withAuth(async (req, authCtx) => {
   } catch (error: any) {
     console.error("[Valtriox Team] POST error:", error?.message);
     return NextResponse.json(
-      { error: "Failed to create invitation", details: error?.message },
+      { error: "Failed to create invitation", details: process.env.NODE_ENV === "production" ? undefined : error?.message },
       { status: 500 }
     );
   }
@@ -215,7 +211,7 @@ export const DELETE = withAuth(async (req, authCtx) => {
   } catch (error: any) {
     console.error("[Valtriox Team] DELETE error:", error?.message);
     return NextResponse.json(
-      { error: "Failed to revoke invitation", details: error?.message },
+      { error: "Failed to revoke invitation", details: process.env.NODE_ENV === "production" ? undefined : error?.message },
       { status: 500 }
     );
   }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
+import { db, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import { sanitizeObject } from "@/lib/sanitize";
 import logger from "@/lib/logger";
@@ -64,7 +64,6 @@ const DEFAULT_RULES: SLARule[] = [
 
 export const GET = withAuth(async (req, authCtx) => {
   try {
-    await ensureDb();
     const { searchParams } = new URL(req.url);
     const orgId = searchParams.get("orgId") || authCtx.organizationId;
 
@@ -106,7 +105,6 @@ export const GET = withAuth(async (req, authCtx) => {
 
 export const POST = withAuth(async (req, authCtx) => {
   try {
-    await ensureDb();
     const body = await req.json();
     Object.assign(body, sanitizeObject(body));
     const { organizationId, name, fromStatus, toStatus, timeLimitHours, responsibleRole, escalationAction } = body;
@@ -180,7 +178,6 @@ export const POST = withAuth(async (req, authCtx) => {
 
 export const PUT = withAuth(async (req, authCtx) => {
   try {
-    await ensureDb();
     const body = await req.json();
     Object.assign(body, sanitizeObject(body));
     const { organizationId, rules: updatedRules } = body;

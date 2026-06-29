@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
+import { db, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
 
@@ -21,8 +21,6 @@ const PAYPRO_BASE = process.env.NODE_ENV === "production"
 export const POST = withAuth(async (req: NextRequest, authCtx) => {
   try {
     logger.info("[PayPro] POST request - creating payment order", { userId: authCtx.userId });
-    await ensureDb();
-
     const body = await req.json();
     const { proposalId, returnUrl } = body;
 

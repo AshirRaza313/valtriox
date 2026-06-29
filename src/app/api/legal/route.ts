@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
+import { db, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
 
 export async function GET(req: NextRequest) {
   try {
-    await ensureDb();
     const { searchParams } = new URL(req.url);
     const slug = searchParams.get("slug");
 

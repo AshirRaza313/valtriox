@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
+import { db, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
 
@@ -7,7 +7,6 @@ import logger from "@/lib/logger";
 export const GET = withAuth(async (req: NextRequest, authCtx) => {
   logger.info("[Admin Subscriptions] GET request", { userId: authCtx.userId });
   try {
-    await ensureDb();
     const { searchParams } = new URL(req.url);
     const status = searchParams.get("status");
     const plan = searchParams.get("plan");

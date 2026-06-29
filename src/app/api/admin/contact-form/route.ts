@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
+import { db, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
 
 // GET /api/admin/contact-form - Fetch current form configuration
 export const GET = withAuth(async (req: NextRequest) => {
   try {
-    await ensureDb();
-
     const setting = await withRetry(async () => {
       return await db.platformSettings.findFirst({
       where: { key: "contact_form_config" },
@@ -31,7 +29,6 @@ export const GET = withAuth(async (req: NextRequest) => {
 // PUT /api/admin/contact-form - Update form configuration
 export const PUT = withAuth(async (req: NextRequest) => {
   try {
-    await ensureDb();
     const body = await req.json();
     const { fields } = body;
 

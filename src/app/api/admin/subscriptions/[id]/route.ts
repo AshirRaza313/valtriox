@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
+import { db, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import { generateInvoiceNumber } from "@/lib/pdf-generator";
 import { getCurrencyForCountry } from "@/lib/currency";
@@ -13,7 +13,6 @@ export const PUT = withAuth(async (
 ) => {
   logger.info("[Admin Subscriptions] PUT request", { userId: authCtx.userId });
   try {
-    await ensureDb();
     const { id } = await params;
     const body = await req.json();
     const {

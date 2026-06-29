@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
+import { db, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
 import { ROLES } from "@/lib/roles";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
 
 export const POST = withAuth(async (req: NextRequest, authCtx) => {
   try {
-    await ensureDb();
     logger.info("[Roles Seed] POST request", { userId: authCtx.userId });
 
     // Upsert all 16 roles into the database

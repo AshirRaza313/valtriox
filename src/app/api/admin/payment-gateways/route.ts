@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
+import { db, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
 import { isPlatformRole } from "@/lib/roles";
@@ -35,9 +35,6 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
     if (!isPlatformRole(authCtx.role)) {
       return NextResponse.json({ error: "Admin access required" }, { status: 403 });
     }
-
-    await ensureDb();
-
     const settings = await withRetry(async () => {
       return await db.systemSetting.findMany({
       where: {
@@ -92,8 +89,6 @@ export const PUT = withAuth(async (req: NextRequest, authCtx) => {
     if (!isPlatformRole(authCtx.role)) {
       return NextResponse.json({ error: "Admin access required" }, { status: 403 });
     }
-
-    await ensureDb();
     const body = await req.json();
     const { gateway, config } = body;
 

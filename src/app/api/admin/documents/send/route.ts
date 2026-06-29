@@ -15,7 +15,7 @@
 // ============================================================================
 
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, withRetry, safeDbQuery } from "@/lib/db";
+import { db, withRetry, safeDbQuery } from "@/lib/db";
 import { sanitizeObject } from "@/lib/sanitize";
 import { sendEmail } from "@/lib/email";
 import logger from "@/lib/logger";
@@ -46,9 +46,6 @@ export async function POST(req: NextRequest) {
     if (!documentKey && !fileId) {
       return NextResponse.json({ error: "Either documentKey or fileId is required" }, { status: 400 });
     }
-
-    await ensureDb();
-
     // ─── Fetch Client Organization ─────────────────────────────────────────
     const { data: org, error: orgError } = await safeDbQuery(async () => {
       return await db.organization.findUnique({

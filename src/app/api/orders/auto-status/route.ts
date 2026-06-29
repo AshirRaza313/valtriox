@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, dbErrorResponse, isDbUnavailable, withRetry } from "@/lib/db";
+import { db, dbErrorResponse, isDbUnavailable, withRetry } from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
 
@@ -20,7 +20,6 @@ interface AutoStatusRule {
 export const GET = withAuth(async (req: NextRequest, authCtx) => {
   try {
     logger.info("[Auto-Status] GET request", { userId: authCtx.userId, orgId: authCtx.organizationId });
-    await ensureDb();
     const orgId = authCtx.organizationId!;
 
     const setting = await withRetry(async () => {
@@ -48,7 +47,6 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
 export const POST = withAuth(async (req: NextRequest, authCtx) => {
   try {
     logger.info("[Auto-Status] POST request", { userId: authCtx.userId, orgId: authCtx.organizationId });
-    await ensureDb();
     const body = await req.json();
     const { orgId, rules } = body;
 

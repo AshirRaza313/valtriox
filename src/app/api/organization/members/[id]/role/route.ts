@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
+import { db, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import { sanitizeObject } from "@/lib/sanitize";
 import logger from "@/lib/logger";
@@ -12,7 +12,6 @@ export const PUT = withAuth(async (
 ) => {
   try {
     logger.info("[Org Members Role] PUT request", { userId: authCtx.userId });
-    await ensureDb();
     // Extract member ID from URL path
     const urlParts = req.url.split("/");
     const id = urlParts[urlParts.length - 1] || urlParts[urlParts.length - 2];

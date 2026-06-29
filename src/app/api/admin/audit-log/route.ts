@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, dbErrorResponse, withRetry} from "@/lib/db";
+import { db, dbErrorResponse, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
 
@@ -22,7 +22,6 @@ interface AuditEntry {
 export const GET = withAuth(async (request: NextRequest, authCtx) => {
   logger.info("[Admin Audit Log] GET request", { userId: authCtx.userId });
   try {
-    await ensureDb();
     const { searchParams } = new URL(request.url);
     const orgId = searchParams.get("orgId");
     const moduleFilterParam = searchParams.get("module"); // orders, products, customers, team, settings

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, dbErrorResponse, withRetry} from "@/lib/db";
+import { db, dbErrorResponse, withRetry} from "@/lib/db";
 import { generateReportPDF, type ReportData } from "@/lib/pdf-generator";
 import { getCurrencyForCountry } from "@/lib/currency";
 import { withAuth } from "@/lib/auth-middleware";
@@ -56,7 +56,6 @@ function truncateLabel(str: string | null | undefined, maxLen: number = 18): str
 export const GET = withAuth(async (req: NextRequest, authCtx) => {
   try {
     logger.info("[Reports Export] GET request", { userId: authCtx.userId });
-    await ensureDb();
     const type = req.nextUrl.searchParams.get("type") || "sales";
     const orgId = req.nextUrl.searchParams.get("orgId") || authCtx.organizationId!;
     const period = req.nextUrl.searchParams.get("period") || "monthly";
@@ -681,7 +680,7 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
       return dbErrorResponse(error);
     }
     return NextResponse.json(
-      { error: "Failed to generate report", details: errMsg },
+      { error: "Failed to generate report", details: process.env.NODE_ENV === "production" ? undefined : errMsg },
       { status: 500 },
     );
   }

@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, withRetry} from "@/lib/db";
+import { db, withRetry} from "@/lib/db";
 import bcrypt from "bcryptjs";
 import { sanitizeEmail } from "@/lib/sanitize";
 import logger from "@/lib/logger";
 import { withRateLimit } from "@/lib/rate-limit";
+import { validateBody, loginSchema } from "@/lib/validations";
+import { z } from "zod";
 import { signAuthData } from "@/lib/auth-middleware";
 
 /**
@@ -42,7 +44,13 @@ function createLoginResponse(userData: any, orgData: any) {
 
 export const POST = withRateLimit(async (req: NextRequest) => {
   try {
-    const { email, password, pin, loginType } = await req.json();
+    // Phase 3: Zod validation for login body
+    const bodyResult = await validateBody(req, loginSchema.extend({
+      pin: z.string().max(10).optional(),
+      loginType: z.enum(["password", "pin"]).optional(),
+    }));
+    if (!bodyResult.success) return bodyResult.response;
+    const { email, password, pin, loginType } = bodyResult.data;
 
     if (!email) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 });
@@ -92,7 +100,6 @@ export const POST = withRateLimit(async (req: NextRequest) => {
         console.log("[Login] Schema mismatch detected, attempting auto-fix...");
         try {
           console.log("[Login] Attempting auto-fix via ensureDb...");
-          await ensureDb();
           // Retry the full query after auto-fix
           user = await db.user.findUnique({
             where: { email: email.toLowerCase() },

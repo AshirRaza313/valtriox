@@ -11,7 +11,7 @@
 // ============================================================================
 
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, withRetry } from "@/lib/db";
+import { db, withRetry } from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
 import { isPlatformRole } from "@/lib/roles";
@@ -36,9 +36,6 @@ export const GET = withAuth(async (_req: NextRequest, authCtx) => {
     if (!isPlatformRole(authCtx.role)) {
       return NextResponse.json({ error: "Admin access required" }, { status: 403 });
     }
-
-    await ensureDb();
-
     const setting = await withRetry(async () => {
       return await db.systemSetting.findUnique({ where: { key: SETTING_KEY } });
     }, 2, 500);
@@ -87,8 +84,6 @@ export const PUT = withAuth(async (req: NextRequest, authCtx) => {
     if (!isPlatformRole(authCtx.role)) {
       return NextResponse.json({ error: "Admin access required" }, { status: 403 });
     }
-
-    await ensureDb();
     const body = await req.json();
 
     const { cloudName, apiKey, apiSecret, enabled, folderPrefix } = body;

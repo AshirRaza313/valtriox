@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
+import { db, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
 import { generateProposalPDF, type ProposalSettings } from "@/lib/proposal-generator";
@@ -7,7 +7,6 @@ import { generateProposalPDF, type ProposalSettings } from "@/lib/proposal-gener
 // POST /api/admin/proposals/generate - Generate PDF for a proposal
 export const POST = withAuth(async (req: NextRequest, authCtx) => {
   try {
-    await ensureDb();
     const body = await req.json();
     const { proposalId, template, type: bodyType, clientName: bodyClientName, clientEmail: bodyClientEmail, title: bodyTitle } = body;
 

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, dbErrorResponse, isDbUnavailable, withRetry } from "@/lib/db";
+import { db, dbErrorResponse, isDbUnavailable, withRetry } from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
 
@@ -10,8 +10,6 @@ const FIXED_MONTHLY_COST = 48440;
 export const GET = withAuth(async (req: NextRequest, authCtx) => {
   logger.info("[Admin Revenue] GET request", { userId: authCtx.userId });
   try {
-    await ensureDb();
-
     const { searchParams } = new URL(req.url);
     const period = searchParams.get("period") || "year"; // month | year | all
     const yearParam = searchParams.get("year");

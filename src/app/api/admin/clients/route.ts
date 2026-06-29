@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ensureDb, db, isDbUnavailable, isSchemaError, withRetry } from "@/lib/db";
+import { db, isDbUnavailable, isSchemaError, withRetry } from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
 
@@ -10,8 +10,6 @@ export const maxDuration = 30;
 export const GET = withAuth(async (req: NextRequest, authCtx) => {
   logger.info("[Admin Clients] GET request", { userId: authCtx.userId });
   try {
-    await ensureDb();
-
     // Wrap main query in retry for transient PgBouncer cold-start errors
     const result = await withRetry(async () => {
       const now = new Date();
@@ -147,7 +145,7 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
     } catch (err: any) {
       logger.error("[Register Brand] Step 1 failed (email check):", err?.message, err?.code);
       return NextResponse.json(
-        { error: "Database error while checking email. Please try again.", _step: "email_check", _details: err?.message },
+        { error: "Database error while checking email. Please try again.", _step: "email_check", _details: process.env.NODE_ENV === "production" ? undefined : err?.message },
         { status: 503 }
       );
     }
@@ -189,7 +187,7 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
         return NextResponse.json({ error: "Email already registered" }, { status: 409 });
       }
       return NextResponse.json(
-        { error: "Failed to create user account. Please try again.", _step: "create_user", _details: err?.message, _code: err?.code },
+        { error: "Failed to create user account. Please try again.", _step: "create_user", _details: process.env.NODE_ENV === "production" ? undefined : err?.message, _code: process.env.NODE_ENV === "production" ? undefined : err?.code },
         { status: 500 }
       );
     }
@@ -233,7 +231,7 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
       // Cleanup: delete the user we just created
       await db.user.delete({ where: { id: user.id } }).catch(() => {});
       return NextResponse.json(
-        { error: "Failed to create organization. Please try again.", _step: "create_org", _details: err?.message, _code: err?.code },
+        { error: "Failed to create organization. Please try again.", _step: "create_org", _details: process.env.NODE_ENV === "production" ? undefined : err?.message, _code: process.env.NODE_ENV === "production" ? undefined : err?.code },
         { status: 500 }
       );
     }
@@ -256,7 +254,7 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
       await db.organization.delete({ where: { id: org.id } }).catch(() => {});
       await db.user.delete({ where: { id: user.id } }).catch(() => {});
       return NextResponse.json(
-        { error: "Failed to create team membership. Please try again.", _step: "create_membership", _details: err?.message, _code: err?.code },
+        { error: "Failed to create team membership. Please try again.", _step: "create_membership", _details: process.env.NODE_ENV === "production" ? undefined : err?.message, _code: process.env.NODE_ENV === "production" ? undefined : err?.code },
         { status: 500 }
       );
     }
@@ -418,7 +416,7 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
     if (isSchemaError(error)) {
       logger.error("[Register Brand] Schema mismatch:", error?.message);
       return NextResponse.json(
-        { error: "Database schema mismatch. Contact support.", _details: error?.message, _code: error?.code },
+        { error: "Database schema mismatch. Contact support.", _details: process.env.NODE_ENV === "production" ? undefined : error?.message, _code: error?.code },
         { status: 500 }
       );
     }
@@ -427,14 +425,14 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
     if (isDbUnavailable(error)) {
       logger.error("[Register Brand] DB unavailable:", error?.message);
       return NextResponse.json(
-        { error: "Database connection timeout. Please try again in a moment.", _details: error?.message, _code: error?.code },
+        { error: "Database connection timeout. Please try again in a moment.", _details: process.env.NODE_ENV === "production" ? undefined : error?.message, _code: error?.code },
         { status: 503 }
       );
     }
 
     // Unknown error - return with full details for debugging
     return NextResponse.json(
-      { error: "Failed to register brand", _details: error?.message || String(error), _code: error?.code },
+      { error: "Failed to register brand", _details: process.env.NODE_ENV === "production" ? undefined : error?.message || String(error), _code: error?.code },
       { status: 500 }
     );
   }

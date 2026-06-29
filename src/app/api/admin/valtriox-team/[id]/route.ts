@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, withRetry} from "@/lib/db";
+import { db, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 
 // PATCH: Update member role, department, status, visibleSections
 export const PATCH = withAuth(async (req, authCtx, context) => {
   try {
-    await ensureDb();
-
     const { id } = await context.params;
     const body = await req.json();
     const { role, department, status, visibleSections } = body;
@@ -43,7 +41,7 @@ export const PATCH = withAuth(async (req, authCtx, context) => {
   } catch (error: any) {
     console.error("[Valtriox Team] PATCH error:", error?.message);
     return NextResponse.json(
-      { error: "Failed to update member", details: error?.message },
+      { error: "Failed to update member", details: process.env.NODE_ENV === "production" ? undefined : error?.message },
       { status: 500 }
     );
   }
@@ -52,8 +50,6 @@ export const PATCH = withAuth(async (req, authCtx, context) => {
 // DELETE: Remove team member
 export const DELETE = withAuth(async (req, authCtx, context) => {
   try {
-    await ensureDb();
-
     const { id } = await context.params;
 
     const member = await withRetry(async () => {
@@ -76,7 +72,7 @@ export const DELETE = withAuth(async (req, authCtx, context) => {
   } catch (error: any) {
     console.error("[Valtriox Team] DELETE error:", error?.message);
     return NextResponse.json(
-      { error: "Failed to remove member", details: error?.message },
+      { error: "Failed to remove member", details: process.env.NODE_ENV === "production" ? undefined : error?.message },
       { status: 500 }
     );
   }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
+import { db, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
 import { getPlanLimits, getUsagePercent, getLimitLabel, PLAN_NAMES } from "@/lib/plan-limits";
@@ -16,8 +16,6 @@ import { estimateStorageUsage } from "@/lib/storage-tracker";
 
 export const GET = withAuth(async (req: NextRequest, authCtx) => {
   try {
-    await ensureDb();
-
     const { searchParams } = new URL(req.url);
     const organizationId = searchParams.get("organizationId") || authCtx.organizationId;
 

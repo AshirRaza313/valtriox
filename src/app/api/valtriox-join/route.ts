@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, withRetry} from "@/lib/db";
+import { db, withRetry} from "@/lib/db";
 import bcrypt from "bcryptjs";
 
 // POST: Accept Valtriox team invitation (public - no auth required)
@@ -8,8 +8,6 @@ import bcrypt from "bcryptjs";
 //   action=accept - Create user account (if needed) and add to Valtriox team
 export async function POST(req: NextRequest) {
   try {
-    await ensureDb();
-
     const body = await req.json();
     const { action, email, token } = body;
 
@@ -215,7 +213,7 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     console.error("[Valtriox Join] POST error:", error?.message);
     return NextResponse.json(
-      { error: "Failed to process invitation", details: error?.message },
+      { error: "Failed to process invitation", details: process.env.NODE_ENV === "production" ? undefined : error?.message },
       { status: 500 }
     );
   }

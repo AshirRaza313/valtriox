@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { db, ensureDb, isDbUnavailable, withRetry} from "@/lib/db";
+import { db, isDbUnavailable, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
 
@@ -72,8 +72,6 @@ async function syncPlansToLandingPage() {
 export const GET = withAuth(async () => {
   try {
     logger.info("[Subscriptions Plans] GET request");
-    await ensureDb();
-
     // Auto-cleanup: filter out stale plans (free, basic, etc.)
     try {
       const staleCount = await withRetry(async () => {
