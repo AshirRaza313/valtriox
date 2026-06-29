@@ -81,4 +81,4 @@ export const POST = withRateLimit(withAuth(async (req, authCtx) => {
     }
     return NextResponse.json({ error: "Failed to create expense" }, { status: 500 });
   }
-}, { maxRequests: 20, windowSeconds: 60 });
+}), { maxRequests: 20, windowSeconds: 60 });

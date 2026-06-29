@@ -140,4 +140,4 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
     const unhandledDetail = process.env.NODE_ENV === 'production' ? undefined : error?.message;
     return NextResponse.json({ error: "Failed to create invoice", ...(unhandledDetail ? { details: unhandledDetail } : {}) }, { status: 500 });
   }
-}, { maxRequests: 10, windowSeconds: 60 });
+}), { maxRequests: 10, windowSeconds: 60 });

@@ -152,4 +152,4 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
     }
     return NextResponse.json({ error: "Failed to send push notification" }, { status: 500 });
   }
-}, { maxRequests: 10, windowSeconds: 60 });
+}), { maxRequests: 10, windowSeconds: 60 });

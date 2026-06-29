@@ -89,7 +89,7 @@ export const POST = withRateLimit(withAuth(async (req, ctx) => {
     console.error("[Feedback POST] Error:", msg);
     return NextResponse.json({ error: "Failed to create feedback" }, { status: 500 });
   }
-}, { maxRequests: 15, windowSeconds: 60 });
+}), { maxRequests: 15, windowSeconds: 60 });
 
 export const PATCH = withAuth(async (req, ctx) => {
   try {

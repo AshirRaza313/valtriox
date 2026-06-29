@@ -208,4 +208,4 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
     }
     return NextResponse.json({ error: "Failed to create payment order" }, { status: 500 });
   }
-}, { maxRequests: 5, windowSeconds: 60 });
+}), { maxRequests: 5, windowSeconds: 60 });

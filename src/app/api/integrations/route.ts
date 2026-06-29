@@ -71,7 +71,7 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
     if (isDbUnavailable(error)) return dbErrorResponse(error);
     return NextResponse.json({ error: "Failed to save integration" }, { status: 500 });
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"] });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"] }), { maxRequests: 10, windowSeconds: 60 });
 
 // DELETE /api/integrations?id=... — Disconnect an integration
 export async function DELETE(req: NextRequest) {
@@ -86,6 +86,6 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error("[Integrations DELETE] Error:", error?.message || error);
-    return NextResponse.json({ error: "Failed to disconnect" }, { status: 500 }, { maxRequests: 10, windowSeconds: 60 });
+    return NextResponse.json({ error: "Failed to disconnect" }, { status: 500 });
   }
 }

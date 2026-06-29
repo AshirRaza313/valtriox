@@ -414,7 +414,7 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
     }
     return NextResponse.json({ error: "Failed to add member" }, { status: 500 });
   }
-}, { maxRequests: 10, windowSeconds: 60 });
+}), { maxRequests: 10, windowSeconds: 60 });
 
 // DELETE - Remove a team member OR revoke a pending invitation
 export const DELETE = withAuth(async (req: NextRequest, authCtx) => {

@@ -98,7 +98,7 @@ export const POST = withRateLimit(withAuth(async (req, authCtx) => {
     }
     return NextResponse.json({ error: "Failed to create broadcast" }, { status: 500 });
   }
-}, { maxRequests: 5, windowSeconds: 60 });
+}), { maxRequests: 5, windowSeconds: 60 });
 
 export const PUT = withAuth(async (req, authCtx) => {
   try {

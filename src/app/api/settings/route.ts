@@ -165,4 +165,4 @@ export const PUT = withRateLimit(withAuth(async (req, authCtx) => {
     }
     return NextResponse.json({ error: "Failed to update settings" }, { status: 500 });
   }
-}, { maxRequests: 10, windowSeconds: 60 });
+}), { maxRequests: 10, windowSeconds: 60 });

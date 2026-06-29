@@ -122,4 +122,4 @@ export const POST = withRateLimit(withAuth(async (req, authCtx) => {
     }
     return NextResponse.json({ error: "Failed to create customer" }, { status: 500 });
   }
-}, { maxRequests: 30, windowSeconds: 60 });
+}), { maxRequests: 30, windowSeconds: 60 });
