@@ -1,6 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db, ensurePlatformSettingsColumns, withRetry} from "@/lib/db";
 import { generateLeadMagnetPDF } from "@/lib/lead-magnet-generator";
+import { withAuth } from "@/lib/auth-middleware";
 
 // Simple in-memory cache: generated PDFs are valid for 10 minutes
 let cachedPdf: { buffer: Buffer; timestamp: number } | null = null;
@@ -104,7 +105,8 @@ export async function GET() {
  * POST /api/lead-magnet - Force regenerate PDF (clears cache).
  * Requires admin auth - used by admin panel "Regenerate PDF" button.
  */
-export async function POST() {
+// FIX 1.8: POST requires platform admin auth — only admins can regenerate the PDF
+export const POST = withAuth(async (_req: NextRequest) => {
   try {
     // Clear cache
     cachedPdf = null;
@@ -160,3 +162,4 @@ export async function POST() {
     );
   }
 }
+}, { requireRole: ["platform_owner", "platform_admin"] });
