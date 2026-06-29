@@ -18,8 +18,11 @@ export const GET = withAuth(async (req, ctx) => {
     const status = url.searchParams.get("status");
     const orgId = ctx.organizationId;
 
-    const where: Record<string, unknown> = {};
-    if (orgId) where.organizationId = orgId;
+    // FIX: orgId is MANDATORY — without it, cross-org data leak occurs
+    if (!orgId) {
+      return NextResponse.json({ error: "Organization context required" }, { status: 400 });
+    }
+    const where: Record<string, unknown> = { organizationId: orgId };
     if (type) where.type = type;
     if (status) where.status = status;
 

@@ -3,6 +3,7 @@ import crypto from "crypto";
 import { db } from "@/lib/db";
 import { sendEmail, isEmailConfigured } from "@/lib/email";
 import { sanitizeEmail } from "@/lib/sanitize";
+import logger from "@/lib/logger";
 import { withRateLimit } from "@/lib/rate-limit";
 import { getPasswordResetOtpEmailHtml } from "@/lib/email-templates";
 

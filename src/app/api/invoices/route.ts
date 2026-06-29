@@ -56,8 +56,10 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
       if (isDbUnavailable(dbErr)) {
         return NextResponse.json({ error: "Database is currently unavailable. Please try again later.", fallback: true }, { status: 503 });
       }
+      // FIX: Never expose internal error details in production
+      const detail = process.env.NODE_ENV === 'production' ? undefined : dbErr?.message;
       return NextResponse.json(
-        { error: "Database error fetching organization", details: dbErr?.message },
+        { error: "Database error fetching organization", ...(detail ? { details: detail } : {}) },
         { status: 500 }
       );
     }
@@ -120,8 +122,10 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
       if (isDbUnavailable(createErr)) {
         return NextResponse.json({ error: "Database is currently unavailable. Please try again later.", fallback: true }, { status: 503 });
       }
+      // FIX: Never expose internal error details in production
+      const createDetail = process.env.NODE_ENV === 'production' ? undefined : createErr?.message;
       return NextResponse.json(
-        { error: "Failed to create invoice in database", details: createErr?.message },
+        { error: "Failed to create invoice in database", ...(createDetail ? { details: createDetail } : {}) },
         { status: 500 }
       );
     }
@@ -132,6 +136,8 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
     if (isDbUnavailable(error)) {
       return NextResponse.json({ error: "Database is currently unavailable. Please try again later.", fallback: true }, { status: 503 });
     }
-    return NextResponse.json({ error: "Failed to create invoice", details: error?.message }, { status: 500 });
+    // FIX: Never expose internal error details in production
+    const unhandledDetail = process.env.NODE_ENV === 'production' ? undefined : error?.message;
+    return NextResponse.json({ error: "Failed to create invoice", ...(unhandledDetail ? { details: unhandledDetail } : {}) }, { status: 500 });
   }
 });
