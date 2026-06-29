@@ -18,7 +18,7 @@ export interface AuthContext {
 }
 
 // ---------------------------------------------------------------------------
-// HMAC signing helpers – used to sign & verify cookie-based auth data so
+// HMAC signing helpers — used to sign & verify cookie-based auth data so
 // that an attacker cannot forge vt-user-* cookies.
 // ---------------------------------------------------------------------------
 
@@ -47,7 +47,6 @@ function verifyAuthCookie(
     .createHmac("sha256", secret)
     .update(payload)
     .digest("hex");
-  // timingSafeEqual requires equal-length buffers
   if (signature.length !== expectedSig.length) return false;
   return crypto.timingSafeEqual(
     Buffer.from(signature, "utf8"),
@@ -62,16 +61,18 @@ function verifyAuthCookie(
  *   1. NextAuth server session
  *   2. Signed cookies (vt-user-* + vt-auth-sig)
  *
- * If neither succeeds, returns null (unauthenticated).
+ * FIX 1.2: x-user-* header auth has been REMOVED.
+ * Headers can be forged by any caller. Cookies with HMAC signatures
+ * are the correct fallback when NextAuth session is unavailable.
  */
 export async function getAuthContext(
   req: NextRequest,
 ): Promise<AuthContext | null> {
-  // ── Method 1: NextAuth session ────────────────────────────────────────
+  // ── Method 1: NextAuth session ─────────────────────────────────────────
   try {
     const session = await getServerSession(authOptions);
     if (session?.user) {
-      const user = session.user as any;
+      const user = session.user as { id?: string; email?: string; role?: string; organizationId?: string };
       if (user?.id) {
         return {
           userId: user.id,
@@ -81,25 +82,15 @@ export async function getAuthContext(
         };
       }
     }
-  } catch (nextAuthErr: any) {
-    // NextAuth failed – log but fall through to cookie auth.
+  } catch (nextAuthErr: unknown) {
+    const msg = nextAuthErr instanceof Error ? nextAuthErr.message : String(nextAuthErr);
     console.warn(
       "[Auth] NextAuth session check failed, falling back to cookie auth:",
-      nextAuthErr?.message || nextAuthErr,
+      msg,
     );
   }
 
-  // ── Method 2: Custom headers (x-user-*, sent by fetchWithAuth) ──────────
-  const headerUserId = req.headers.get("x-user-id");
-  const headerEmail = req.headers.get("x-user-email") || "";
-  const headerRole = req.headers.get("x-user-role") || "member";
-  const headerOrgId = req.headers.get("x-org-id") || undefined;
-
-  if (headerUserId) {
-    return { userId: headerUserId, email: headerEmail, role: headerRole, organizationId: headerOrgId };
-  }
-
-  // ── Method 3: Signed cookies (set by login API) ───────────────────────
+  // ── Method 2: Signed cookies (set by login API) ───────────────────────
   // The login route sets vt-user-id, vt-user-email, vt-user-role,
   // vt-org-id, and a corresponding vt-auth-sig (HMAC-SHA256 signature).
   const cookieUserId = req.cookies.get("vt-user-id")?.value;
@@ -124,27 +115,14 @@ export async function getAuthContext(
         organizationId: cookieOrgId,
       };
     }
-    // Signature invalid – fall through and reject below
     console.warn("[Auth] Cookie auth signature verification failed");
   }
 
-  // No valid auth found
   return null;
 }
 
 /**
  * withAuth - Higher-order function that wraps API route handlers with authentication.
- *
- * Usage:
- *   export const GET = withAuth(async (req, ctx) => {
- *     // ctx.userId, ctx.role, ctx.organizationId are available
- *     return NextResponse.json({ data: "protected" });
- *   });
- *
- * Options:
- *   - requireRole: string[] - Only allow specific roles (e.g., ["platform_owner", "admin"])
- *   - requireOrg: boolean - Require organizationId to be present (default: true)
- *   - allowPublic: boolean - Skip auth check entirely (default: false)
  */
 export type RouteContext = { params: Promise<Record<string, string>> };
 type ApiHandler = (
@@ -171,7 +149,6 @@ export function withAuth(
   ): Promise<Response> => {
     const ctx = context ?? { params: Promise.resolve({}) };
     try {
-      // Public routes skip auth
       if (allowPublic) {
         const publicCtx: AuthContext = {
           userId: "public",
@@ -190,33 +167,25 @@ export function withAuth(
         );
       }
 
-      // Role check
       if (requireRole.length > 0 && !requireRole.includes(authCtx.role)) {
         return NextResponse.json(
-          {
-            error:
-              "Insufficient permissions. You don't have access to this resource.",
-          },
+          { error: "Insufficient permissions. You don't have access to this resource." },
           { status: 403 },
         );
       }
 
-      // Organization check - auto-bypass for platform-level roles (admin/owner)
-      // Platform owners don't need to belong to a specific organization.
       const isPlatformAdmin = isPlatformRole(authCtx.role);
       if (requireOrg && !authCtx.organizationId && !isPlatformAdmin) {
         return NextResponse.json(
-          {
-            error:
-              "Organization context required. Please join or create an organization.",
-          },
+          { error: "Organization context required. Please join or create an organization." },
           { status: 403 },
         );
       }
 
       return handler(req, authCtx, ctx);
-    } catch (error: any) {
-      console.error("[Auth Middleware Error]", error?.message || error);
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      console.error("[Auth Middleware Error]", msg);
       return NextResponse.json(
         { error: "Internal server error during authentication." },
         { status: 500 },
@@ -226,14 +195,15 @@ export function withAuth(
 }
 
 /**
- * Utility to check if the user has a platform-level role (bypasses feature locks)
+ * Utility to check if the user has a platform-level role
  */
 export function isPlatformRole(role: string): boolean {
   return ["platform_owner", "platform_admin", "owner", "admin"].includes(role);
 }
 
 /**
- * Utility to check if the user is a brand owner or higher
+ * Utility to check if the user is an org admin.
+ * FIX 5.5: "manager" role removed — managers should NOT have admin-level access.
  */
 export function isOrgAdmin(role: string): boolean {
   return [
@@ -241,6 +211,5 @@ export function isOrgAdmin(role: string): boolean {
     "platform_admin",
     "owner",
     "brand_owner",
-    "manager",
   ].includes(role);
 }
