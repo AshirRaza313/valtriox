@@ -15,7 +15,7 @@ export const GET = withAuth(async (req, authCtx) => {
   try {
     const queryResult = validateQuery(req, productsQuerySchema);
     if (!queryResult.success) return queryResult.response;
-    const { search, orgId: queryOrgId, category } = queryResult.data;
+    const { page, limit, search, orgId: queryOrgId, category } = queryResult.data;
 
     const orgId = queryOrgId || authCtx.organizationId;
     if (!orgId) return NextResponse.json({ error: "orgId required" }, { status: 400 });
@@ -34,8 +34,19 @@ export const GET = withAuth(async (req, authCtx) => {
       ];
     }
 
-    const { products, stats } = await withRetry(async () => {
-      const prods = await db.product.findMany({ where, orderBy: { createdAt: "desc" } });
+    // Phase 4: Apply pagination to prevent unbounded queries
+    const skip = (page - 1) * limit;
+
+    const { products, stats, totalCount } = await withRetry(async () => {
+      const [prods, count] = await Promise.all([
+        db.product.findMany({
+          where,
+          orderBy: { createdAt: "desc" },
+          skip,
+          take: limit,
+        }),
+        db.product.count({ where }),
+      ]);
 
       const [total, active, lowStock] = await Promise.all([
         db.product.count({ where: { organizationId: orgId } }),
@@ -48,10 +59,19 @@ export const GET = withAuth(async (req, authCtx) => {
         _sum: { price: true },
       });
 
-      return { products: prods, stats: { total, active, lowStock, totalValue: totalValue._sum.price || 0 } };
+      return { products: prods, stats: { total, active, lowStock, totalValue: totalValue._sum.price || 0 }, totalCount: count };
     }, 2, 500);
 
-    return NextResponse.json({ products, stats });
+    return NextResponse.json({
+      products,
+      stats,
+      pagination: {
+        page,
+        limit,
+        totalCount,
+        totalPages: Math.ceil(totalCount / limit),
+      },
+    });
   } catch (error: unknown) {
     logger.error("Products API error", error, { orgId: authCtx?.organizationId });
     if (isDbUnavailable(error)) {

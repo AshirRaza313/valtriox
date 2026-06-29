@@ -186,12 +186,17 @@ export const POST = withAuth(async (req, authCtx) => {
           }
         }
 
-        // Update product stock (verify products belong to same org)
+        // Update product stock — Phase 4: Batch ownership check, then individual updates
+        // Reduces from 2N queries to N+1 (1 bulk check + N updates)
+        const productIds = items.map(i => i.productId);
+        const orgProducts = await tx.product.findMany({
+          where: { id: { in: productIds }, organizationId },
+          select: { id: true },
+        });
+        const validProductIds = new Set(orgProducts.map(p => p.id));
+
         for (const item of items) {
-          const productExists = await tx.product.findFirst({
-            where: { id: item.productId, organizationId },
-          });
-          if (productExists) {
+          if (validProductIds.has(item.productId)) {
             await tx.product.update({
               where: { id: item.productId },
               data: { stock: { decrement: item.quantity } },

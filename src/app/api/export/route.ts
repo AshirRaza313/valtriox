@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth-middleware";
 import { db } from "@/lib/db";
+import logger from "@/lib/logger";
+
+// Phase 4: Cap export queries to prevent OOM on large datasets
+const EXPORT_ROW_LIMIT = 5000;
 
 export const GET = withAuth(async (req, ctx) => {
   try {
@@ -10,12 +14,13 @@ export const GET = withAuth(async (req, ctx) => {
       return NextResponse.json({ error: "Organization ID required" }, { status: 400 });
     }
 
-    // Fetch all organization data in parallel
+    // Fetch organization data in parallel with row caps
     const [products, customers, orders, expenses, tasks, coupons] =
       await Promise.all([
         db.product.findMany({
           where: { organizationId: orgId },
           orderBy: { createdAt: "desc" },
+          take: EXPORT_ROW_LIMIT,
           select: {
             id: true, name: true, sku: true, description: true,
             price: true, costPrice: true, stock: true, category: true,
@@ -25,6 +30,7 @@ export const GET = withAuth(async (req, ctx) => {
         db.customer.findMany({
           where: { organizationId: orgId },
           orderBy: { createdAt: "desc" },
+          take: EXPORT_ROW_LIMIT,
           select: {
             id: true, name: true, email: true, phone: true,
             city: true, address: true, loyaltyTier: true,
@@ -35,6 +41,7 @@ export const GET = withAuth(async (req, ctx) => {
         db.order.findMany({
           where: { organizationId: orgId },
           orderBy: { createdAt: "desc" },
+          take: EXPORT_ROW_LIMIT,
           include: {
             items: {
               select: {
@@ -42,16 +49,11 @@ export const GET = withAuth(async (req, ctx) => {
               },
             },
           },
-          select: {
-            id: true, orderNumber: true, customerId: true, status: true,
-            subtotal: true, discount: true, total: true, channel: true,
-            courier: true, trackingNumber: true, notes: true, priority: true,
-            createdAt: true, updatedAt: true,
-          },
         }),
         db.expense.findMany({
           where: { organizationId: orgId },
           orderBy: { date: "desc" },
+          take: EXPORT_ROW_LIMIT,
           select: {
             id: true, title: true, amount: true, category: true,
             date: true, description: true, createdAt: true, updatedAt: true,
@@ -60,6 +62,7 @@ export const GET = withAuth(async (req, ctx) => {
         db.teamTask.findMany({
           where: { organizationId: orgId },
           orderBy: { createdAt: "desc" },
+          take: EXPORT_ROW_LIMIT,
           select: {
             id: true, assignedTo: true, title: true, description: true,
             status: true, priority: true, dueDate: true,
@@ -69,6 +72,7 @@ export const GET = withAuth(async (req, ctx) => {
         db.coupon.findMany({
           where: { organizationId: orgId },
           orderBy: { createdAt: "desc" },
+          take: EXPORT_ROW_LIMIT,
           select: {
             id: true, code: true, type: true, value: true,
             minOrder: true, usageLimit: true, usageCount: true,
@@ -76,6 +80,16 @@ export const GET = withAuth(async (req, ctx) => {
           },
         }),
       ]);
+
+    // Check if any collection was truncated
+    const truncated = [
+      products.length >= EXPORT_ROW_LIMIT ? "products" : null,
+      customers.length >= EXPORT_ROW_LIMIT ? "customers" : null,
+      orders.length >= EXPORT_ROW_LIMIT ? "orders" : null,
+      expenses.length >= EXPORT_ROW_LIMIT ? "expenses" : null,
+      tasks.length >= EXPORT_ROW_LIMIT ? "tasks" : null,
+      coupons.length >= EXPORT_ROW_LIMIT ? "coupons" : null,
+    ].filter(Boolean);
 
     const exportData = {
       exportedAt: new Date().toISOString(),
@@ -119,6 +133,7 @@ export const GET = withAuth(async (req, ctx) => {
         totalExpenses: expenses.length,
         totalTasks: tasks.length,
         totalCoupons: coupons.length,
+        truncated: truncated.length > 0 ? `Some collections reached the ${EXPORT_ROW_LIMIT} row limit: ${truncated.join(", ")}` : false,
       },
     };
 
@@ -132,8 +147,9 @@ export const GET = withAuth(async (req, ctx) => {
         "Cache-Control": "no-store",
       },
     });
-  } catch (error: any) {
-    console.error("[Export] Error:", error?.message || error);
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    logger.error("[Export] Error:", msg);
     return NextResponse.json(
       { error: "Failed to export data. Please try again." },
       { status: 500 },

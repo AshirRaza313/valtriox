@@ -1,24 +1,11 @@
 // ============================================================================
 // Rate Limiting Middleware
 // ============================================================================
-// Simple in-memory rate limiter for API routes.
-// In production, use Redis or Upstash for distributed rate limiting.
+// Phase 4: Production-grade rate limiting using Upstash Redis.
+// Falls back to in-memory for local development when Redis is not configured.
 // ============================================================================
 
-interface RateLimitEntry {
-  count: number;
-  resetAt: number;
-}
-
-const store = new Map<string, RateLimitEntry>();
-
-// Clean up old entries every 5 minutes
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, entry] of store) {
-    if (entry.resetAt <= now) store.delete(key);
-  }
-}, 5 * 60 * 1000);
+import { NextRequest, NextResponse } from "next/server";
 
 export interface RateLimitOptions {
   /** Maximum number of requests in the window */
@@ -36,38 +23,71 @@ export interface RateLimitResult {
   limit: number;
 }
 
-/**
- * Check if a request is within rate limits.
- *
- * Usage in API routes:
- *   import { rateLimit } from "@/lib/rate-limit";
- *
- *   export async function POST(req: NextRequest) {
- *     const { success, remaining } = rateLimit(req, { maxRequests: 5, windowSeconds: 60 });
- *     if (!success) {
- *       return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
- *     }
- *     // ... handle request
- *   }
- */
-export function rateLimit(
-  req: NextRequest,
-  options: RateLimitOptions = {}
+// ── Upstash Redis Rate Limiter (production) ──────────────────────────────────
+
+let _ratelimit: import("@upstash/ratelimit").Ratelimit | null = null;
+
+async function getUpstashRatelimit(
+  maxRequests: number,
+  windowSeconds: number
+): Promise<import("@upstash/ratelimit").Ratelimit | null> {
+  if (_ratelimit) return _ratelimit;
+
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+
+  if (!url || !token) return null;
+
+  try {
+    const { Ratelimit } = await import("@upstash/ratelimit");
+    const { Redis } = await import("@upstash/redis");
+
+    const redis = new Redis({ url, token });
+    _ratelimit = new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(maxRequests, `${windowSeconds} s`),
+      prefix: "valtriox-rl",
+    });
+    return _ratelimit;
+  } catch {
+    // Upstash not available — fall back to in-memory
+    console.warn("[RateLimit] Upstash Redis not available, using in-memory fallback");
+    return null;
+  }
+}
+
+// ── In-Memory Fallback (development) ─────────────────────────────────────────
+
+interface RateLimitEntry {
+  count: number;
+  resetAt: number;
+}
+
+const memoryStore = new Map<string, RateLimitEntry>();
+
+// Clean up old entries every 5 minutes (dev only)
+if (typeof setInterval !== "undefined") {
+  setInterval(() => {
+    const now = Date.now();
+    for (const [key, entry] of memoryStore) {
+      if (entry.resetAt <= now) memoryStore.delete(key);
+    }
+  }, 5 * 60 * 1000);
+}
+
+function memoryRateLimit(
+  key: string,
+  maxRequests: number,
+  windowSeconds: number
 ): RateLimitResult {
-  const { maxRequests = 10, windowSeconds = 60, identifier } = options;
-  const key = identifier || getClientIp(req);
   const now = Date.now();
   const windowMs = windowSeconds * 1000;
 
-  const entry = store.get(key);
+  const entry = memoryStore.get(key);
 
   if (!entry || entry.resetAt <= now) {
-    // Create new window
-    const newEntry: RateLimitEntry = {
-      count: 1,
-      resetAt: now + windowMs,
-    };
-    store.set(key, newEntry);
+    const newEntry: RateLimitEntry = { count: 1, resetAt: now + windowMs };
+    memoryStore.set(key, newEntry);
     return { success: true, remaining: maxRequests - 1, resetAt: newEntry.resetAt, limit: maxRequests };
   }
 
@@ -79,20 +99,56 @@ export function rateLimit(
   return { success: true, remaining: maxRequests - entry.count, resetAt: entry.resetAt, limit: maxRequests };
 }
 
+// ── Main Rate Limit Function ─────────────────────────────────────────────────
+
+/**
+ * Check if a request is within rate limits.
+ * Uses Upstash Redis in production, in-memory fallback in development.
+ */
+export async function rateLimit(
+  req: NextRequest,
+  options: RateLimitOptions = {}
+): Promise<RateLimitResult> {
+  const { maxRequests = 10, windowSeconds = 60, identifier } = options;
+  const key = identifier || getClientIp(req);
+
+  // Try Upstash Redis first
+  const ratelimit = await getUpstashRatelimit(maxRequests, windowSeconds);
+  if (ratelimit) {
+    try {
+      const result = await ratelimit.limit(key);
+      return {
+        success: result.success,
+        remaining: result.remaining,
+        resetAt: result.reset,
+        limit: result.limit,
+      };
+    } catch {
+      // Redis error — fall back to in-memory
+      console.warn("[RateLimit] Upstash Redis error, using in-memory fallback");
+    }
+  }
+
+  // In-memory fallback
+  return memoryRateLimit(key, maxRequests, windowSeconds);
+}
+
+// ── withRateLimit HOF ────────────────────────────────────────────────────────
+
+type Handler = (req: NextRequest) => Promise<Response> | Response;
+
 /**
  * withRateLimit - Higher-order function wrapper for rate limiting API routes.
  *
  * Usage:
  *   export const POST = withRateLimit(handler, { maxRequests: 5, windowSeconds: 60 });
  */
-type Handler = (req: NextRequest) => Promise<Response> | Response;
-
 export function withRateLimit(
   handler: Handler,
   options: RateLimitOptions = {}
 ): (req: NextRequest) => Promise<Response> {
   return async (req: NextRequest): Promise<Response> => {
-    const result = rateLimit(req, options);
+    const result = await rateLimit(req, options);
     if (!result.success) {
       const response = NextResponse.json(
         {
@@ -116,14 +172,11 @@ export function withRateLimit(
   };
 }
 
-/**
- * Get client IP from request headers
- */
+// ── Client IP Detection ──────────────────────────────────────────────────────
+
 function getClientIp(req: NextRequest): string {
   const forwarded = req.headers.get("x-forwarded-for");
-  if (forwarded) {
-    return forwarded.split(",")[0].trim();
-  }
+  if (forwarded) return forwarded.split(",")[0].trim();
   const realIp = req.headers.get("x-real-ip");
   if (realIp) return realIp;
   const cfIp = req.headers.get("cf-connecting-ip");
@@ -131,15 +184,13 @@ function getClientIp(req: NextRequest): string {
 
   // Fallback: use User-Agent hash so same client gets rate limited consistently
   const ua = req.headers.get("user-agent") || "unknown";
-  // Simple hash function for rate limit key (doesn't need to be cryptographic)
   let hash = 0;
   for (let i = 0; i < ua.length; i++) {
     const char = ua.charCodeAt(i);
     hash = ((hash << 5) - hash) + char;
-    hash = hash & hash; // Convert to 32bit integer
+    hash = hash & hash;
   }
   return `ua-${Math.abs(hash)}`;
 }
 
-// Export for testing
 export { getClientIp };

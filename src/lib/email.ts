@@ -67,27 +67,42 @@ async function sendViaResend({ to, subject, html, text }: EmailOptions): Promise
 
 // ============================================================================
 // SMTP Fallback (Zoho / Gmail / any SMTP server)
-// ============================================================================
-async function sendViaSmtp({ to, subject, html, text }: EmailOptions): Promise<boolean> {
+// Phase 4: Module-level SMTP transporter singleton with connection pooling
+let _smtpTransporter: nodemailer.Transporter | null = null;
+
+function getSmtpTransporter(): nodemailer.Transporter | null {
   const host = process.env.SMTP_HOST;
   const port = parseInt(process.env.SMTP_PORT || '587');
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS;
+
+  if (!host || !user || !pass) return null;
+
+  if (!_smtpTransporter) {
+    _smtpTransporter = nodemailer.createTransport({
+      host,
+      port,
+      secure: port === 465,
+      auth: { user, pass },
+      pool: true,          // Enable connection pooling
+      maxConnections: 5,   // Max simultaneous connections
+      maxMessages: 100,    // Max messages per connection
+    });
+  }
+  return _smtpTransporter;
+}
+
+// ============================================================================
+async function sendViaSmtp({ to, subject, html, text }: EmailOptions): Promise<boolean> {
   const from = process.env.SMTP_FROM || process.env.SMTP_USER || 'Valtriox <onboarding@resend.dev>';
 
-  if (!host || !user || !pass) {
+  const transporter = getSmtpTransporter();
+  if (!transporter) {
     console.warn('[Email/SMTP] SMTP not configured. Set SMTP_HOST, SMTP_USER, SMTP_PASS.');
     return false;
   }
 
   try {
-    const transporter = nodemailer.createTransport({
-      host,
-      port,
-      secure: port === 465,
-      auth: { user, pass },
-    });
-
     await transporter.sendMail({
       from: `"Valtriox" <${from}>`,
       to,

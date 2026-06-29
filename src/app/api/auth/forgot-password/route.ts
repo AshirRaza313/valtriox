@@ -76,11 +76,11 @@ export const POST = withRateLimit(async (req: NextRequest) => {
       }
     }
 
-    // FIX 1.1: Log OTP server-side only — NEVER expose in response
-    // In production: remove this log entirely or use a secured logger
-    if (process.env.NODE_ENV !== "production") {
-      console.log(`[ForgotPassword] OTP for ${email}: ${otp} | emailSent=${emailSent}`);
-    }
+    // Phase 4: OTP is NEVER logged — not even in development
+    // Previously this was logged with NODE_ENV check but staging environments
+    // may have NODE_ENV=production while still exposing Vercel logs to team.
+    // Use logger.info for audit trail without exposing the OTP value.
+    logger.info("OTP generated and email send attempted", { email, emailSent });
 
     // FIX 1.1: NEVER return OTP in response — not even in testing mode
     // If email is not configured, tell the user to check server logs
