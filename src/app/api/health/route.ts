@@ -109,12 +109,13 @@ export async function GET() {
     }
   }
 
+  // FIX 4.8: Never expose internal file paths in API response
   health.checks.api_routes = {
     status: routesAllExist ? "healthy" : "warning",
-    routes: apiRoutesResults,
     total: criticalRoutes.length,
     present: Object.values(apiRoutesResults).filter((r) => r.exists).length,
     missing: Object.values(apiRoutesResults).filter((r) => !r.exists).length,
+    // routes object intentionally omitted — internal paths not exposed to clients
   };
   if (!routesAllExist) {
     health.status = "degraded";
