@@ -67,13 +67,18 @@ export function validateEnv(): EnvSchema {
       .map((issue) => `  - ${issue.path.join(".")}: ${issue.message}`)
       .join("\n");
 
-    if (process.env.NODE_ENV === "development") {
-      console.error("\n" + "=".repeat(60));
-      console.error("ENVIRONMENT VARIABLE VALIDATION FAILED");
-      console.error("=".repeat(60));
-      console.error(errors);
-      console.error("=".repeat(60) + "\n");
+    // FIX 2.5: Crash on startup if env vars are invalid in production
+    if (process.env.NODE_ENV === "production") {
+      throw new Error(
+        `\n${"=".repeat(60)}\nENVIRONMENT VARIABLE VALIDATION FAILED\n${"=".repeat(60)}\n${errors}\n${"=".repeat(60)}\n`
+      );
     }
+
+    console.error("\n" + "=".repeat(60));
+    console.error("ENVIRONMENT VARIABLE VALIDATION FAILED");
+    console.error("=".repeat(60));
+    console.error(errors);
+    console.error("=".repeat(60) + "\n");
 
     _validatedEnv = result.data as EnvSchema;
     return _validatedEnv;
