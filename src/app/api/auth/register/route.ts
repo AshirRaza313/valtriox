@@ -30,14 +30,10 @@ export const POST = withRateLimit(async (req: NextRequest) => {
     const cleanEmail = sanitizeEmail(email);
     const cleanBrandName = sanitizeString(brandName);
 
-    // Validate password strength
+    // Validate password strength (FIX 5.4: removed duplicate password.length check below)
     const passwordCheck = validatePassword(password);
     if (!passwordCheck.valid) {
       return NextResponse.json({ error: passwordCheck.reason }, { status: 400 });
-    }
-
-    if (password.length < 8) {
-      return NextResponse.json({ error: "Password must be at least 8 characters" }, { status: 400 });
     }
 
     // Check database connectivity
@@ -80,42 +76,56 @@ export const POST = withRateLimit(async (req: NextRequest) => {
     const isAdmin = adminEmail && cleanEmail === adminEmail;
     const assignedRole = isAdmin ? "platform_owner" : "brand_owner";
 
-    const user = await withRetry(async () => {
-      return await db.user.create({
-      data: {
-        name: cleanName,
-        email: cleanEmail,
-        password: hashedPassword,
-        role: assignedRole,
-      },
-      select: { id: true, name: true, email: true, role: true },
-    })
-    }, 2, 500);
+    // FIX 2.2: Wrap all creation in a single transaction to prevent partial writes
+    let user: { id: string; name: string | null; email: string; role: string };
+    let organization: { id: string; name: string; slug: string };
+
+    try {
+      const result = await db.$transaction(async (tx) => {
+        const newUser = await tx.user.create({
+          data: {
+            name: cleanName,
+            email: cleanEmail,
+            password: hashedPassword,
+            role: assignedRole,
+          },
+          select: { id: true, name: true, email: true, role: true },
+        });
+
+        const newOrg = await tx.organization.create({
+          data: {
+            name: cleanBrandName,
+            slug,
+            email: cleanEmail,
+            currency: "PKR",
+          },
+          select: { id: true, name: true, slug: true },
+        });
+
+        await tx.organizationMember.create({
+          data: {
+            organizationId: newOrg.id,
+            userId: newUser.id,
+            role: assignedRole,
+          },
+          select: { id: true },
+        });
+
+        return { user: newUser, organization: newOrg };
+      });
+
+      user = result.user;
+      organization = result.organization;
+    } catch (txError: unknown) {
+      const msg = txError instanceof Error ? txError.message : String(txError);
+      // Handle unique constraint violations gracefully
+      if (msg.includes("Unique constraint") || msg.includes("unique")) {
+        return NextResponse.json({ error: "Email or brand name already registered" }, { status: 400 });
+      }
+      throw txError;
+    }
 
     logger.info("New user registered", { userId: user.id, email: cleanEmail, role: assignedRole, orgName: cleanBrandName });
-
-    const organization = await withRetry(async () => {
-      return await db.organization.create({
-      data: {
-        name: cleanBrandName,
-        slug,
-        email: cleanEmail,
-        currency: "PKR",
-      },
-      select: { id: true, name: true, slug: true },
-    })
-    }, 2, 500);
-
-    await withRetry(async () => {
-      return await db.organizationMember.create({
-      data: {
-        organizationId: organization.id,
-        userId: user.id,
-        role: assignedRole,
-      },
-      select: { id: true },
-    })
-    }, 2, 500);
 
     return NextResponse.json({
       user: { id: user.id, name: user.name, email: user.email, role: user.role },
