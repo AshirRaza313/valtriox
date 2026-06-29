@@ -4,6 +4,9 @@ import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
 
 export const POST = withAuth(async (req: NextRequest, authCtx) => {
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json({ error: 'Not available in production' }, { status: 404 });
+  }
   logger.info("[Seed] POST request", { userId: authCtx.userId });
   try {
     // Check if demo data already exists
@@ -371,6 +374,6 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
     });
   } catch (error: any) {
     logger.error("Seed error", error);
-    return NextResponse.json({ error: "Seed failed: " + error.message }, { status: 500 });
+    return NextResponse.json({ error: process.env.NODE_ENV === 'production' ? "Seed failed" : "Seed failed: " + error.message }, { status: 500 });
   }
 }, { requireRole: ["platform_owner", "platform_admin"], requireOrg: false });

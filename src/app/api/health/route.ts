@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db, safeDbQuery } from "@/lib/db";
 import logger from "@/lib/logger";
 
@@ -9,7 +9,19 @@ import logger from "@/lib/logger";
  * project directory, triggering "Encountered unexpected file in NFT list" warning.
  * Route file existence checks removed (not needed in production on Vercel).
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
+  // In production, require basic auth via HEALTH_CHECK_SECRET env var
+  if (process.env.NODE_ENV === 'production') {
+    const authHeader = req.headers.get('authorization');
+    const secret = process.env.HEALTH_CHECK_SECRET;
+    if (!secret) {
+      return NextResponse.json({ error: 'Health check not configured' }, { status: 503 });
+    }
+    if (!authHeader || authHeader !== `Bearer ${secret}`) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+  }
+
   const health: Record<string, unknown> = {
     status: "ok",
     timestamp: new Date().toISOString(),
@@ -27,7 +39,7 @@ export async function GET() {
     health.status = "degraded";
     (health.checks as Record<string, unknown>).database = {
       status: "unhealthy",
-      error: error?.substring(0, 200) || "Unknown database error",
+      error: process.env.NODE_ENV === 'production' ? "Database connection failed" : (error?.substring(0, 200) || "Unknown database error"),
     };
     logger.error("[Health] Database check failed", { error });
   } else {

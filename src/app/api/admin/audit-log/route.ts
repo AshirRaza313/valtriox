@@ -318,7 +318,7 @@ export const GET = withAuth(async (request: NextRequest, authCtx) => {
       return dbErrorResponse(error);
     }
     return NextResponse.json(
-      { error: error?.message || "Failed to fetch audit log" },
+      { error: process.env.NODE_ENV === 'production' ? "Failed to fetch audit log" : (error?.message || "Failed to fetch audit log") },
       { status: 500 }
     );
   }

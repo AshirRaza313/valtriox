@@ -16,14 +16,10 @@ import {
 
 function generateToken(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  // SECURITY: Always use crypto.getRandomValues — no Math.random() fallback
   const bytes = new Uint8Array(8);
-  if (typeof crypto !== "undefined" && crypto.getRandomValues) {
-    crypto.getRandomValues(bytes);
-    return Array.from(bytes, (b) => chars[b % chars.length]).join("");
-  }
-  return Array.from({ length: 8 }, () =>
-    chars[Math.floor(Math.random() * chars.length)]
-  ).join("");
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => chars[b % chars.length]).join("");
 }
 
 async function getPlatformSettings() {
@@ -113,7 +109,7 @@ export const GET = withAuth(async (req, _ctx) => {
   } catch (error: any) {
     console.error("[BetaInvite GET]", error?.message);
     return NextResponse.json(
-      { error: "Failed to fetch invites", detail: error?.message },
+      { error: "Failed to fetch invites", detail: process.env.NODE_ENV === 'production' ? undefined : error?.message },
       { status: 500 }
     );
   }
@@ -246,7 +242,7 @@ export const POST = withAuth(async (req, ctx) => {
     }
 
     return NextResponse.json(
-      { error: "Failed to create invite", detail: error?.message },
+      { error: "Failed to create invite", detail: process.env.NODE_ENV === 'production' ? undefined : error?.message },
       { status: 500 }
     );
   }

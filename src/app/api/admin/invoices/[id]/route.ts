@@ -47,7 +47,7 @@ export async function GET(
 
     if (error) {
       logger.error("[Admin Invoice Detail] GET failed", { error, userId: authCtx.userId });
-      return NextResponse.json({ error: "Failed to fetch invoice", detail: error?.substring(0, 200) }, { status: 503 });
+      return NextResponse.json({ error: "Failed to fetch invoice", detail: process.env.NODE_ENV === 'production' ? undefined : error?.substring(0, 200) }, { status: 503 });
     }
 
     if (!invoice) {
@@ -128,7 +128,7 @@ export async function PUT(
 
     if (fetchErr) {
       logger.error("[Admin Invoice Update] Fetch failed", { error: fetchErr, userId: authCtx.userId });
-      return NextResponse.json({ error: "Failed to fetch invoice", detail: fetchErr?.substring(0, 200) }, { status: 503 });
+      return NextResponse.json({ error: "Failed to fetch invoice", detail: process.env.NODE_ENV === 'production' ? undefined : fetchErr?.substring(0, 200) }, { status: 503 });
     }
 
     if (!existing) {
@@ -219,7 +219,7 @@ export async function PUT(
 
     if (updateErr) {
       logger.error("[Admin Invoice Update] Update failed", { error: updateErr, userId: authCtx.userId });
-      return NextResponse.json({ error: "Failed to update invoice", detail: updateErr?.substring(0, 200) }, { status: 503 });
+      return NextResponse.json({ error: "Failed to update invoice", detail: process.env.NODE_ENV === 'production' ? undefined : updateErr?.substring(0, 200) }, { status: 503 });
     }
 
     // Create notification on status change

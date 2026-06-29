@@ -28,8 +28,12 @@ export function signAuthData(data: {
   role: string;
   organizationId?: string;
 }): string {
+  const secret = process.env.NEXTAUTH_SECRET;
+  // SECURITY: Refuse to sign when secret is missing — prevents deterministic HMAC with empty key
+  if (!secret) {
+    throw new Error("NEXTAUTH_SECRET is required for auth data signing");
+  }
   const payload = JSON.stringify(data);
-  const secret = process.env.NEXTAUTH_SECRET || "";
   return crypto.createHmac("sha256", secret).update(payload).digest("hex");
 }
 

@@ -144,7 +144,7 @@ export const GET = withAuth(async (_req: NextRequest, authCtx) => {
     return NextResponse.json({
       settings: DEFAULT_SETTINGS,
       fallback: true,
-      reason: msg,
+      reason: process.env.NODE_ENV === 'production' ? undefined : msg,
     });
   }
 }, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
@@ -265,7 +265,7 @@ export const PUT = withAuth(async (req: NextRequest, authCtx) => {
 
     return NextResponse.json({
       success: false,
-      error: `Could not save settings: ${msg}`,
+      error: process.env.NODE_ENV === 'production' ? "Could not save settings" : `Could not save settings: ${msg}`,
       details: process.env.NODE_ENV === "production" ? undefined : msg,
     }, { status: 500 });
   }

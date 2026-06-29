@@ -11,6 +11,9 @@ import { getAuthContext, isPlatformRole } from "@/lib/auth-middleware";
  * Requires platform_owner or platform_admin authentication.
  */
 export async function GET(req: NextRequest) {
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json({ error: 'Not available in production' }, { status: 404 });
+  }
   const authCtx = await getAuthContext(req);
   if (!authCtx || !isPlatformRole(authCtx.role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

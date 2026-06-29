@@ -10,6 +10,9 @@ import { withAuth } from "@/lib/auth-middleware";
  * Requires platform_owner or platform_admin authentication.
  */
 export const GET = withAuth(async (req: NextRequest, authCtx) => {
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json({ error: 'Not available in production' }, { status: 404 });
+  }
   const results: Record<string, any> = { timestamp: new Date().toISOString() };
 
   const dbUrl = process.env.DATABASE_URL || '';

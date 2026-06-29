@@ -85,8 +85,8 @@ export const POST = withAuth(async (req, authCtx) => {
       return NextResponse.json({ error: "A pending invitation already exists for this email" }, { status: 409 });
     }
 
-    // Generate 6-digit PIN token
-    const token = Math.floor(100000 + Math.random() * 900000).toString();
+    // Generate 6-digit PIN token — SECURITY: Use crypto.randomInt() instead of Math.random()
+    const token = (100000 + crypto.randomInt(900000)).toString();
 
     // Create invitation (expires in 7 days)
     const expiresAt = new Date();

@@ -78,7 +78,7 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
       clients: [],
       summary: { totalClients: 0, newThisMonth: 0, totalRevenue: 0, totalOrders: 0, planDistribution: {} },
       _dbError: true,
-      error: error?.message || "Database temporarily unavailable"
+      error: process.env.NODE_ENV === 'production' ? "Database temporarily unavailable" : (error?.message || "Database temporarily unavailable")
     });
   }
 }, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });

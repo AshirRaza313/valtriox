@@ -1,25 +1,48 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, withRetry} from "@/lib/db";
 import bcrypt from "bcryptjs";
+import { withRateLimit } from "@/lib/rate-limit";
+import { sanitizeObject, sanitizeEmail } from "@/lib/sanitize";
+import { z } from "zod";
 
-// POST: Accept Valtriox team invitation (public - no auth required)
-// Actions:
-//   action=verify - Check if email+token is valid and return invite details
-//   action=accept - Create user account (if needed) and add to Valtriox team
-export async function POST(req: NextRequest) {
+// ── Input validation schemas ──
+const verifySchema = z.object({
+  action: z.literal("verify"),
+  email: z.string().email().max(254),
+  token: z.string().min(1).max(128),
+});
+
+const acceptSchema = z.object({
+  action: z.literal("accept"),
+  email: z.string().email().max(254),
+  token: z.string().min(1).max(128),
+  name: z.string().min(1).max(100),
+  password: z.string().min(8).max(128),
+});
+
+const joinActionSchema = z.discriminatedUnion("action", [verifySchema, acceptSchema]);
+
+// POST: Accept Valtriox team invitation
+// SECURITY: Rate-limited to prevent brute-force token guessing
+export const POST = withRateLimit(async (req: NextRequest) => {
   try {
-    const body = await req.json();
+    const rawBody = await req.json();
+    const sanitizedBody = sanitizeObject(rawBody);
+
+    // Validate input with Zod
+    const parseResult = joinActionSchema.safeParse(sanitizedBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { error: "Invalid input", details: parseResult.error.issues.map(i => i.message).join(", ") },
+        { status: 400 }
+      );
+    }
+
+    const body = parseResult.data;
     const { action, email, token } = body;
 
     // ── ACTION: VERIFY ──
     if (action === "verify") {
-      if (!email || !token) {
-        return NextResponse.json(
-          { error: "Email and token are required" },
-          { status: 400 }
-        );
-      }
-
       const invitation = await withRetry(async () => {
         return await db.valtrioxTeamInvitation.findFirst({
         where: {
@@ -62,27 +85,12 @@ export async function POST(req: NextRequest) {
     // ── ACTION: ACCEPT ──
     if (action === "accept") {
       const { name, password } = body;
+      // Zod already validated: email, token, name, password
 
-      // Validate required fields
-      if (!email || !token || !name) {
-        return NextResponse.json(
-          { error: "Email, token, and name are required" },
-          { status: 400 }
-        );
-      }
-
-      if (!password || password.length < 8) {
-        return NextResponse.json(
-          { error: "Password must be at least 8 characters" },
-          { status: 400 }
-        );
-      }
-
-      // Find pending invitation
       const invitation = await withRetry(async () => {
         return await db.valtrioxTeamInvitation.findFirst({
         where: {
-          email: email.toLowerCase(),
+          email: sanitizeEmail(email).toLowerCase(),
           token,
           status: "pending",
         },
@@ -109,10 +117,9 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      // Check if user already exists - if so, use their account
       const existingUser = await withRetry(async () => {
         return await db.user.findUnique({
-        where: { email: email.toLowerCase() },
+        where: { email: sanitizeEmail(email).toLowerCase() },
       })
       }, 2, 500);
 
@@ -135,7 +142,7 @@ export async function POST(req: NextRequest) {
           return await db.user.create({
           data: {
             name: name.trim(),
-            email: email.toLowerCase(),
+            email: sanitizeEmail(email).toLowerCase(),
             password: hashedPassword,
             role: invitation.role,
           },
@@ -170,7 +177,7 @@ export async function POST(req: NextRequest) {
         return await db.valtrioxTeamMember.create({
         data: {
           userId,
-          email: email.toLowerCase(),
+          email: sanitizeEmail(email).toLowerCase(),
           name: name.trim(),
           role: invitation.role,
           department: invitation.department,
@@ -213,8 +220,8 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     console.error("[Valtriox Join] POST error:", error?.message);
     return NextResponse.json(
-      { error: "Failed to process invitation", details: process.env.NODE_ENV === "production" ? undefined : error?.message },
+      { error: "Failed to process invitation" },
       { status: 500 }
     );
   }
-}
+}, { maxRequests: 5, windowSeconds: 60 });

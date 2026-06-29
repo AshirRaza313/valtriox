@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
+import { canAssignRole, getAdminEmail } from "@/lib/roles";
 import { sanitizeObject } from "@/lib/sanitize";
 import logger from "@/lib/logger";
 
@@ -49,6 +50,14 @@ export const PUT = withAuth(async (
       );
     }
 
+    // SECURITY: Org ownership check — prevent cross-org role changes
+    if (existingMember.organizationId !== authCtx.organizationId) {
+      return NextResponse.json(
+        { error: "Access denied. This member does not belong to your organization." },
+        { status: 403 }
+      );
+    }
+
     const updateData: any = {};
 
     if (roleId) {
@@ -66,6 +75,16 @@ export const PUT = withAuth(async (
     }
 
     if (roleName) {
+      // SECURITY: Enforce role hierarchy — prevent privilege escalation
+      const targetRole = roleName.toLowerCase();
+      const adminEmail = getAdminEmail();
+      const roleCheck = canAssignRole(authCtx.role, authCtx.email, targetRole, adminEmail);
+      if (!roleCheck.allowed) {
+        return NextResponse.json(
+          { error: roleCheck.reason || "Insufficient permissions to assign this role", code: roleCheck.code },
+          { status: 403 }
+        );
+      }
       updateData.role = roleName;
     }
 

@@ -21,6 +21,9 @@ import logger from "@/lib/logger";
  * Admin user (identified by ADMIN_EMAIL or body param) → "platform_owner"
  */
 export const POST = withAuth(async (req: NextRequest, authCtx) => {
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json({ error: 'Not available in production' }, { status: 404 });
+  }
   try {
     logger.info("[Fix Old Roles] POST request", { userId: authCtx.userId });
 
@@ -209,7 +212,7 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
   } catch (error: any) {
     console.error("Role migration error:", error?.message || error);
     return NextResponse.json(
-      { error: "Migration failed: " + (error?.message || "Unknown error") },
+      { error: process.env.NODE_ENV === 'production' ? "Migration failed" : "Migration failed: " + (error?.message || "Unknown error") },
       { status: 500 }
     );
   }

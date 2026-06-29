@@ -163,7 +163,7 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
     }
     const detail = errMsg.length > 120 ? errMsg.substring(0, 120) + "..." : errMsg;
     return NextResponse.json(
-      { error: "Failed to fetch integration data", detail },
+      { error: "Failed to fetch integration data", detail: process.env.NODE_ENV === 'production' ? undefined : detail },
       { status: 500 }
     );
   }
