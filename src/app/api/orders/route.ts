@@ -139,16 +139,15 @@ export const POST = withAuth(async (req, authCtx) => {
       // FIX 2.1: Wrap order number generation + order create + stock update in a transaction
       // This prevents race conditions where two orders could get the same order number
       const createdOrder = await db.$transaction(async (tx) => {
-        // Generate order number atomically within transaction
-        const lastOrder = await tx.order.findFirst({
-          where: { organizationId },
-          orderBy: { createdAt: "desc" },
-          select: { orderNumber: true },
+        // FIX 6 (FULL): Atomic order counter — use increment instead of read-then-write
+        // The organization's orderCounter is atomically incremented inside the transaction,
+        // guaranteeing unique order numbers even under concurrent requests.
+        const updatedOrg = await tx.organization.update({
+          where: { id: organizationId },
+          data: { orderCounter: { increment: 1 } },
+          select: { orderCounter: true },
         });
-        let counter = 1;
-        if (lastOrder?.orderNumber) {
-          counter = parseInt(lastOrder.orderNumber.replace("VTX-", "")) + 1;
-        }
+        const counter = updatedOrg.orderCounter;
 
         const subtotal = items.reduce((sum: number, item: any) => sum + item.price * item.quantity, 0);
         const txOrder = await tx.order.create({

@@ -2364,13 +2364,19 @@ export async function safeDbQuery<T>(
     }
 
     const status = unavailable ? 503 : schemaErr ? 500 : 500;
-    const errorObj = { error: unavailable ? 'Service temporarily unavailable' : 'Database query failed', detail: msg.substring(0, 200) };
+    // FIX 9: Never expose internal error details to clients in production
+    // Matches the pattern already applied to dbErrorResponse()
+    const errorObj = process.env.NODE_ENV === 'production'
+      ? { error: unavailable ? 'Service temporarily unavailable' : 'Database query failed' }
+      : { error: unavailable ? 'Service temporarily unavailable' : 'Database query failed', detail: msg.substring(0, 200) };
 
     console.error(`[safeDbQuery] ${unavailable ? 'DB_UNAVAILABLE' : schemaErr ? 'SCHEMA_ERROR' : 'QUERY_ERROR'}: ${msg.substring(0, 150)}`);
 
     return {
       data: null,
-      error: msg,
+      error: process.env.NODE_ENV === 'production'
+        ? (unavailable ? 'Service temporarily unavailable' : 'Database query failed')
+        : msg,
       unavailable,
       schemaError: schemaErr,
       errorResponse: NextResponse.json(errorObj, { status }),

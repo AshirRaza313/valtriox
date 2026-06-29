@@ -111,6 +111,8 @@ model Organization {
   attendance            Attendance[]
   integrations          IntegrationConnection[]
   feedbacks            Feedback[]
+  // ── Atomic Counters (race-safe via increment) ──
+  orderCounter           Int                  @default(0) // Monotonic counter for VTX-XXXX order numbers
   // ── Billing Security ──
   paymentRejectionCount Int                  @default(0) // Track fake payment rejections
   isBanned              Boolean              @default(false)
