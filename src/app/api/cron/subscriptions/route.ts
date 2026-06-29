@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { NextResponse } from "next/server";
 import { db, ensureDb, withRetry} from "@/lib/db";
 
@@ -15,8 +16,17 @@ export async function GET(req: Request) {
     if (!cronSecret) {
       return NextResponse.json({ error: "CRON_SECRET not configured" }, { status: 500 });
     }
+    // FIX 1.6: Use timingSafeEqual to prevent timing attacks on cron secret
     const authHeader = req.headers.get("authorization");
-    if (!authHeader || authHeader !== `Bearer ${cronSecret}`) {
+    const expectedHeader = `Bearer ${cronSecret}`;
+    const providedHeader = authHeader || "";
+    const isValid =
+      providedHeader.length === expectedHeader.length &&
+      crypto.timingSafeEqual(
+        Buffer.from(providedHeader, "utf8"),
+        Buffer.from(expectedHeader, "utf8")
+      );
+    if (!authHeader || !isValid) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
