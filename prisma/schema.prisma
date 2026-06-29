@@ -662,7 +662,6 @@ model ValtrioxTeamMember {
   createdAt       DateTime                 @default(now())
   updatedAt       DateTime                 @updatedAt
   user            User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  sentInvitations ValtrioxTeamInvitation[]
 
   @@index([status])
   @@index([department])
@@ -680,7 +679,8 @@ model ValtrioxTeamInvitation {
   expiresAt  DateTime
   createdAt  DateTime            @default(now())
   acceptedAt DateTime?
-  inviter    ValtrioxTeamMember? @relation(fields: [invitedBy], references: [id], onDelete: SetNull)
+  // invitedBy stores User IDs (not TeamMember IDs), so no FK relation
+  // was causing FK violation during prisma db push
 
   @@index([email])
   @@index([status])
