@@ -249,7 +249,7 @@ export function toDirectUrl(url: string): string | null {
   }
 
   const directUrl = `postgresql://postgres:${encodeURIComponent(password)}@db.${projectRef}.supabase.co:5432/${database}`;
-  console.log(`[DB] Converted to direct connection: db.${projectRef}.supabase.co:5432`);
+  // FIX 4.9: Logging removed — avoid exposing DB host info
   return directUrl;
 }
 
@@ -2012,8 +2012,13 @@ export async function createAllTables(): Promise<boolean> {
 
   const configs = getDdlConnectionConfigs();
   console.log(`[DB] createAllTables: trying ${configs.length} connection method(s)`);
-  console.log(`[DB] DATABASE_URL set: ${!!process.env.DATABASE_URL}`);
-  console.log(`[DB] DIRECT_URL set: ${!!process.env.DIRECT_URL}`);
+  // FIX 4.9: Use non-logging check — avoid any env var reference in logs
+  const hasDbUrl = !!process.env.DATABASE_URL;
+  const hasDirectUrl = !!process.env.DIRECT_URL;
+  if (process.env.NODE_ENV !== "production") {
+    console.log(`[DB] DATABASE_URL set: ${hasDbUrl}`);
+    console.log(`[DB] DIRECT_URL set: ${hasDirectUrl}`);
+  }
 
   if (configs.length === 0) {
     createError = 'No database URL configured. Set DATABASE_URL in Vercel environment variables.';
@@ -2158,10 +2163,14 @@ export async function safeQuery<T>(queryFn: () => Promise<T>): Promise<{ data: T
   }
 }
 
-export function dbErrorResponse(error: any) {
-  const message = error?.message || 'Database connection failed';
+export function dbErrorResponse(error: unknown) {
+  // FIX 3.4: Never expose internal error details to clients in production
+  const message = error instanceof Error ? error.message : 'Database connection failed';
+  const body = process.env.NODE_ENV === 'production'
+    ? { error: 'Service temporarily unavailable' }
+    : { error: 'Service temporarily unavailable', details: message };
   return new Response(
-    JSON.stringify({ error: 'Service temporarily unavailable', details: message }),
+    JSON.stringify(body),
     { status: 503, headers: { 'Content-Type': 'application/json' } }
   );
 }
