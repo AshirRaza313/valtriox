@@ -9,7 +9,7 @@ export const GET = withAuth(async (req, ctx) => {
     const status = url.searchParams.get("status");
     const orgId = ctx.organizationId;
 
-    const where: any = {};
+    const where: Record<string, unknown> = {};
     if (orgId) where.organizationId = orgId;
     if (type) where.type = type;
     if (status) where.status = status;
@@ -25,8 +25,9 @@ export const GET = withAuth(async (req, ctx) => {
     });
 
     return NextResponse.json({ feedbacks });
-  } catch (error: any) {
-    console.error("[Feedback GET] Error:", error?.message || error);
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error("[Feedback GET] Error:", msg);
     return NextResponse.json({ error: "Failed to fetch feedback" }, { status: 500 });
   }
 });
@@ -64,8 +65,9 @@ export const POST = withAuth(async (req, ctx) => {
     });
 
     return NextResponse.json({ feedback }, { status: 201 });
-  } catch (error: any) {
-    console.error("[Feedback POST] Error:", error?.message || error);
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error("[Feedback POST] Error:", msg);
     return NextResponse.json({ error: "Failed to create feedback" }, { status: 500 });
   }
 });
@@ -79,7 +81,22 @@ export const PATCH = withAuth(async (req, ctx) => {
       return NextResponse.json({ error: "Feedback ID is required" }, { status: 400 });
     }
 
-    const updateData: any = {};
+    // FIX 1.7: Verify feedback belongs to the caller's organization
+    const orgId = ctx.organizationId;
+    if (!orgId) {
+      return NextResponse.json({ error: "Organization context required" }, { status: 403 });
+    }
+
+    const existing = await db.feedback.findFirst({
+      where: { id, organizationId: orgId },
+      select: { id: true },
+    });
+
+    if (!existing) {
+      return NextResponse.json({ error: "Feedback not found" }, { status: 404 });
+    }
+
+    const updateData: Record<string, unknown> = {};
     if (status) updateData.status = status;
     if (typeof isFeatured === "boolean") updateData.isFeatured = isFeatured;
 
@@ -89,8 +106,9 @@ export const PATCH = withAuth(async (req, ctx) => {
     });
 
     return NextResponse.json({ feedback });
-  } catch (error: any) {
-    console.error("[Feedback PATCH] Error:", error?.message || error);
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error("[Feedback PATCH] Error:", msg);
     return NextResponse.json({ error: "Failed to update feedback" }, { status: 500 });
   }
 });
@@ -104,10 +122,26 @@ export const DELETE = withAuth(async (req, ctx) => {
       return NextResponse.json({ error: "Feedback ID is required" }, { status: 400 });
     }
 
+    // FIX 1.7: Verify feedback belongs to the caller's organization
+    const orgId = ctx.organizationId;
+    if (!orgId) {
+      return NextResponse.json({ error: "Organization context required" }, { status: 403 });
+    }
+
+    const existing = await db.feedback.findFirst({
+      where: { id, organizationId: orgId },
+      select: { id: true },
+    });
+
+    if (!existing) {
+      return NextResponse.json({ error: "Feedback not found" }, { status: 404 });
+    }
+
     await db.feedback.delete({ where: { id } });
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    console.error("[Feedback DELETE] Error:", error?.message || error);
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error("[Feedback DELETE] Error:", msg);
     return NextResponse.json({ error: "Failed to delete feedback" }, { status: 500 });
   }
 });
