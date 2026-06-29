@@ -6,7 +6,7 @@
 // ============================================================================
 
 import { NextRequest, NextResponse } from "next/server";
-import { ZodSchema, ZodError } from "zod";
+import { ZodType as ZodSchema, ZodError } from "zod";
 import { sanitizeObject } from "@/lib/sanitize";
 
 // ── Standardized API response helpers ────────────────────────────────────────
