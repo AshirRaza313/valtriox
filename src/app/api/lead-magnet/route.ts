@@ -34,8 +34,8 @@ export async function GET() {
     // Fetch settings from DB
     const settings = await withRetry(async () => {
       return await db.platformSettings.findFirst({
-      orderBy: { createdAt: "desc" },
-    })
+        orderBy: { createdAt: "desc" },
+      });
     }, 2, 500);
 
     const companyName = settings?.companyName || "Valtriox";
@@ -117,8 +117,8 @@ export const POST = withAuth(async (_req: NextRequest) => {
     // Fetch settings
     const settings = await withRetry(async () => {
       return await db.platformSettings.findFirst({
-      orderBy: { createdAt: "desc" },
-    })
+        orderBy: { createdAt: "desc" },
+      });
     }, 2, 500);
 
     const companyName = settings?.companyName || "Valtriox";
@@ -161,5 +161,4 @@ export const POST = withAuth(async (_req: NextRequest) => {
       { status: 500 }
     );
   }
-}
 }, { requireRole: ["platform_owner", "platform_admin"] });
