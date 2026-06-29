@@ -65,14 +65,17 @@ interface RateLimitEntry {
 
 const memoryStore = new Map<string, RateLimitEntry>();
 
-// Clean up old entries every 5 minutes (dev only)
-if (typeof setInterval !== "undefined") {
-  setInterval(() => {
-    const now = Date.now();
-    for (const [key, entry] of memoryStore) {
-      if (entry.resetAt <= now) memoryStore.delete(key);
-    }
-  }, 5 * 60 * 1000);
+// Phase 5: Removed setInterval — unreliable in serverless.
+// Instead, we do lazy TTL cleanup on each memoryRateLimit call.
+const CLEANUP_THRESHOLD = 1000; // Clean up every N checks
+
+let cleanupCounter = 0;
+
+function cleanupMemoryStore() {
+  const now = Date.now();
+  for (const [key, entry] of memoryStore) {
+    if (entry.resetAt <= now) memoryStore.delete(key);
+  }
 }
 
 function memoryRateLimit(
@@ -80,6 +83,13 @@ function memoryRateLimit(
   maxRequests: number,
   windowSeconds: number
 ): RateLimitResult {
+  // Lazy cleanup: run every CLEANUP_THRESHOLD checks
+  cleanupCounter++;
+  if (cleanupCounter >= CLEANUP_THRESHOLD) {
+    cleanupCounter = 0;
+    cleanupMemoryStore();
+  }
+
   const now = Date.now();
   const windowMs = windowSeconds * 1000;
 
@@ -129,7 +139,10 @@ export async function rateLimit(
     }
   }
 
-  // In-memory fallback
+  // In-memory fallback — warn loudly in production
+  if (process.env.NODE_ENV === 'production') {
+    console.error("[RateLimit] WARNING: Using in-memory fallback in production! Rate limiting will NOT work across serverless instances. Configure UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN.");
+  }
   return memoryRateLimit(key, maxRequests, windowSeconds);
 }
 

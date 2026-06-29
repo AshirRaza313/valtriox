@@ -1,17 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, dbErrorResponse, withRetry } from "@/lib/db";
+import { db, withRetry } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import { sanitizeEmail, sanitizeString, validatePassword } from "@/lib/sanitize";
 import logger from "@/lib/logger";
 import { withRateLimit } from "@/lib/rate-limit";
-import { validateBody, validationError } from "@/lib/validations";
+import { validateBody } from "@/lib/validations";
 import { z } from "zod";
+import { getAdminEmail } from "@/lib/roles";
 
-// Phase 3: Zod schema for register endpoint
+// Phase 5: Password length/complexity is solely handled by validatePassword()
+// Zod only validates that password is a non-empty string (structural check)
 const registerBodySchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters").max(100, "Name must be 100 characters or less"),
   email: z.string().email("Invalid email address").max(254),
-  password: z.string().min(8, "Password must be at least 8 characters").max(128, "Password must be 128 characters or less"),
+  password: z.string().min(1, "Password is required").max(128, "Password must be 128 characters or less"),
   brandName: z.string().min(2, "Brand name must be at least 2 characters").max(100, "Brand name must be 100 characters or less"),
 });
 
@@ -49,8 +51,8 @@ export const POST = withRateLimit(async (req: NextRequest) => {
   const hashedPassword = await bcrypt.hash(password, 12);
   const slug = cleanBrandName.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
 
-  // Admin is determined by ADMIN_EMAIL environment variable
-  const adminEmail = (process.env.ADMIN_EMAIL || "").toLowerCase().trim();
+  // Phase 5: Use getAdminEmail() helper instead of inline process.env access
+  const adminEmail = getAdminEmail();
   const isAdmin = adminEmail && cleanEmail === adminEmail;
   const assignedRole = isAdmin ? "platform_owner" : "brand_owner";
 

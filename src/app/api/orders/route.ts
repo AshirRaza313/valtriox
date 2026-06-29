@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, isDbUnavailable, withRetry } from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import { validateBody, validateQuery, createOrderSchema, paginationQuerySchema } from "@/lib/validations";
+import { getAdminEmail } from "@/lib/roles";
 import logger from "@/lib/logger";
 import { z } from "zod";
 
@@ -118,7 +119,7 @@ export const POST = withAuth(async (req, authCtx) => {
 
       // Skip order limit check for platform admin roles and admin email
       const isPlatformAdmin = authCtx.role === "platform_owner" || authCtx.role === "platform_admin" || authCtx.role === "owner";
-      const adminEmail = (process.env.ADMIN_EMAIL || "").toLowerCase().trim();
+      const adminEmail = getAdminEmail();
       const isAdminByEmail = adminEmail && authCtx.email?.toLowerCase() === adminEmail;
 
       if (!isPlatformAdmin && !isAdminByEmail && org.plan === "starter") {

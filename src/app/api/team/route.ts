@@ -6,6 +6,7 @@ import logger from "@/lib/logger";
 import { withAuth } from "@/lib/auth-middleware";
 import { validateBody, inviteTeamMemberSchema } from "@/lib/validations";
 import { z } from "zod";
+import { getAdminEmail } from "@/lib/roles";
 
 /**
  * POST /api/team - Add a team member via PIN-based invitation
@@ -176,7 +177,7 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
     const totalUsed = currentMemberCount + pendingInviteCount;
 
     // Platform admin/owner bypasses team limit (isPlatformAdmin already defined above)
-    const adminEmail = (process.env.ADMIN_EMAIL || "").toLowerCase().trim();
+    const adminEmail = getAdminEmail();
     const isAdminByEmail = adminEmail && authCtx.email?.toLowerCase() === adminEmail;
 
     if (!isPlatformAdmin && !isAdminByEmail && teamLimit !== -1 && totalUsed >= teamLimit) {
@@ -218,7 +219,7 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
       if (inviterUser) {
         const inviterRole = inviterUser.role.toLowerCase();
         const inviterLevel = ROLE_LEVELS[inviterRole] ?? 0;
-        const adminEmail = (process.env.ADMIN_EMAIL || "").toLowerCase().trim();
+        const adminEmail = getAdminEmail();
         const isPlatformOwner = adminEmail && inviterUser.email.toLowerCase() === adminEmail;
 
         if (!isPlatformOwner) {
