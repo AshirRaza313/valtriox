@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, dbErrorResponse, isDbUnavailable, withRetry } from "@/lib/db";
+import { db, isDbUnavailable, withRetry } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import { sanitizeEmail, sanitizeObject } from "@/lib/sanitize";
 import logger from "@/lib/logger";
 import { withAuth } from "@/lib/auth-middleware";
+import { validateBody, inviteTeamMemberSchema } from "@/lib/validations";
+import { z } from "zod";
 
 /**
  * POST /api/team - Add a team member via PIN-based invitation
@@ -44,7 +46,6 @@ const BRAND_ADMIN_MAX_LEVEL = 60;
 export const GET = withAuth(async (req: NextRequest, authCtx) => {
   try {
     logger.info("[Team] GET request", { userId: authCtx.userId });
-    await ensureDb();
     const { searchParams } = new URL(req.url);
     const orgId = searchParams.get("orgId") || authCtx.organizationId!;
 
@@ -105,13 +106,20 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
 });
 
 export const POST = withAuth(async (req: NextRequest, authCtx) => {
-  let body: Record<string, any> = {};
   try {
     logger.info("[Team] POST request", { userId: authCtx.userId });
-    await ensureDb();
-    body = await req.json();
-    Object.assign(body, sanitizeObject(body));
-    const { organizationId, email, name, role, pin, invitedBy } = body as any;
+    // Phase 3: Zod validation for team invitation body
+    const teamInviteSchema = z.object({
+      organizationId: z.string().min(1),
+      email: z.string().email().max(254),
+      name: z.string().max(100).optional(),
+      role: z.string().min(1).max(50),
+      pin: z.string().regex(/^\d{6}$/, "PIN must be exactly 6 digits"),
+      invitedBy: z.string().optional(),
+    });
+    const bodyResult = await validateBody(req, teamInviteSchema);
+    if (!bodyResult.success) return bodyResult.response;
+    const { organizationId, email, name, role, pin, invitedBy } = bodyResult.data;
 
     // ── Fetch Platform Identity ──
     let platformName = "Valtriox";
@@ -393,15 +401,14 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
   } catch (error: any) {
     const errMsg = error?.message || String(error);
     const errCode = error?.code || "";
-    logger.error("Team POST error", error, { organizationId: body?.organizationId, email: body?.email });
+    logger.error("Team POST error", error, { organizationId: authCtx?.organizationId });
     if (isDbUnavailable(error)) {
-      return NextResponse.json({ error: "Database is currently unavailable. Please try again later.", fallback: true, _details: errMsg, _code: errCode }, { status: 503 });
+      return NextResponse.json({ error: "Database is currently unavailable. Please try again later.", fallback: true }, { status: 503 });
     }
     if (errCode === 'P2002') {
       return NextResponse.json({ error: "User is already a member of this organization" }, { status: 400 });
     }
-    // Return actual error details for debugging
-    return NextResponse.json({ error: "Failed to add member", _details: errMsg, _code: errCode, _step: "unknown" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to add member" }, { status: 500 });
   }
 });
 
@@ -409,7 +416,6 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
 export const DELETE = withAuth(async (req: NextRequest, authCtx) => {
   try {
     logger.info("[Team] DELETE request", { userId: authCtx.userId });
-    await ensureDb();
     const { searchParams } = new URL(req.url);
     const memberId = searchParams.get("memberId");
     const invitationId = searchParams.get("invitationId");

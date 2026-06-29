@@ -1,9 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getAuthContext } from "@/lib/auth-middleware";
 import { db, withRetry } from "@/lib/db";
 
-export async function GET(req: Request) {
-  const authCtx = await getAuthContext(req as any);
+export async function GET(req: NextRequest) {
+  const authCtx = await getAuthContext(req);
   if (!authCtx) {
     return NextResponse.json({ user: null, organization: null });
   }

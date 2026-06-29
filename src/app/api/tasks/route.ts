@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, isDbUnavailable, withRetry} from "@/lib/db";
+import { db, isDbUnavailable, withRetry } from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
-import { sanitizeObject } from "@/lib/sanitize";
+import { validateBody, createTaskSchema } from "@/lib/validations";
 import logger from "@/lib/logger";
 
 export const GET = withAuth(async (req, authCtx) => {
   try {
-    await ensureDb();
     const { searchParams } = new URL(req.url);
     const orgId = searchParams.get("orgId") || authCtx.organizationId;
 
@@ -19,12 +18,12 @@ export const GET = withAuth(async (req, authCtx) => {
 
     const tasks = await withRetry(async () => {
       return await db.teamTask.findMany({
-      where: { organizationId: orgId },
-      orderBy: { createdAt: "desc" },
-    })
+        where: { organizationId: orgId },
+        orderBy: { createdAt: "desc" },
+      });
     }, 2, 500);
     return NextResponse.json({ tasks });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("Tasks GET error", error, { orgId: authCtx?.organizationId });
     if (isDbUnavailable(error)) {
       return NextResponse.json({ tasks: [], fallback: true });
@@ -35,36 +34,31 @@ export const GET = withAuth(async (req, authCtx) => {
 
 export const POST = withAuth(async (req, authCtx) => {
   try {
-    await ensureDb();
-    const body = await req.json();
-    Object.assign(body, sanitizeObject(body));
-    const { organizationId, title, description, priority, assignedTo, dueDate } = body;
-    const orgId = organizationId || authCtx.organizationId;
+    // Phase 3: Zod validation
+    const bodyResult = await validateBody(req, createTaskSchema);
+    if (!bodyResult.success) return bodyResult.response;
+    const { title, description, priority, assignedTo, dueDate } = bodyResult.data;
 
-    if (!orgId || !title) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
-    }
-
-    // Security: Ensure user can only create tasks in their own org
-    if (orgId !== authCtx.organizationId) {
-      return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    const orgId = authCtx.organizationId;
+    if (!orgId) {
+      return NextResponse.json({ error: "Organization context required" }, { status: 400 });
     }
 
     const task = await withRetry(async () => {
       return await db.teamTask.create({
-      data: {
-        organizationId: orgId,
-        title,
-        description: description || null,
-        priority: priority || "medium",
-        assignedTo: assignedTo || null,
-        dueDate: dueDate ? new Date(dueDate) : null,
-      },
-    })
+        data: {
+          organizationId: orgId,
+          title,
+          description: description || null,
+          priority: priority || "medium",
+          assignedTo: assignedTo || null,
+          dueDate: dueDate ? new Date(dueDate) : null,
+        },
+      });
     }, 2, 500);
 
     return NextResponse.json({ task }, { status: 201 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("Tasks POST error", error, { orgId: authCtx?.organizationId });
     if (isDbUnavailable(error)) {
       return NextResponse.json({ error: "Database is currently unavailable. Please try again later.", fallback: true }, { status: 503 });

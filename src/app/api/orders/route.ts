@@ -1,20 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, isDbUnavailable, withRetry } from "@/lib/db";
+import { db, isDbUnavailable, withRetry } from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
-import { sanitizeObject } from "@/lib/sanitize";
+import { validateBody, validateQuery, createOrderSchema, paginationQuerySchema } from "@/lib/validations";
 import logger from "@/lib/logger";
+import { z } from "zod";
+
+// Phase 3: Query validation schema for GET /orders
+const ordersQuerySchema = paginationQuerySchema.extend({
+  orgId: z.string().min(1).optional(),
+  status: z.string().max(50).optional(),
+});
 
 export const GET = withAuth(async (req, authCtx) => {
   try {
-    await ensureDb();
-    const { searchParams } = new URL(req.url);
-    const orgId = searchParams.get("orgId") || authCtx.organizationId;
-    const status = searchParams.get("status");
-    const search = searchParams.get("search");
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = Math.min(parseInt(searchParams.get("limit") || "10"), 100);
-    const sortBy = searchParams.get("sortBy") || "createdAt";
-    const sortDir = searchParams.get("sortDir") || "desc";
+    // Phase 3: Validate query parameters with Zod
+    const queryResult = validateQuery(req, ordersQuerySchema);
+    if (!queryResult.success) return queryResult.response;
+    const { page, limit, search, sortBy, sortDir, orgId: queryOrgId, status } = queryResult.data;
+
+    const orgId = queryOrgId || authCtx.organizationId;
 
     if (!orgId) return NextResponse.json({ error: "orgId required" }, { status: 400 });
 
@@ -23,7 +27,7 @@ export const GET = withAuth(async (req, authCtx) => {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    const where: any = { organizationId: orgId };
+    const where: Record<string, unknown> = { organizationId: orgId };
     if (status && status !== "all") where.status = status;
     if (search) {
       where.OR = [
@@ -36,7 +40,7 @@ export const GET = withAuth(async (req, authCtx) => {
 
     // Validate sort field
     const validSortFields = ["createdAt", "total", "status", "orderNumber", "subtotal"];
-    const orderField = validSortFields.includes(sortBy) ? sortBy : "createdAt";
+    const orderField = validSortFields.includes(sortBy || "") ? (sortBy as string) : "createdAt";
     const orderDirection = sortDir === "asc" ? "asc" : "desc";
 
     const { orders, totalCount, total, pending, confirmed, dispatched, delivered } = await withRetry(async () => {
@@ -76,7 +80,7 @@ export const GET = withAuth(async (req, authCtx) => {
       },
       stats: { total, pending, confirmed, dispatched, delivered },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("Fetch orders error", error, { orgId: authCtx?.organizationId });
     if (isDbUnavailable(error)) {
       return NextResponse.json({
@@ -92,14 +96,14 @@ export const GET = withAuth(async (req, authCtx) => {
 
 export const POST = withAuth(async (req, authCtx) => {
   try {
-    await ensureDb();
-    const body = await req.json();
-    Object.assign(body, sanitizeObject(body));
-    const { customerId, channel, notes, items } = body;
-    const organizationId = authCtx.organizationId || body.organizationId;
+    // Phase 3: Zod validation replaces raw req.json() + manual checks
+    const bodyResult = await validateBody(req, createOrderSchema);
+    if (!bodyResult.success) return bodyResult.response;
+    const { customerId, channel, notes, items } = bodyResult.data;
+    const organizationId = authCtx.organizationId;
 
-    if (!organizationId || !items?.length) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    if (!organizationId) {
+      return NextResponse.json({ error: "Organization context required" }, { status: 400 });
     }
 
     // ── Order limit enforcement (lifetime) ──
@@ -137,11 +141,8 @@ export const POST = withAuth(async (req, authCtx) => {
       }
 
       // FIX 2.1: Wrap order number generation + order create + stock update in a transaction
-      // This prevents race conditions where two orders could get the same order number
+      // FIX 6 (FULL): Atomic order counter — guarantees unique order numbers under concurrency
       const createdOrder = await db.$transaction(async (tx) => {
-        // FIX 6 (FULL): Atomic order counter — use increment instead of read-then-write
-        // The organization's orderCounter is atomically incremented inside the transaction,
-        // guaranteeing unique order numbers even under concurrent requests.
         const updatedOrg = await tx.organization.update({
           where: { id: organizationId },
           data: { orderCounter: { increment: 1 } },
@@ -149,7 +150,7 @@ export const POST = withAuth(async (req, authCtx) => {
         });
         const counter = updatedOrg.orderCounter;
 
-        const subtotal = items.reduce((sum: number, item: any) => sum + item.price * item.quantity, 0);
+        const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
         const txOrder = await tx.order.create({
           data: {
             orderNumber: `VTX-${String(counter).padStart(4, "0")}`,
@@ -160,7 +161,7 @@ export const POST = withAuth(async (req, authCtx) => {
             subtotal,
             total: subtotal,
             items: {
-              create: items.map((item: any) => ({
+              create: items.map((item) => ({
                 productId: item.productId,
                 productName: item.productName,
                 quantity: item.quantity,
@@ -204,8 +205,9 @@ export const POST = withAuth(async (req, authCtx) => {
       return { order: createdOrder };
     }, 2, 500);
 
-    if ((orderLimitResult as any)?._error) {
-      const err = orderLimitResult as any;
+    // Type-safe error check (Phase 3: eliminated `as any`)
+    if (orderLimitResult && typeof orderLimitResult === "object" && "_error" in orderLimitResult) {
+      const err = orderLimitResult as { _error: string; _status: number; _extra?: Record<string, unknown> };
       return NextResponse.json({ error: err._error, ...err._extra }, { status: err._status });
     }
 
@@ -233,13 +235,14 @@ export const POST = withAuth(async (req, authCtx) => {
           })
         )
       );
-    } catch (taskErr: any) {
+    } catch (taskErr: unknown) {
       // Log task creation failure but don't fail the order creation
-      logger.warn("Auto-task creation failed (non-blocking)", taskErr.message, { orderNumber: orderNum });
+      const msg = taskErr instanceof Error ? taskErr.message : String(taskErr);
+      logger.warn("Auto-task creation failed (non-blocking)", msg, { orderNumber: orderNum });
     }
 
     return NextResponse.json({ order, autoTasksCreated: true }, { status: 201 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("Create order error", error, { orgId: authCtx?.organizationId });
     if (isDbUnavailable(error)) {
       return NextResponse.json({ error: "Database is currently unavailable. Please try again later.", fallback: true }, { status: 503 });

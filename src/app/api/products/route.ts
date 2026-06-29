@@ -1,17 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, isDbUnavailable, withRetry } from "@/lib/db";
+import { db, isDbUnavailable, withRetry } from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
-import { sanitizeObject } from "@/lib/sanitize";
+import { validateBody, validateQuery, createProductSchema, paginationQuerySchema } from "@/lib/validations";
 import logger from "@/lib/logger";
+import { z } from "zod";
+
+// Phase 3: Query validation schema for GET /products
+const productsQuerySchema = paginationQuerySchema.extend({
+  orgId: z.string().min(1).optional(),
+  category: z.string().max(100).optional(),
+});
 
 export const GET = withAuth(async (req, authCtx) => {
   try {
-    await ensureDb();
-    const { searchParams } = new URL(req.url);
-    const orgId = searchParams.get("orgId") || authCtx.organizationId;
-    const category = searchParams.get("category");
-    const search = searchParams.get("search");
+    const queryResult = validateQuery(req, productsQuerySchema);
+    if (!queryResult.success) return queryResult.response;
+    const { search, orgId: queryOrgId, category } = queryResult.data;
 
+    const orgId = queryOrgId || authCtx.organizationId;
     if (!orgId) return NextResponse.json({ error: "orgId required" }, { status: 400 });
 
     // Security: Ensure user can only access their own org's data
@@ -19,7 +25,7 @@ export const GET = withAuth(async (req, authCtx) => {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    const where: any = { organizationId: orgId };
+    const where: Record<string, unknown> = { organizationId: orgId };
     if (category && category !== "all") where.category = category;
     if (search) {
       where.OR = [
@@ -45,11 +51,8 @@ export const GET = withAuth(async (req, authCtx) => {
       return { products: prods, stats: { total, active, lowStock, totalValue: totalValue._sum.price || 0 } };
     }, 2, 500);
 
-    return NextResponse.json({
-      products,
-      stats,
-    });
-  } catch (error: any) {
+    return NextResponse.json({ products, stats });
+  } catch (error: unknown) {
     logger.error("Products API error", error, { orgId: authCtx?.organizationId });
     if (isDbUnavailable(error)) {
       return NextResponse.json({
@@ -64,19 +67,14 @@ export const GET = withAuth(async (req, authCtx) => {
 
 export const POST = withAuth(async (req, authCtx) => {
   try {
-    await ensureDb();
-    const body = await req.json();
-    Object.assign(body, sanitizeObject(body));
-    const { organizationId, name, sku, description, price, costPrice, stock, category, status } = body;
-    const orgId = organizationId || authCtx.organizationId;
+    // Phase 3: Zod validation replaces raw req.json() + manual checks
+    const bodyResult = await validateBody(req, createProductSchema);
+    if (!bodyResult.success) return bodyResult.response;
+    const { name, sku, description, price, costPrice, stock, category, status } = bodyResult.data;
 
-    if (!orgId || !name) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
-    }
-
-    // Security: Ensure user can only create products in their own org
-    if (orgId !== authCtx.organizationId) {
-      return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    const orgId = authCtx.organizationId;
+    if (!orgId) {
+      return NextResponse.json({ error: "Organization context required" }, { status: 400 });
     }
 
     const product = await withRetry(async () => {
@@ -86,9 +84,9 @@ export const POST = withAuth(async (req, authCtx) => {
           name,
           sku: sku || null,
           description: description || null,
-          price: parseFloat(price) || 0,
-          costPrice: costPrice ? parseFloat(costPrice) : null,
-          stock: parseInt(stock) || 0,
+          price: price,
+          costPrice: costPrice || null,
+          stock: stock,
           category: category || null,
           status: status || "active",
         },
@@ -96,7 +94,7 @@ export const POST = withAuth(async (req, authCtx) => {
     }, 2, 500);
 
     return NextResponse.json({ product }, { status: 201 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("Create product API error", error, { orgId: authCtx?.organizationId });
     if (isDbUnavailable(error)) {
       return NextResponse.json({ error: "Database is currently unavailable. Please try again later.", fallback: true }, { status: 503 });

@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth-middleware";
 import { db } from "@/lib/db";
+import { validateBody, createFeedbackSchema } from "@/lib/validations";
+import { z } from "zod";
+
+// Phase 3: Zod schemas for feedback
+const feedbackPatchSchema = z.object({
+  id: z.string().min(1),
+  status: z.enum(["pending", "approved", "rejected"]).optional(),
+  isFeatured: z.boolean().optional(),
+});
 
 export const GET = withAuth(async (req, ctx) => {
   try {
@@ -34,16 +43,21 @@ export const GET = withAuth(async (req, ctx) => {
 
 export const POST = withAuth(async (req, ctx) => {
   try {
-    const body = await req.json();
-    const { type, rating, content, authorName, authorCompany, videoUrl, isFeatured, status } = body;
+    // Phase 3: Zod validation
+    const feedbackBodySchema = z.object({
+      type: z.enum(["feedback", "testimonial", "review", "video"]),
+      rating: z.number().min(1).max(5).optional(),
+      content: z.string().min(1, "Content is required").max(5000),
+      authorName: z.string().max(200).optional(),
+      authorCompany: z.string().max(200).optional(),
+      videoUrl: z.string().max(2048).optional(),
+      isFeatured: z.boolean().optional(),
+      status: z.enum(["pending", "approved", "rejected"]).optional(),
+    });
 
-    if (!content || !content.trim()) {
-      return NextResponse.json({ error: "Content is required" }, { status: 400 });
-    }
-
-    if (!["feedback", "testimonial", "review", "video"].includes(type)) {
-      return NextResponse.json({ error: "Invalid type" }, { status: 400 });
-    }
+    const bodyResult = await validateBody(req, feedbackBodySchema);
+    if (!bodyResult.success) return bodyResult.response;
+    const { type, rating, content, authorName, authorCompany, videoUrl, isFeatured, status } = bodyResult.data;
 
     const orgId = ctx.organizationId;
     if (!orgId) {
@@ -53,7 +67,7 @@ export const POST = withAuth(async (req, ctx) => {
     const feedback = await db.feedback.create({
       data: {
         organizationId: orgId,
-        type: type || "feedback",
+        type,
         rating: rating || null,
         content: content.trim(),
         authorName: authorName || null,
@@ -74,12 +88,9 @@ export const POST = withAuth(async (req, ctx) => {
 
 export const PATCH = withAuth(async (req, ctx) => {
   try {
-    const body = await req.json();
-    const { id, status, isFeatured } = body;
-
-    if (!id) {
-      return NextResponse.json({ error: "Feedback ID is required" }, { status: 400 });
-    }
+    const bodyResult = await validateBody(req, feedbackPatchSchema);
+    if (!bodyResult.success) return bodyResult.response;
+    const { id, status, isFeatured } = bodyResult.data;
 
     // FIX 1.7: Verify feedback belongs to the caller's organization
     const orgId = ctx.organizationId;

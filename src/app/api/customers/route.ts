@@ -1,15 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, ensureDb, isDbUnavailable, withRetry } from "@/lib/db";
+import { db, isDbUnavailable, withRetry } from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
-import { sanitizeObject, sanitizeEmail, sanitizePhone } from "@/lib/sanitize";
+import { validateBody, validateQuery, createCustomerSchema, paginationQuerySchema } from "@/lib/validations";
 import logger from "@/lib/logger";
+import { z } from "zod";
+
+// Phase 3: Query validation schema
+const customersQuerySchema = paginationQuerySchema.extend({
+  orgId: z.string().min(1).optional(),
+});
 
 export const GET = withAuth(async (req, authCtx) => {
   try {
-    await ensureDb();
-    const { searchParams } = new URL(req.url);
-    const orgId = searchParams.get("orgId") || authCtx.organizationId;
+    const queryResult = validateQuery(req, customersQuerySchema);
+    if (!queryResult.success) return queryResult.response;
+    const { page, limit, orgId: queryOrgId } = queryResult.data;
 
+    const orgId = queryOrgId || authCtx.organizationId;
     if (!orgId) return NextResponse.json({ error: "orgId required" }, { status: 400 });
 
     // Security: Ensure user can only access their own org's data
@@ -17,9 +24,6 @@ export const GET = withAuth(async (req, authCtx) => {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    // Pagination
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = Math.min(parseInt(searchParams.get("limit") || "50"), 100);
     const skip = (page - 1) * limit;
 
     const [customers, totalCount] = await Promise.all([
@@ -36,7 +40,7 @@ export const GET = withAuth(async (req, authCtx) => {
       }, 2, 500),
     ]);
 
-    // Aggregate stats (computed from the full org, not just the current page)
+    // Aggregate stats
     const [totalRevenue, totalOrders, tierAgg] = await Promise.all([
       db.customer.aggregate({
         where: { organizationId: orgId },
@@ -67,22 +71,10 @@ export const GET = withAuth(async (req, authCtx) => {
 
     return NextResponse.json({
       customers,
-      pagination: {
-        page,
-        limit,
-        totalCount,
-        totalPages: Math.ceil(totalCount / limit),
-      },
-      stats: {
-        totalCustomers: totalCount,
-        totalRevenue: rev,
-        totalOrders: ord,
-        avgOrderValue,
-        vipCount,
-        tierCounts,
-      },
+      pagination: { page, limit, totalCount, totalPages: Math.ceil(totalCount / limit) },
+      stats: { totalCustomers: totalCount, totalRevenue: rev, totalOrders: ord, avgOrderValue, vipCount, tierCounts },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("Failed to fetch customers", error, { orgId: authCtx?.organizationId });
     if (isDbUnavailable(error)) {
       return NextResponse.json({
@@ -97,38 +89,32 @@ export const GET = withAuth(async (req, authCtx) => {
 
 export const POST = withAuth(async (req, authCtx) => {
   try {
-    await ensureDb();
-    const body = await req.json();
-    Object.assign(body, sanitizeObject(body));
-    const { organizationId, name, email, phone, city, address, notes, loyaltyTier } = body;
-    const orgId = organizationId || authCtx.organizationId;
+    // Phase 3: Zod validation
+    const bodyResult = await validateBody(req, createCustomerSchema);
+    if (!bodyResult.success) return bodyResult.response;
+    const { name, email, phone, address, notes } = bodyResult.data;
 
-    if (!orgId || !name) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
-    }
-
-    // Security: Ensure user can only create customers in their own org
-    if (orgId !== authCtx.organizationId) {
-      return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    const orgId = authCtx.organizationId;
+    if (!orgId) {
+      return NextResponse.json({ error: "Organization context required" }, { status: 400 });
     }
 
     const customer = await withRetry(async () => {
       return db.customer.create({
-      data: {
-        organizationId: orgId,
-        name,
-        email: email || null,
-        phone: phone || null,
-        city: city || null,
-        address: address || null,
-        notes: notes || null,
-        loyaltyTier: loyaltyTier || "new",
-      },
-    });
+        data: {
+          organizationId: orgId,
+          name,
+          email: email || null,
+          phone: phone || null,
+          address: address || null,
+          notes: notes || null,
+          loyaltyTier: "new",
+        },
+      });
     }, 2, 500);
 
     return NextResponse.json({ customer }, { status: 201 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("Failed to create customer", error, { orgId: authCtx?.organizationId });
     if (isDbUnavailable(error)) {
       return NextResponse.json({ error: "Database is currently unavailable. Please try again later.", fallback: true }, { status: 503 });
