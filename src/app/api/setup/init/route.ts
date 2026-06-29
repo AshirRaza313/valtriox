@@ -16,7 +16,9 @@ export async function POST(req: NextRequest) {
         { status: 500 }
       );
     }
-    if (token !== expectedToken) {
+    // FIX 1.5: Use timingSafeEqual to prevent timing attacks on token comparison
+    if (!token || token.length !== expectedToken.length ||
+      !crypto.timingSafeEqual(Buffer.from(token, "utf8"), Buffer.from(expectedToken, "utf8"))) {
       return NextResponse.json({ error: "Invalid setup token" }, { status: 403 });
     }
 
