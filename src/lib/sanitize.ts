@@ -48,9 +48,14 @@ export function sanitizeObject<T extends Record<string, unknown>>(obj: T): T {
     } else if (typeof value === "string") {
       result[key] = sanitizeString(value);
     } else if (Array.isArray(value)) {
-      result[key] = value.map((item) =>
-        typeof item === "object" && item !== null ? sanitizeObject(item as Record<string, unknown>) : sanitizeString(item)
-      );
+      // FIX 3.6: Preserve numbers/booleans in arrays — only sanitize strings
+      result[key] = value.map((item) => {
+        if (item === null || item === undefined) return item;
+        if (typeof item === "string") return sanitizeString(item);
+        if (typeof item === "number" || typeof item === "boolean") return item;
+        if (typeof item === "object") return sanitizeObject(item as Record<string, unknown>);
+        return item;
+      });
     } else if (typeof value === "object") {
       result[key] = sanitizeObject(value as Record<string, unknown>);
     } else {
