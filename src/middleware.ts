@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import crypto from "crypto";
 
 // Phase 4+5: CORS + security headers + request correlation middleware
 const ALLOWED_ORIGINS = [

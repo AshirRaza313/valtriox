@@ -320,7 +320,7 @@ export const adminUpdateSubscriptionSchema = z.object({
 });
 
 export const adminFeatureToggleSchema = z.object({
-  features: z.record(z.boolean()),
+  features: z.record(z.boolean()).refine(obj => Object.keys(obj).length <= 20, { message: "Maximum 20 features allowed" }),
 });
 
 // ── Flash Sale schemas ───────────────────────────────────────────────────────
@@ -389,7 +389,7 @@ export const pushSendSchema = z.object({
 
 export const createIntegrationSchema = z.object({
   provider: z.enum(["whatsapp", "google", "meta", "stripe", "paypro", "calendly", "hubspot", "mailchimp", "zapier", "custom"]),
-  config: z.record(z.string().max(500)).max(20),
+  config: z.record(z.string().max(500)).refine(obj => Object.keys(obj).length <= 20, { message: "Maximum 20 config entries allowed" }),
   isActive: z.boolean().default(true),
 });
 
