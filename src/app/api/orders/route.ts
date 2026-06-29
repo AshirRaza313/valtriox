@@ -136,65 +136,71 @@ export const POST = withAuth(async (req, authCtx) => {
         }
       }
 
-      // Generate order number
-      const lastOrder = await db.order.findFirst({
-        where: { organizationId },
-        orderBy: { createdAt: "desc" },
-        select: { orderNumber: true },
-      });
-      let counter = 1;
-      if (lastOrder?.orderNumber) {
-        counter = parseInt(lastOrder.orderNumber.replace("VTX-", "")) + 1;
-      }
+      // FIX 2.1: Wrap order number generation + order create + stock update in a transaction
+      // This prevents race conditions where two orders could get the same order number
+      const createdOrder = await db.$transaction(async (tx) => {
+        // Generate order number atomically within transaction
+        const lastOrder = await tx.order.findFirst({
+          where: { organizationId },
+          orderBy: { createdAt: "desc" },
+          select: { orderNumber: true },
+        });
+        let counter = 1;
+        if (lastOrder?.orderNumber) {
+          counter = parseInt(lastOrder.orderNumber.replace("VTX-", "")) + 1;
+        }
 
-      const subtotal = items.reduce((sum: number, item: any) => sum + item.price * item.quantity, 0);
-      const createdOrder = await db.order.create({
-        data: {
-          orderNumber: `VTX-${String(counter).padStart(4, "0")}`,
-          organizationId,
-          customerId: customerId || null,
-          channel: channel || "manual",
-          notes: notes || null,
-          subtotal,
-          total: subtotal,
-          items: {
-            create: items.map((item: any) => ({
-              productId: item.productId,
-              productName: item.productName,
-              quantity: item.quantity,
-              price: item.price,
-              total: item.price * item.quantity,
-            })),
+        const subtotal = items.reduce((sum: number, item: any) => sum + item.price * item.quantity, 0);
+        const txOrder = await tx.order.create({
+          data: {
+            orderNumber: `VTX-${String(counter).padStart(4, "0")}`,
+            organizationId,
+            customerId: customerId || null,
+            channel: channel || "manual",
+            notes: notes || null,
+            subtotal,
+            total: subtotal,
+            items: {
+              create: items.map((item: any) => ({
+                productId: item.productId,
+                productName: item.productName,
+                quantity: item.quantity,
+                price: item.price,
+                total: item.price * item.quantity,
+              })),
+            },
           },
-        },
-        include: { customer: { select: { name: true } }, items: true },
+          include: { customer: { select: { name: true } }, items: true },
+        });
+
+        // Update customer stats (verify customer belongs to same org)
+        if (customerId) {
+          const customerExists = await tx.customer.findFirst({
+            where: { id: customerId, organizationId },
+          });
+          if (customerExists) {
+            await tx.customer.update({
+              where: { id: customerId },
+              data: { totalSpent: { increment: subtotal }, orderCount: { increment: 1 } },
+            });
+          }
+        }
+
+        // Update product stock (verify products belong to same org)
+        for (const item of items) {
+          const productExists = await tx.product.findFirst({
+            where: { id: item.productId, organizationId },
+          });
+          if (productExists) {
+            await tx.product.update({
+              where: { id: item.productId },
+              data: { stock: { decrement: item.quantity } },
+            });
+          }
+        }
+
+        return txOrder;
       });
-
-      // Update customer stats (verify customer belongs to same org)
-      if (customerId) {
-        const customerExists = await db.customer.findFirst({
-          where: { id: customerId, organizationId },
-        });
-        if (customerExists) {
-          await db.customer.update({
-            where: { id: customerId },
-            data: { totalSpent: { increment: subtotal }, orderCount: { increment: 1 } },
-          });
-        }
-      }
-
-      // Update product stock (verify products belong to same org)
-      for (const item of items) {
-        const productExists = await db.product.findFirst({
-          where: { id: item.productId, organizationId },
-        });
-        if (productExists) {
-          await db.product.update({
-            where: { id: item.productId },
-            data: { stock: { decrement: item.quantity } },
-          });
-        }
-      }
 
       return { order: createdOrder };
     }, 2, 500);
