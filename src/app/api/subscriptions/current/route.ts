@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, dbErrorResponse, isDbUnavailable, withRetry } from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
+import { withRateLimit } from "@/lib/rate-limit";
 
 // GET /api/subscriptions/current - Return current org's subscription + plan details
-export const GET = withAuth(async (req: NextRequest, authCtx) => {
+export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   try {
     logger.info("[Subscriptions Current] GET request", { userId: authCtx.userId });
     const { searchParams } = new URL(req.url);
@@ -202,7 +203,7 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
     }
     return NextResponse.json({ error: "Failed to fetch subscription" }, { status: 500 });
   }
-});
+}), { maxRequests: 30, windowSeconds: 60 });
 
 function formatSubscription(sub: any) {
   const now = new Date();

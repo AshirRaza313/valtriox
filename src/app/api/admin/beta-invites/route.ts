@@ -3,6 +3,7 @@ import { withAuth } from "@/lib/auth-middleware";
 import { db, withRetry } from "@/lib/db";
 import { sendEmail, isEmailConfigured } from "@/lib/email";
 import {
+import { withRateLimit } from "@/lib/rate-limit";
   getUltraPremiumInviteHtml,
   getUltraPremiumWhatsAppMessage,
   generateUltraPremiumWhatsAppLink,
@@ -50,7 +51,7 @@ const VALID_STATUSES = ["sent", "accepted", "expired", "revoked"] as const;
 //  GET — List invites or preview invitation document
 // ═══════════════════════════════════════════════════════════════════════
 
-export const GET = withAuth(async (req, _ctx) => {
+export const GET = withRateLimit(withAuth(async (req, _ctx) => {
   try {
     const url = new URL(req.url);
 
@@ -113,7 +114,7 @@ export const GET = withAuth(async (req, _ctx) => {
       { status: 500 }
     );
   }
-}, { requireRole: ["platform_owner", "platform_admin"] });
+}, { requireRole: ["platform_owner", "platform_admin"] }), { maxRequests: 10, windowSeconds: 60 });
 
 // ═══════════════════════════════════════════════════════════════════════
 //  POST — Create invite
@@ -123,7 +124,7 @@ export const GET = withAuth(async (req, _ctx) => {
 //  No runtime DDL is performed here.
 // ═══════════════════════════════════════════════════════════════════════
 
-export const POST = withAuth(async (req, ctx) => {
+export const POST = withRateLimit(withAuth(async (req, ctx) => {
   try {
     const body = await req.json();
     const { email, plan, trialDays, sendVia, phone } = body;
@@ -246,13 +247,13 @@ export const POST = withAuth(async (req, ctx) => {
       { status: 500 }
     );
   }
-}, { requireRole: ["platform_owner", "platform_admin"] });
+}, { requireRole: ["platform_owner", "platform_admin"] }), { maxRequests: 10, windowSeconds: 60 });
 
 // ═══════════════════════════════════════════════════════════════════════
 //  DELETE — Remove an invite
 // ═══════════════════════════════════════════════════════════════════════
 
-export const DELETE = withAuth(async (req, _ctx) => {
+export const DELETE = withRateLimit(withAuth(async (req, _ctx) => {
   try {
     const id = new URL(req.url).searchParams.get("id");
     if (!id) {
@@ -270,13 +271,13 @@ export const DELETE = withAuth(async (req, _ctx) => {
       { status: 500 }
     );
   }
-}, { requireRole: ["platform_owner", "platform_admin"] });
+}, { requireRole: ["platform_owner", "platform_admin"] }), { maxRequests: 10, windowSeconds: 60 });
 
 // ═══════════════════════════════════════════════════════════════════════
 //  PATCH — Update invite status
 // ═══════════════════════════════════════════════════════════════════════
 
-export const PATCH = withAuth(async (req, _ctx) => {
+export const PATCH = withRateLimit(withAuth(async (req, _ctx) => {
   try {
     const { id, status } = await req.json();
     if (!id) {
@@ -304,4 +305,4 @@ export const PATCH = withAuth(async (req, _ctx) => {
       { status: 500 }
     );
   }
-}, { requireRole: ["platform_owner", "platform_admin"] });
+}, { requireRole: ["platform_owner", "platform_admin"] }), { maxRequests: 10, windowSeconds: 60 });

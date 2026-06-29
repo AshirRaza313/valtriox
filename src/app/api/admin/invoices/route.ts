@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, dbErrorResponse, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
+import { withRateLimit } from "@/lib/rate-limit";
 
-export const GET = withAuth(async (req: NextRequest, authCtx) => {
+export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   logger.info("[Admin Invoices] GET request", { userId: authCtx.userId });
   try {
     const status = req.nextUrl.searchParams.get("status");
@@ -40,4 +41,4 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
   } catch (error: any) {
     return dbErrorResponse(error);
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 20, windowSeconds: 60 });

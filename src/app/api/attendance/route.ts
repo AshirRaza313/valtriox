@@ -3,8 +3,9 @@ import { db, dbErrorResponse, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import { sanitizeObject } from "@/lib/sanitize";
 import logger from "@/lib/logger";
+import { withRateLimit } from "@/lib/rate-limit";
 
-export const POST = withAuth(async (req, authCtx) => {
+export const POST = withRateLimit(withAuth(async (req, authCtx) => {
   try {
     const body = await req.json();
     Object.assign(body, sanitizeObject(body));
@@ -137,9 +138,9 @@ export const POST = withAuth(async (req, authCtx) => {
     logger.error("Attendance POST error", error, { orgId: authCtx?.organizationId });
     return NextResponse.json({ error: "Failed to mark attendance" }, { status: 500 });
   }
-});
+}), { maxRequests: 20, windowSeconds: 60 });
 
-export const GET = withAuth(async (req, authCtx) => {
+export const GET = withRateLimit(withAuth(async (req, authCtx) => {
   try {
     const { searchParams } = new URL(req.url);
     const orgId = searchParams.get("orgId") || authCtx.organizationId;
@@ -191,4 +192,4 @@ export const GET = withAuth(async (req, authCtx) => {
     }
     return NextResponse.json({ error: "Failed to fetch attendance" }, { status: 500 });
   }
-});
+}), { maxRequests: 20, windowSeconds: 60 });

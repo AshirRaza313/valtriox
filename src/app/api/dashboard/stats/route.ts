@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { db, safeDbQuery, isDbUnavailable, withRetry } from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
+import { withRateLimit } from "@/lib/rate-limit";
 
-export const GET = withAuth(async (req, authCtx) => {
+export const GET = withRateLimit(withAuth(async (req, authCtx) => {
   try {
     const { searchParams } = new URL(req.url);
     const orgId = searchParams.get("orgId") || authCtx.organizationId;
@@ -245,4 +246,4 @@ export const GET = withAuth(async (req, authCtx) => {
     }
     return NextResponse.json({ error: "Failed to fetch stats" }, { status: 500 });
   }
-});
+}), { maxRequests: 30, windowSeconds: 60 });

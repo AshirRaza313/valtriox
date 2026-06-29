@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
+import { withRateLimit } from "@/lib/rate-limit";
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  Calendly Settings - stored in SystemSetting table as JSON
@@ -18,7 +19,7 @@ const DEFAULT_CALENDLY_SETTINGS = {
 /**
  * GET - Fetch Calendly settings
  */
-export const GET = withAuth(async (_req: NextRequest, authCtx) => {
+export const GET = withRateLimit(withAuth(async (_req: NextRequest, authCtx) => {
   logger.info("[Admin Calendly] GET request", { userId: authCtx.userId });
 
   try {
@@ -35,12 +36,12 @@ export const GET = withAuth(async (_req: NextRequest, authCtx) => {
     console.error("Calendly settings GET error:", error?.message);
     return NextResponse.json(DEFAULT_CALENDLY_SETTINGS);
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 20, windowSeconds: 60 });
 
 /**
  * PUT - Save Calendly settings
  */
-export const PUT = withAuth(async (req: NextRequest, authCtx) => {
+export const PUT = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   logger.info("[Admin Calendly] PUT request", { userId: authCtx.userId });
 
   try {
@@ -67,4 +68,4 @@ export const PUT = withAuth(async (req: NextRequest, authCtx) => {
     console.error("Calendly settings PUT error:", error?.message);
     return NextResponse.json({ error: "Failed to save Calendly settings" }, { status: 500 });
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 20, windowSeconds: 60 });

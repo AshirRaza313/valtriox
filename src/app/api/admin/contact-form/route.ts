@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
+import { withRateLimit } from "@/lib/rate-limit";
 
 // GET /api/admin/contact-form - Fetch current form configuration
-export const GET = withAuth(async (req: NextRequest) => {
+export const GET = withRateLimit(withAuth(async (req: NextRequest) => {
   try {
     const setting = await withRetry(async () => {
       return await db.platformSettings.findFirst({
@@ -24,10 +25,10 @@ export const GET = withAuth(async (req: NextRequest) => {
     }
     return NextResponse.json({ fields: null }, { status: 200 });
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 20, windowSeconds: 60 });
 
 // PUT /api/admin/contact-form - Update form configuration
-export const PUT = withAuth(async (req: NextRequest) => {
+export const PUT = withRateLimit(withAuth(async (req: NextRequest) => {
   try {
     const body = await req.json();
     const { fields } = body;
@@ -71,4 +72,4 @@ export const PUT = withAuth(async (req: NextRequest) => {
     }
     return NextResponse.json({ error: "Failed to save form configuration" }, { status: 500 });
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 20, windowSeconds: 60 });

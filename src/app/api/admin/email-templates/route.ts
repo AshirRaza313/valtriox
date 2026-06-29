@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
+import { withRateLimit } from "@/lib/rate-limit";
 
 // GET /api/admin/email-templates - List all email templates
-export const GET = withAuth(async (req: NextRequest) => {
+export const GET = withRateLimit(withAuth(async (req: NextRequest) => {
   try {
     const { searchParams } = new URL(req.url);
     const page = parseInt(searchParams.get("page") || "1");
@@ -27,10 +28,10 @@ export const GET = withAuth(async (req: NextRequest) => {
     }
     return NextResponse.json({ error: "Failed to fetch email templates", details: process.env.NODE_ENV === "production" ? undefined : error?.message }, { status: 500 });
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 20, windowSeconds: 60 });
 
 // POST /api/admin/email-templates - Create new email template
-export const POST = withAuth(async (req: NextRequest) => {
+export const POST = withRateLimit(withAuth(async (req: NextRequest) => {
   try {
     const body = await req.json();
     const { type, name, subject, htmlContent, textContent, variables } = body;
@@ -63,10 +64,10 @@ export const POST = withAuth(async (req: NextRequest) => {
     }
     return NextResponse.json({ error: "Failed to create email template", details: process.env.NODE_ENV === "production" ? undefined : error?.message }, { status: 500 });
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 20, windowSeconds: 60 });
 
 // PUT /api/admin/email-templates - Update email template
-export const PUT = withAuth(async (req: NextRequest) => {
+export const PUT = withRateLimit(withAuth(async (req: NextRequest) => {
   try {
     const body = await req.json();
     const { id, ...updateData } = body;
@@ -99,10 +100,10 @@ export const PUT = withAuth(async (req: NextRequest) => {
     }
     return NextResponse.json({ error: "Failed to update email template", details: process.env.NODE_ENV === "production" ? undefined : error?.message }, { status: 500 });
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 20, windowSeconds: 60 });
 
 // DELETE /api/admin/email-templates - Delete email template
-export const DELETE = withAuth(async (req: NextRequest) => {
+export const DELETE = withRateLimit(withAuth(async (req: NextRequest) => {
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
@@ -121,4 +122,4 @@ export const DELETE = withAuth(async (req: NextRequest) => {
     }
     return NextResponse.json({ error: "Failed to delete email template", details: process.env.NODE_ENV === "production" ? undefined : error?.message }, { status: 500 });
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 20, windowSeconds: 60 });

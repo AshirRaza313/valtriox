@@ -13,7 +13,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db, withRetry, safeDbQuery } from "@/lib/db";
-import { withAuth } from "@/lib/auth-middleware";
+import { withAuth, isPlatformRole, AuthContext } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
 import { uploadFile, deleteFile, CLOUDINARY_BUCKETS } from "@/lib/cloudinary";
 
@@ -52,11 +52,16 @@ const MAX_FILE_SIZE = 50 * 1024 * 1024;
 // GET - List all uploaded platform documents
 // ═══════════════════════════════════════════════════════════════════════════
 
-export const GET = withAuth(async (_req: NextRequest, authCtx) => {
+export const GET = withAuth(async (_req: NextRequest, authCtx: AuthContext) => {
   try {
     const { data: files, error } = await safeDbQuery(async () => {
+      // ── Scope to caller's org unless they are a platform admin ──
+      const where: any = { isActive: true };
+      if (!isPlatformRole(authCtx.role) && authCtx.organizationId) {
+        where.organizationId = authCtx.organizationId;
+      }
       return await db.platformDocument.findMany({
-        where: { isActive: true },
+        where,
         orderBy: { createdAt: "desc" },
       });
     }, 3, 500);
@@ -83,7 +88,7 @@ export const GET = withAuth(async (_req: NextRequest, authCtx) => {
 // POST - Upload a new file
 // ═══════════════════════════════════════════════════════════════════════════
 
-export const POST = withAuth(async (req: NextRequest, authCtx) => {
+export const POST = withAuth(async (req: NextRequest, authCtx: AuthContext) => {
   try {
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
@@ -152,6 +157,7 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
           cloudinaryPublicId: uploadResult.publicId || null,
           category,
           uploadedBy: authCtx.userId,
+          organizationId: authCtx.organizationId || null,
         },
       });
     }, 2, 500);
@@ -192,7 +198,7 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
 // PUT - Update file metadata
 // ═══════════════════════════════════════════════════════════════════════════
 
-export const PUT = withAuth(async (req: NextRequest, authCtx) => {
+export const PUT = withAuth(async (req: NextRequest, authCtx: AuthContext) => {
   try {
     const body = await req.json();
     const { id, title, description, category } = body;
@@ -200,6 +206,26 @@ export const PUT = withAuth(async (req: NextRequest, authCtx) => {
     if (!id) {
       return NextResponse.json({ error: "File ID is required" }, { status: 400 });
     }
+
+    // ── Verify the file exists and the user has access ──
+    const { data: existing, error: fetchError } = await safeDbQuery(async () => {
+      return await db.platformDocument.findUnique({ where: { id } });
+    }, 2, 500);
+
+    if (fetchError || !existing) {
+      return NextResponse.json({ error: "File not found" }, { status: 404 });
+    }
+
+    // ── Org ownership check ──
+    if (!isPlatformRole(authCtx.role) && existing.organizationId && existing.organizationId !== authCtx.organizationId) {
+      logger.warn("[DocumentFiles] PUT cross-org access denied", {
+        userId: authCtx.userId,
+        fileOrgId: existing.organizationId,
+        callerOrgId: authCtx.organizationId,
+      });
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    }
+
     const { data: updated, error } = await safeDbQuery(async () => {
       return await db.platformDocument.update({
         where: { id },
@@ -233,7 +259,7 @@ export const PUT = withAuth(async (req: NextRequest, authCtx) => {
 // DELETE - Delete a file from Cloudinary + database
 // ═══════════════════════════════════════════════════════════════════════════
 
-export const DELETE = withAuth(async (req: NextRequest, authCtx) => {
+export const DELETE = withAuth(async (req: NextRequest, authCtx: AuthContext) => {
   try {
     const { searchParams } = new URL(req.url);
     const fileId = searchParams.get("id");
@@ -247,6 +273,16 @@ export const DELETE = withAuth(async (req: NextRequest, authCtx) => {
 
     if (fetchError || !file) {
       return NextResponse.json({ error: "File not found" }, { status: 404 });
+    }
+
+    // ── Org ownership check ──
+    if (!isPlatformRole(authCtx.role) && file.organizationId && file.organizationId !== authCtx.organizationId) {
+      logger.warn("[DocumentFiles] DELETE cross-org access denied", {
+        userId: authCtx.userId,
+        fileOrgId: file.organizationId,
+        callerOrgId: authCtx.organizationId,
+      });
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
     // Delete from Cloudinary

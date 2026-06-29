@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { ROLES } from "@/lib/roles";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
+import { withRateLimit } from "@/lib/rate-limit";
 
-export const GET = withAuth(async () => {
+export const GET = withRateLimit(withAuth(async () => {
   try {
     logger.info("[Roles] GET request");
     return NextResponse.json({
@@ -23,4 +24,4 @@ export const GET = withAuth(async () => {
       { status: 500 }
     );
   }
-}, { requireOrg: false });
+}, { requireOrg: false }), { maxRequests: 20, windowSeconds: 60 });

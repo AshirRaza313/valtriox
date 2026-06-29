@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, safeDbQuery } from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
+import { withRateLimit } from "@/lib/rate-limit";
 
 // GET /api/admin/proposals - List proposals with filtering (admin only)
-export const GET = withAuth(async (req: NextRequest) => {
+export const GET = withRateLimit(withAuth(async (req: NextRequest) => {
   const { searchParams } = new URL(req.url);
   const status = searchParams.get("status");
   const type = searchParams.get("type");
@@ -48,10 +49,10 @@ export const GET = withAuth(async (req: NextRequest) => {
   const proposals = r1.data;
   const total = r2.data;
   return NextResponse.json({ proposals, total, page, totalPages: Math.ceil(total / limit) });
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 15, windowSeconds: 60 });
 
 // POST /api/admin/proposals - Create a new proposal (admin only)
-export const POST = withAuth(async (req: NextRequest) => {
+export const POST = withRateLimit(withAuth(async (req: NextRequest) => {
   try {
     const body = await req.json();
     const {
@@ -139,10 +140,10 @@ export const POST = withAuth(async (req: NextRequest) => {
       code: "PROPOSALS_CREATE_ERROR",
     }, { status: 500 });
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 15, windowSeconds: 60 });
 
 // PUT /api/admin/proposals - Update proposal (admin only)
-export const PUT = withAuth(async (req: NextRequest) => {
+export const PUT = withRateLimit(withAuth(async (req: NextRequest) => {
   try {
     const body = await req.json();
     const { id, status, notes, content, totalCost, validUntil, title, clientName, clientEmail, clientCompany, clientPhone, type } = body;
@@ -216,10 +217,10 @@ export const PUT = withAuth(async (req: NextRequest) => {
       code: "PROPOSALS_UPDATE_ERROR",
     }, { status: 500 });
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 15, windowSeconds: 60 });
 
 // DELETE /api/admin/proposals - Delete a proposal (admin only)
-export const DELETE = withAuth(async (req: NextRequest) => {
+export const DELETE = withRateLimit(withAuth(async (req: NextRequest) => {
   const { searchParams } = new URL(req.url);
   const id = searchParams.get("id");
 
@@ -241,4 +242,4 @@ export const DELETE = withAuth(async (req: NextRequest) => {
   }
 
   return NextResponse.json({ success: true });
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 15, windowSeconds: 60 });

@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
+import { withRateLimit } from "@/lib/rate-limit";
 
 const GUIDE_KEY = "user_guide_content";
 
 // GET /api/admin/guide - Return guide content (admin only)
 // SECURITY: If DB has corrupt/empty guide data, auto-delete it and return null
 // so the client falls back to its built-in DEFAULT_GUIDE
-export const GET = withAuth(async (_req: NextRequest, authCtx) => {
+export const GET = withRateLimit(withAuth(async (_req: NextRequest, authCtx) => {
   logger.info("[Admin Guide] GET request", { userId: authCtx.userId });
   try {
     const setting = await withRetry(async () => {
@@ -50,10 +51,10 @@ export const GET = withAuth(async (_req: NextRequest, authCtx) => {
     // On any error, return null content so client uses DEFAULT_GUIDE
     return NextResponse.json({ content: null, source: "defaults" });
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 20, windowSeconds: 60 });
 
 // PUT /api/admin/guide - Save guide content (admin only)
-export const PUT = withAuth(async (req: NextRequest, authCtx) => {
+export const PUT = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   logger.info("[Admin Guide] PUT request", { userId: authCtx.userId });
   try {
     const body = await req.json();
@@ -93,4 +94,4 @@ export const PUT = withAuth(async (req: NextRequest, authCtx) => {
     }
     return NextResponse.json({ error: "Failed to save guide" }, { status: 500 });
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 20, windowSeconds: 60 });

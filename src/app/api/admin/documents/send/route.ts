@@ -18,6 +18,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, withRetry, safeDbQuery } from "@/lib/db";
 import { sanitizeObject } from "@/lib/sanitize";
 import { sendEmail } from "@/lib/email";
+import { withAuth, AuthContext } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
 
 export const maxDuration = 30;
@@ -26,15 +27,8 @@ export const maxDuration = 30;
 // POST - Send document/file to a client via email
 // ═══════════════════════════════════════════════════════════════════════════
 
-export async function POST(req: NextRequest) {
+export const POST = withAuth(async (req: NextRequest, authCtx: AuthContext) => {
   try {
-    // Auth check
-    const userRole = req.headers.get("x-user-role");
-    const userId = req.headers.get("x-user-id");
-    if (!userRole || !["admin", "owner", "platform_owner", "platform_admin"].includes(userRole)) {
-      return NextResponse.json({ error: "Access denied" }, { status: 403 });
-    }
-
     const body = await req.json();
     const sanitized = sanitizeObject(body);
     const { documentKey, fileId, clientOrgId, placeholders, message } = sanitized;
@@ -205,7 +199,7 @@ export async function POST(req: NextRequest) {
     logger.error("[Documents/Send] Error", error?.message || error);
     return NextResponse.json({ error: "Failed to send document" }, { status: 500 });
   }
-}
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"] });
 
 // ─── Email Template Builders ──────────────────────────────────────────────
 

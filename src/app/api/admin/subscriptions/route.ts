@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
+import { withRateLimit } from "@/lib/rate-limit";
 
 // GET /api/admin/subscriptions - List all subscriptions (admin management)
-export const GET = withAuth(async (req: NextRequest, authCtx) => {
+export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   logger.info("[Admin Subscriptions] GET request", { userId: authCtx.userId });
   try {
     const { searchParams } = new URL(req.url);
@@ -107,4 +108,4 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
     }
     return NextResponse.json({ error: "Failed to fetch subscriptions" }, { status: 500 });
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 20, windowSeconds: 60 });

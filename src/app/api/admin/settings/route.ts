@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, ensurePlatformSettingsColumns, withRetry } from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
+import { withRateLimit } from "@/lib/rate-limit";
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  Uses Prisma ORM with pgbouncer=true (configured in db.ts).
@@ -109,7 +110,7 @@ function formatRow(row: any) {
 //  GET - Fetch Platform Settings
 // ═══════════════════════════════════════════════════════════════════════════
 
-export const GET = withAuth(async (_req: NextRequest, authCtx) => {
+export const GET = withRateLimit(withAuth(async (_req: NextRequest, authCtx) => {
   logger.info("[Admin Settings] GET request", { userId: authCtx.userId });
 
   try {
@@ -147,13 +148,13 @@ export const GET = withAuth(async (_req: NextRequest, authCtx) => {
       reason: process.env.NODE_ENV === 'production' ? undefined : msg,
     });
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 20, windowSeconds: 60 });
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  PUT - Update Platform Settings
 // ═══════════════════════════════════════════════════════════════════════════
 
-export const PUT = withAuth(async (req: NextRequest, authCtx) => {
+export const PUT = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   logger.info("[Admin Settings] PUT request", { userId: authCtx.userId });
 
   try {
@@ -269,4 +270,4 @@ export const PUT = withAuth(async (req: NextRequest, authCtx) => {
       details: process.env.NODE_ENV === "production" ? undefined : msg,
     }, { status: 500 });
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 20, windowSeconds: 60 });

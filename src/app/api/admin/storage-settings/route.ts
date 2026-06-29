@@ -16,6 +16,7 @@ import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
 import { isPlatformRole } from "@/lib/roles";
 import { v2 as cloudinary } from "cloudinary";
+import { withRateLimit } from "@/lib/rate-limit";
 
 const SETTING_KEY = "storage_cloudinary_config";
 
@@ -31,7 +32,7 @@ interface CloudinaryConfig {
 // GET - Fetch current Cloudinary config (masked)
 // ═══════════════════════════════════════════════════════════════════════════
 
-export const GET = withAuth(async (_req: NextRequest, authCtx) => {
+export const GET = withRateLimit(withAuth(async (_req: NextRequest, authCtx) => {
   try {
     if (!isPlatformRole(authCtx.role)) {
       return NextResponse.json({ error: "Admin access required" }, { status: 403 });
@@ -73,13 +74,13 @@ export const GET = withAuth(async (_req: NextRequest, authCtx) => {
     logger.error("[StorageSettings] GET error:", error);
     return NextResponse.json({ error: "Failed to fetch storage settings" }, { status: 500 });
   }
-}, { requireRole: ["platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 20, windowSeconds: 60 });
 
 // ═══════════════════════════════════════════════════════════════════════════
 // PUT - Save/update Cloudinary config
 // ═══════════════════════════════════════════════════════════════════════════
 
-export const PUT = withAuth(async (req: NextRequest, authCtx) => {
+export const PUT = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   try {
     if (!isPlatformRole(authCtx.role)) {
       return NextResponse.json({ error: "Admin access required" }, { status: 403 });
@@ -140,13 +141,13 @@ export const PUT = withAuth(async (req: NextRequest, authCtx) => {
     logger.error("[StorageSettings] PUT error:", error);
     return NextResponse.json({ error: "Failed to save storage settings" }, { status: 500 });
   }
-}, { requireRole: ["platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 20, windowSeconds: 60 });
 
 // ═══════════════════════════════════════════════════════════════════════════
 // POST - Test Cloudinary connection with provided credentials
 // ═══════════════════════════════════════════════════════════════════════════
 
-export const POST = withAuth(async (req: NextRequest, authCtx) => {
+export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   try {
     if (!isPlatformRole(authCtx.role)) {
       return NextResponse.json({ error: "Admin access required" }, { status: 403 });
@@ -202,4 +203,4 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
     logger.error("[StorageSettings] POST error:", error);
     return NextResponse.json({ error: "Failed to test connection" }, { status: 500 });
   }
-}, { requireRole: ["platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 20, windowSeconds: 60 });

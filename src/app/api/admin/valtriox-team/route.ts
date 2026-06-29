@@ -3,6 +3,7 @@ import { db, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import { sendEmail, isEmailConfigured } from "@/lib/email";
 import { getValtrioxInvitationHtml, generateWhatsAppInviteLink, generateInvitationPlainText } from "@/lib/email-templates";
+import { withRateLimit } from "@/lib/rate-limit";
 
 const DEPARTMENTS = ["Engineering", "Sales", "Marketing", "Support", "Operations", "Finance", "Design", "Management"];
 
@@ -16,7 +17,7 @@ const VALTROIX_ROLES = [
 ];
 
 // GET: List all Valtriox team members + pending invitations
-export const GET = withAuth(async (req, authCtx) => {
+export const GET = withRateLimit(withAuth(async (req, authCtx) => {
   try {
     const members = await withRetry(async () => {
       return await db.valtrioxTeamMember.findMany({
@@ -43,10 +44,10 @@ export const GET = withAuth(async (req, authCtx) => {
       { status: 500 }
     );
   }
-}, { requireRole: ["platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 20, windowSeconds: 60 });
 
 // POST: Invite new team member
-export const POST = withAuth(async (req, authCtx) => {
+export const POST = withRateLimit(withAuth(async (req, authCtx) => {
   try {
     const body = await req.json();
     const { name, email, role, department, phone } = body;
@@ -188,10 +189,10 @@ export const POST = withAuth(async (req, authCtx) => {
       { status: 500 }
     );
   }
-}, { requireRole: ["platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 20, windowSeconds: 60 });
 
 // DELETE: Revoke invitation
-export const DELETE = withAuth(async (req, authCtx) => {
+export const DELETE = withRateLimit(withAuth(async (req, authCtx) => {
   try {
     const { searchParams } = new URL(req.url);
     const invitationId = searchParams.get("invitationId");
@@ -215,4 +216,4 @@ export const DELETE = withAuth(async (req, authCtx) => {
       { status: 500 }
     );
   }
-}, { requireRole: ["platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 20, windowSeconds: 60 });

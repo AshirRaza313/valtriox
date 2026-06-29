@@ -111,6 +111,7 @@ model Organization {
   attendance            Attendance[]
   integrations          IntegrationConnection[]
   feedbacks            Feedback[]
+  platformDocuments    PlatformDocument[]
   // ── Atomic Counters (race-safe via increment) ──
   orderCounter           Int                  @default(0) // Monotonic counter for VTX-XXXX order numbers
   // ── Billing Security ──
@@ -638,12 +639,16 @@ model PlatformDocument {
   category          String   @default("uploaded") // uploaded, lead-magnet, proposal-export, invoice-template
   isActive          Boolean  @default(true)
   uploadedBy        String?  // userId
+  organizationId    String?  // org that owns this file — prevents cross-org access
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([category])
   @@index([isActive])
   @@index([fileType])
+  @@index([organizationId])
 }
 
 // ── Valtriox Team (Platform-level team, separate from brand teams) ──

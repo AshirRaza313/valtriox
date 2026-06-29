@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
-import { withAuth } from "@/lib/auth-middleware";
+import { withAuth, isPlatformRole, AuthContext } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
 
 // PUT /api/db-notifications/[id] - Mark notification as read
 export const PUT = withAuth(async (
   req: NextRequest,
-  authCtx: any
+  authCtx: AuthContext
 ) => {
   try {
     logger.info("[DB Notifications] PUT request", { userId: authCtx.userId });
@@ -19,6 +19,27 @@ export const PUT = withAuth(async (
     }, 2, 500);
     if (!notification) {
       return NextResponse.json({ error: "Notification not found" }, { status: 404 });
+    }
+
+    // ── Org ownership check: ensure the notification belongs to the caller's org ──
+    // Platform admins can access any notification; all others must match orgId.
+    if (!isPlatformRole(authCtx.role)) {
+      if (notification.orgId && notification.orgId !== authCtx.organizationId) {
+        logger.warn("[DB Notifications] Cross-org access denied", {
+          userId: authCtx.userId,
+          notificationOrgId: notification.orgId,
+          callerOrgId: authCtx.organizationId,
+        });
+        return NextResponse.json({ error: "Access denied" }, { status: 403 });
+      }
+      // Also allow if the notification is user-scoped (userId match) and has no orgId
+      if (!notification.orgId && notification.userId !== authCtx.userId) {
+        logger.warn("[DB Notifications] Cross-user access denied", {
+          userId: authCtx.userId,
+          notificationUserId: notification.userId,
+        });
+        return NextResponse.json({ error: "Access denied" }, { status: 403 });
+      }
     }
 
     await withRetry(async () => {

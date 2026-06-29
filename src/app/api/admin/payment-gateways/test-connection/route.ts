@@ -3,6 +3,7 @@ import { db, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
 import { isPlatformRole } from "@/lib/roles";
+import { withRateLimit } from "@/lib/rate-limit";
 
 // ============================================================================
 // Payment Gateway Server-Side Test Connection
@@ -23,7 +24,7 @@ const GATEWAY_BASES: Record<string, Record<string, string>> = {
 };
 
 // POST /api/admin/payment-gateways/test-connection
-export const POST = withAuth(async (req: NextRequest, authCtx) => {
+export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   try {
     if (!isPlatformRole(authCtx.role)) {
       return NextResponse.json({ error: "Admin access required" }, { status: 403 });
@@ -118,4 +119,4 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
     logger.error("[Gateway Test] Error", error);
     return NextResponse.json({ error: "Test connection failed" }, { status: 500 });
   }
-}, { requireRole: ["platform_owner", "platform_admin", "owner"], requireOrg: false });
+}, { requireRole: ["platform_owner", "platform_admin", "owner"], requireOrg: false }), { maxRequests: 5, windowSeconds: 60 });

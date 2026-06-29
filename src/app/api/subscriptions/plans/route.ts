@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db, isDbUnavailable, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
+import { withRateLimit } from "@/lib/rate-limit";
 
 // Allowed plan names - any plan NOT in this list will be filtered out
 const ALLOWED_PLAN_NAMES = ["starter", "growth", "professional", "enterprise"];
@@ -69,7 +70,7 @@ async function syncPlansToLandingPage() {
 }
 
 // GET /api/subscriptions/plans - Public: return all active subscription plans
-export const GET = withAuth(async () => {
+export const GET = withRateLimit(withAuth(async () => {
   try {
     logger.info("[Subscriptions Plans] GET request");
     // Auto-cleanup: filter out stale plans (free, basic, etc.)
@@ -190,4 +191,4 @@ export const GET = withAuth(async () => {
     }
     return NextResponse.json({ error: "Failed to fetch plans" }, { status: 500 });
   }
-}, { allowPublic: true });
+}, { allowPublic: true }), { maxRequests: 30, windowSeconds: 60 });

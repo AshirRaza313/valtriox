@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, dbErrorResponse, isDbUnavailable, withRetry } from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
+import { withRateLimit } from "@/lib/rate-limit";
 
 // Fixed Monthly Platform Cost (Vercel Pro, Supabase Pro, Resend Pro, Calendly, WA API, Sentry, Cloudflare)
 const FIXED_MONTHLY_COST = 48440;
 
 // GET /api/admin/revenue?period=month&year=2026
-export const GET = withAuth(async (req: NextRequest, authCtx) => {
+export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   logger.info("[Admin Revenue] GET request", { userId: authCtx.userId });
   try {
     const { searchParams } = new URL(req.url);
@@ -300,4 +301,4 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
     }
     return NextResponse.json({ error: "Failed to fetch revenue data" }, { status: 500 });
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 20, windowSeconds: 60 });

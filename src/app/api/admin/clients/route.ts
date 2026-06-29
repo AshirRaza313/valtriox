@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, isDbUnavailable, isSchemaError, withRetry } from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
+import { withRateLimit } from "@/lib/rate-limit";
 
 // Allow up to 30 seconds for DB operations on Vercel serverless
 export const maxDuration = 30;
 
 // GET /api/admin/clients - Admin-only: return all organizations with stats
-export const GET = withAuth(async (req: NextRequest, authCtx) => {
+export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   logger.info("[Admin Clients] GET request", { userId: authCtx.userId });
   try {
     // Wrap main query in retry for transient PgBouncer cold-start errors
@@ -81,7 +82,7 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
       error: process.env.NODE_ENV === 'production' ? "Database temporarily unavailable" : (error?.message || "Database temporarily unavailable")
     });
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 20, windowSeconds: 60 });
 
 // POST /api/admin/clients - Admin-only: register a new brand/client
 //
@@ -92,7 +93,7 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
 // that multiplexes connections. This caused consistent 503 timeouts.
 //
 // Sequential operations with cleanup on failure provide near-atomic behavior.
-export const POST = withAuth(async (req: NextRequest, authCtx) => {
+export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   logger.info("[Admin Clients] POST request - Register brand", { userId: authCtx.userId });
 
   // Pre-import plan utilities (used across multiple steps)
@@ -436,4 +437,4 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
       { status: 500 }
     );
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 20, windowSeconds: 60 });

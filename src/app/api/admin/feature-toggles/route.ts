@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
+import { withRateLimit } from "@/lib/rate-limit";
 
-export const GET = withAuth(async (_req: NextRequest, authCtx) => {
+export const GET = withRateLimit(withAuth(async (_req: NextRequest, authCtx) => {
   logger.info("[Admin Feature Toggles] GET request", { userId: authCtx.userId });
   try {
     const settings = await withRetry(async () => {
@@ -22,9 +23,9 @@ export const GET = withAuth(async (_req: NextRequest, authCtx) => {
     console.error("Feature toggles GET error:", error?.message);
     return NextResponse.json({ lockedGrowth: [], lockedEnterprise: [] });
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 20, windowSeconds: 60 });
 
-export const PUT = withAuth(async (req: NextRequest, authCtx) => {
+export const PUT = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   logger.info("[Admin Feature Toggles] PUT request", { userId: authCtx.userId });
   try {
     const body = await req.json();
@@ -48,4 +49,4 @@ export const PUT = withAuth(async (req: NextRequest, authCtx) => {
     console.error("Feature toggles PUT error:", error?.message);
     return NextResponse.json({ error: "Failed to save feature toggles" }, { status: 500 });
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 20, windowSeconds: 60 });

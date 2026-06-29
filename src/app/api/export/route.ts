@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth-middleware";
 import { db } from "@/lib/db";
 import logger from "@/lib/logger";
+import { withRateLimit } from "@/lib/rate-limit";
 
 // Phase 4: Cap export queries to prevent OOM on large datasets
 const EXPORT_ROW_LIMIT = 5000;
 
-export const GET = withAuth(async (req, ctx) => {
+export const GET = withRateLimit(withAuth(async (req, ctx) => {
   try {
     const orgId = ctx.organizationId;
 
@@ -155,4 +156,4 @@ export const GET = withAuth(async (req, ctx) => {
       { status: 500 },
     );
   }
-});
+}), { maxRequests: 10, windowSeconds: 60 });
