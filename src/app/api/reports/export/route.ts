@@ -4,6 +4,7 @@ import { generateReportPDF, type ReportData } from "@/lib/pdf-generator";
 import { getCurrencyForCountry } from "@/lib/currency";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
+import { safeDate } from "@/lib/utils-extended";
 
 // Extend Vercel serverless function timeout to 60s (PDF generation is heavy)
 export const maxDuration = 60;
@@ -19,18 +20,6 @@ const BAR_COLORS = [
 function calcChange(current: number, previous: number): number {
   if (previous === 0) return current > 0 ? 100 : 0;
   return Math.round(((current - previous) / previous) * 100 * 10) / 10;
-}
-
-// Helper: safely parse date from DB
-function safeDate(value: any): Date | null {
-  if (!value) return null;
-  if (value instanceof Date) return value;
-  try {
-    const parsed = new Date(value);
-    return isNaN(parsed.getTime()) ? null : parsed;
-  } catch {
-    return null;
-  }
 }
 
 // Helper: format date as short day label (e.g. "Mon 15")

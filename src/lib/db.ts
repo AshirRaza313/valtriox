@@ -1,6 +1,17 @@
 import { PrismaClient } from '@prisma/client'
 import { Pool, PoolConfig } from 'pg'
 import { NextResponse } from 'next/server'
+import logger from '@/lib/logger'
+
+/** Safely extract message and code from an unknown error */
+function getErrorInfo(e: unknown): { message: string; code: string } {
+  if (e && typeof e === 'object') {
+    const message = 'message' in e && typeof (e as Record<string, unknown>).message === 'string' ? (e as Record<string, unknown>).message as string : String(e);
+    const code = 'code' in e && typeof (e as Record<string, unknown>).code === 'string' ? (e as Record<string, unknown>).code as string : '';
+    return { message, code };
+  }
+  return { message: String(e), code: '' };
+}
 
 /**
  * Build Prisma-compatible DATABASE_URL.
@@ -73,15 +84,15 @@ const RETRYABLE_MSGS = [
   'too many connections', 'pgbouncer',
 ];
 
-function isRetryable(error: any): boolean {
+function isRetryable(error: unknown): boolean {
   if (!error) return false;
-  const code = error?.code || '';
+  const { message, code } = getErrorInfo(error);
   // Always retry P1xxx (Prisma engine/connection errors)
   if (/^P1\d{2}$/.test(code)) return true;
   // Retry specific network error codes
   if (RETRYABLE_CODES.includes(code)) return true;
   // Retry by error message patterns
-  const msg = (error?.message || '').toLowerCase();
+  const msg = message.toLowerCase();
   if (RETRYABLE_MSGS.some(m => msg.includes(m.toLowerCase()))) return true;
   return false;
 }
@@ -95,34 +106,34 @@ export async function withRetry<T>(
   retries = 3,
   baseDelay = 300
 ): Promise<T> {
-  let lastError: any;
+  let lastError: unknown;
   for (let i = 0; i <= retries; i++) {
     try {
       return await queryFn();
-    } catch (err: any) {
+    } catch (err: unknown) {
       lastError = err;
       if (i === retries || !isRetryable(err)) throw err;
       // On first retry, attempt to reconnect Prisma if stale connection detected
       if (i === 0 && isStaleConnection(err)) {
-        console.warn('[DB] Stale connection detected, attempting reconnect...');
+        logger.warn('[DB] Stale connection detected, attempting reconnect');
         try {
           await db.$disconnect();
           await db.$connect();
-        } catch (reconnectErr: any) {
-          console.warn('[DB] Reconnect failed:', reconnectErr?.message?.slice(0, 80));
+        } catch (reconnectErr: unknown) {
+          logger.warn('[DB] Reconnect failed', { message: getErrorInfo(reconnectErr).message.slice(0, 80) });
         }
       }
       const delay = baseDelay * Math.pow(2, i);
-      console.warn(`[DB] Retry ${i + 1}/${retries} after ${delay}ms: ${err?.message?.slice(0, 80)}`);
+      logger.warn('[DB] Retry attempt', { attempt: i + 1, retries, delay, message: getErrorInfo(err).message.slice(0, 80) });
       await new Promise(r => setTimeout(r, delay));
     }
   }
   throw lastError;
 }
 
-function isStaleConnection(error: any): boolean {
-  const msg = (error?.message || '').toLowerCase();
-  const code = error?.code || '';
+function isStaleConnection(error: unknown): boolean {
+  const { message, code } = getErrorInfo(error);
+  const msg = message.toLowerCase();
   return (
     code === 'P1001' ||  // Connection closed
     code === 'P1008' ||  // Timeout
@@ -210,7 +221,7 @@ export function toDirectUrl(url: string): string | null {
 
   const parts = parsePgUrl(url);
   if (!parts) {
-    console.warn('[DB] toDirectUrl: could not parse URL');
+    logger.warn('[DB] toDirectUrl: could not parse URL');
     return null;
   }
 
@@ -247,7 +258,7 @@ export function toDirectUrl(url: string): string | null {
   }
 
   if (!projectRef || projectRef.length < 8) {
-    console.warn('[DB] toDirectUrl: could not extract project ref. Host:', host, 'User:', username);
+    logger.warn('[DB] toDirectUrl: could not extract project ref', { host, username });
     return null;
   }
 
@@ -1939,9 +1950,9 @@ const DDL_BATCH_NAMES = [
 /**
  * Classify a connection error into a human-friendly message.
  */
-function classifyConnectionError(err: any): string {
-  const msg = (err?.message || '').toLowerCase();
-  const code = err?.code || '';
+function classifyConnectionError(err: unknown): string {
+  const { message, code } = getErrorInfo(err);
+  const msg = message.toLowerCase();
 
   if (msg.includes('enotfound') || msg.includes('getaddrinfo')) {
     return 'Host not found - check that the database URL is correct';
@@ -1974,29 +1985,30 @@ function classifyConnectionError(err: any): string {
 async function tryCreateWithConfig(config: PoolConfig, label: string): Promise<{ success: boolean; error: string | null }> {
   const pool = new Pool(config);
   try {
-    console.log(`[DB] Attempting table creation via: ${label}`);
+    logger.info('[DB] Attempting table creation', { method: label });
 
     // Test connection first
     await pool.query('SELECT 1 as ok');
-    console.log(`[DB] Connection test PASSED via ${label}`);
+    logger.info('[DB] Connection test PASSED', { method: label });
 
     // Execute DDL in batches to avoid timeout on Vercel serverless functions
     for (let i = 0; i < DDL_BATCHES.length; i++) {
       if (!DDL_BATCHES[i]) continue; // Skip empty batches
       const batchName = DDL_BATCH_NAMES[i] || `Batch ${i + 1}`;
-      console.log(`[DB] Running DDL batch ${i + 1}/${DDL_BATCHES.length} (${batchName}) via ${label}...`);
+      logger.info('[DB] Running DDL batch', { batch: i + 1, total: DDL_BATCHES.length, name: batchName, method: label });
       const startTime = Date.now();
       await pool.query(DDL_BATCHES[i]);
       const elapsed = Date.now() - startTime;
-      console.log(`[DB] Batch ${i + 1}/${DDL_BATCHES.length} (${batchName}) completed in ${elapsed}ms`);
+      logger.info('[DB] DDL batch completed', { batch: i + 1, total: DDL_BATCHES.length, name: batchName, elapsed, method: label });
     }
 
-    console.log(`[DB] All ${DDL_BATCHES.length} batches completed successfully via ${label}`);
+    logger.info('[DB] All batches completed', { total: DDL_BATCHES.length, method: label });
     return { success: true, error: null };
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const { message: errMsg, code: errCode } = getErrorInfo(err);
     const friendly = classifyConnectionError(err);
-    console.error(`[DB] ${label} FAILED:`, friendly);
-    console.error(`[DB] Raw error:`, err?.message, err?.code);
+    logger.error(`[DB] ${label} FAILED`, { friendly });
+    logger.error('[DB] Raw error', { errMsg, errCode });
     return { success: false, error: friendly };
   } finally {
     try { await pool.end(); } catch {}
@@ -2014,19 +2026,19 @@ export async function createAllTables(): Promise<boolean> {
   if (schemaCreated) return true;
 
   const configs = getDdlConnectionConfigs();
-  console.log(`[DB] createAllTables: trying ${configs.length} connection method(s)`);
+  logger.info('[DB] createAllTables: trying connection methods', { count: configs.length });
   // FIX 4.9: Use non-logging check — avoid any env var reference in logs
   const hasDbUrl = !!process.env.DATABASE_URL;
   const hasDirectUrl = !!process.env.DIRECT_URL;
   if (process.env.NODE_ENV !== "production") {
-    console.log(`[DB] DATABASE_URL set: ${hasDbUrl}`);
-    console.log(`[DB] DIRECT_URL set: ${hasDirectUrl}`);
+    logger.info('[DB] DATABASE_URL set', { hasDbUrl });
+    logger.info('[DB] DIRECT_URL set', { hasDirectUrl });
   }
 
   if (configs.length === 0) {
     createError = 'No database URL configured. Set DATABASE_URL in Vercel environment variables.';
     lastCreateDetail = createError;
-    console.error('[DB]', createError);
+    logger.error('[DB] Configuration error', createError);
     return false;
   }
 
@@ -2048,8 +2060,8 @@ export async function createAllTables(): Promise<boolean> {
     lastCreateDetail = `${labels[i]} failed: ${result.error}`;
   }
 
-  console.error('[DB] ALL connection methods failed');
-  console.error('[DB] Last error:', createError);
+  logger.error('[DB] ALL connection methods failed');
+  logger.error('[DB] Last error', createError);
   return false;
 }
 
@@ -2148,7 +2160,7 @@ export function getDirectPool(): Pool {
   directPoolCache.pool = pool;
   directPoolCache.url = bestUrl;
 
-  console.log('[DB] getDirectPool: using direct connection');
+  logger.info('[DB] getDirectPool: using direct connection');
   return pool;
 }
 
@@ -2159,9 +2171,9 @@ export async function safeQuery<T>(queryFn: () => Promise<T>): Promise<{ data: T
   try {
     const data = await queryFn();
     return { data, error: null };
-  } catch (err: any) {
-    const msg = err?.message || "Database error";
-    console.error("[DB] Query error:", msg);
+  } catch (err: unknown) {
+    const { message: msg } = getErrorInfo(err);
+    logger.error('[DB] Query error', { message: msg });
     return { data: null, error: msg };
   }
 }
@@ -2211,9 +2223,10 @@ export function dbErrorResponse(error: unknown) {
  *
  * Returns true if a repair was attempted.
  */
-async function autoRepairSchema(error: any): Promise<boolean> {
+async function autoRepairSchema(error: unknown): Promise<boolean> {
   if (schemaRepaired) return false;
-  const msg = (error?.message || '').toLowerCase();
+  const { message: errMsg } = getErrorInfo(error);
+  const msg = errMsg.toLowerCase();
 
   // Only attempt repair for missing column/table errors
   if (!msg.includes('does not exist')) return false;
@@ -2227,7 +2240,7 @@ async function autoRepairSchema(error: any): Promise<boolean> {
   const missingTable = tableMatch ? tableMatch[1] : columnMatch ? columnMatch[1] : null;
   const missingColumn = columnMatch ? columnMatch[2] : null;
 
-  console.log(`[DB] Auto-repair: detected missing ${missingTable ? 'table' : 'column'}` +
+  logger.info(`[DB] Auto-repair: detected missing ${missingTable ? 'table' : 'column'}` +
     (missingColumn ? ` ${missingTable}.${missingColumn}` : missingTable ? ` ${missingTable}` : ''));
 
   // SQL to add ALL known missing columns that Prisma expects but production DB might lack.
@@ -2286,24 +2299,24 @@ DO $$ BEGIN ALTER TABLE "PlatformSettings" ADD COLUMN IF NOT EXISTS "leadMagnetD
 
   // If a TABLE is missing (not just a column), we need to run full table creation
   if (tableMatch && !columnMatch) {
-    console.log('[DB] Auto-repair: missing TABLE detected, running createAllTables()...');
+    logger.info('[DB] Auto-repair: missing TABLE detected, running createAllTables()');
     const success = await createAllTables();
     if (success) {
       schemaRepaired = true;
       return true;
     }
-    console.error('[DB] Auto-repair: createAllTables failed, trying column repair anyway');
+    logger.error('[DB] Auto-repair: createAllTables failed, trying column repair anyway');
   }
 
   // Try direct pool first, fall back to Prisma via PgBouncer
   try {
     const pool = getDirectPool();
     await pool.query(repairSql);
-    console.log('[DB] Auto-repair: schema columns repair completed successfully (direct pool)');
+    logger.info('[DB] Auto-repair: schema columns repair completed successfully (direct pool)');
     schemaRepaired = true;
     return true;
-  } catch (directErr: any) {
-    console.warn('[DB] Auto-repair: direct pool failed, trying PgBouncer:', directErr?.message?.substring(0, 100));
+  } catch (directErr: unknown) {
+    logger.warn('[DB] Auto-repair: direct pool failed, trying PgBouncer', { error: getErrorInfo(directErr).message.substring(0, 100) });
   }
 
   // Fallback: run via Prisma $executeRawUnsafe through PgBouncer
@@ -2321,11 +2334,11 @@ DO $$ BEGIN ALTER TABLE "PlatformSettings" ADD COLUMN IF NOT EXISTS "leadMagnetD
     for (const stmt of combined) {
       try { await db.$executeRawUnsafe(stmt); } catch { /* ignore */ }
     }
-    console.log('[DB] Auto-repair: schema columns repair completed (PgBouncer fallback)');
+    logger.info('[DB] Auto-repair: schema columns repair completed (PgBouncer fallback)');
     schemaRepaired = true;
     return true;
-  } catch (poolErr: any) {
-    console.error('[DB] Auto-repair failed:', poolErr?.message?.substring(0, 150));
+  } catch (poolErr: unknown) {
+    logger.error('[DB] Auto-repair failed', { error: getErrorInfo(poolErr).message.substring(0, 150) });
     // Don't set schemaRepaired - allow retry on next request
     return false;
   }
@@ -2346,8 +2359,8 @@ export async function safeDbQuery<T>(
     // ensureDb() is now a no-op - real retry logic is in withRetry()
     const data = await withRetry(queryFn, retries, baseDelay);
     return { data, error: null, unavailable: false, schemaError: false, errorResponse: new Response(JSON.stringify({}), { status: 200 }) };
-  } catch (err: any) {
-    const msg = err?.message || 'Database error';
+  } catch (err: unknown) {
+    const { message: msg } = getErrorInfo(err);
     const unavailable = isDbUnavailable(err);
     const schemaErr = isSchemaError(err);
 
@@ -2355,12 +2368,12 @@ export async function safeDbQuery<T>(
     if (schemaErr) {
       const repaired = await autoRepairSchema(err);
       if (repaired) {
-        console.log('[safeDbQuery] Schema auto-repaired, retrying query...');
+        logger.info('[safeDbQuery] Schema auto-repaired, retrying query');
         try {
           const data = await withRetry(queryFn, 1, 200);
           return { data, error: null, unavailable: false, schemaError: false, errorResponse: new Response(JSON.stringify({}), { status: 200 }) };
-        } catch (retryErr: any) {
-          console.error('[safeDbQuery] Query still fails after auto-repair:', retryErr?.message?.substring(0, 100));
+        } catch (retryErr: unknown) {
+          logger.error('[safeDbQuery] Query still fails after auto-repair', { error: getErrorInfo(retryErr).message.substring(0, 100) });
           // Fall through to return error response
         }
       }
@@ -2373,7 +2386,7 @@ export async function safeDbQuery<T>(
       ? { error: unavailable ? 'Service temporarily unavailable' : 'Database query failed' }
       : { error: unavailable ? 'Service temporarily unavailable' : 'Database query failed', detail: msg.substring(0, 200) };
 
-    console.error(`[safeDbQuery] ${unavailable ? 'DB_UNAVAILABLE' : schemaErr ? 'SCHEMA_ERROR' : 'QUERY_ERROR'}: ${msg.substring(0, 150)}`);
+    logger.error(`[safeDbQuery] ${unavailable ? 'DB_UNAVAILABLE' : schemaErr ? 'SCHEMA_ERROR' : 'QUERY_ERROR'}`, { message: msg.substring(0, 150) });
 
     return {
       data: null,
@@ -2387,9 +2400,8 @@ export async function safeDbQuery<T>(
   }
 }
 
-export function isDbUnavailable(error: any): boolean {
-  const msg = error?.message || "";
-  const code = error?.code || "";
+export function isDbUnavailable(error: unknown): boolean {
+  const { message: msg, code } = getErrorInfo(error);
   return (
     msg.includes("DATABASE_URL") ||
     msg.includes("ENOTFOUND") ||
@@ -2414,9 +2426,9 @@ export function isDbUnavailable(error: any): boolean {
  * These are NOT transient errors - they indicate Prisma schema is out of sync
  * with the actual database. Should be reported as 500 with details.
  */
-export function isSchemaError(error: any): boolean {
-  const code = error?.code || "";
-  const msg = (error?.message || "").toLowerCase();
+export function isSchemaError(error: unknown): boolean {
+  const { message, code } = getErrorInfo(error);
+  const msg = message.toLowerCase();
   return (
     code === "P2021" ||
     code === "P2022" ||
@@ -2493,24 +2505,24 @@ export async function ensurePlatformSettingsColumns(): Promise<void> {
       try {
         const sql = `ALTER TABLE "PlatformSettings" ADD COLUMN IF NOT EXISTS "${col.name}" ${col.type}`;
         await pool.query(sql);
-      } catch (colErr: any) {
-        console.warn(`[Settings] Could not add column ${col.name}:`, colErr?.message);
+      } catch (colErr: unknown) {
+        logger.warn('[Settings] Could not add column', { column: col.name, error: getErrorInfo(colErr).message });
       }
     }
     platformColumnsRepaired = true;
-    console.log("[Settings] PlatformSettings columns verified/added");
-  } catch (err: any) {
-    console.error("[Settings] Column repair failed:", err?.message);
+    logger.info('[Settings] PlatformSettings columns verified/added');
+  } catch (err: unknown) {
+    logger.error('[Settings] Column repair failed', { error: getErrorInfo(err).message });
   }
 }
 
-export function isTableNotFound(error: any): boolean {
-  const msg = error?.message || "";
+export function isTableNotFound(error: unknown): boolean {
+  const { message: msg, code } = getErrorInfo(error);
   return (
     msg.includes("does not exist") ||
     msg.includes("Unknown table") ||
     msg.includes("relation \"") ||
-    error?.code === "P2021"
+    code === "P2021"
   );
 }
 
@@ -2518,7 +2530,7 @@ let pushAttempted = false;
 export async function tryDbPush(): Promise<boolean> {
   if (pushAttempted && schemaCreated) return true;
   pushAttempted = true;
-  console.log("[DB] Creating tables via direct pg (bypassing PgBouncer)...");
+  logger.info('[DB] Creating tables via direct pg (bypassing PgBouncer)');
   const result = await createAllTables();
   if (!result) {
     pushAttempted = false;

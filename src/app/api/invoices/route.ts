@@ -83,7 +83,7 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
       }, 2, 500);
     } catch (countErr: unknown) {
       const countErrMsg = countErr instanceof Error ? countErr.message : "Unknown error";
-      logger.warn("[Invoice Create] Invoice count failed, using 0:", countErrMsg);
+      logger.warn("[Invoice Create] Invoice count failed, using 0:", { error: countErrMsg });
     }
     const invoiceNumber = generateInvoiceNumber(invoiceCount);
 

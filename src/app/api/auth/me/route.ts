@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
     // Flag for platform-level roles that should bypass subscription checks
     const isPlatformLevel = user.role === "platform_owner" || user.role === "platform_admin" || user.role === "valtriox_team";
 
-    let organization = null;
+    let organization: Record<string, unknown> | null = null;
     if (authCtx.organizationId) {
       const membership = await withRetry(async () => {
         return await db.organizationMember.findFirst({

@@ -31,6 +31,7 @@ import {
   type RoleDefinition,
 } from "@/lib/roles";
 import { cn } from "@/lib/utils";
+import { buildWhatsAppLink } from "@/lib/utils-extended";
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -924,10 +925,7 @@ export function UserManagementPage() {
                   onClick={() => {
                     if (!inviteResultData) return;
                     const message = generateWhatsAppMessage(inviteResultData);
-                    const cleanPhone = invitePhone.replace(/[^0-9+]/g, "");
-                    const url = cleanPhone
-                      ? `https://wa.me/${cleanPhone.replace("+", "")}?text=${encodeURIComponent(message)}`
-                      : `https://wa.me/?text=${encodeURIComponent(message)}`;
+                    const url = buildWhatsAppLink(invitePhone, message);
                     window.open(url, "_blank");
                     toast.success("Opening WhatsApp");
                     setWhatsappInviteOpen(false);

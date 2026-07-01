@@ -178,7 +178,7 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
         });
       });
 
-      if (pingResult?.result === "ok" || pingResult?.status === "ok") {
+      if (pingResult?.result === "ok" || (pingResult as Record<string, unknown>)?.status === "ok") {
         logger.info("[StorageSettings] Connection test successful", { cloudName, userId: authCtx.userId });
         return NextResponse.json({
           success: true,

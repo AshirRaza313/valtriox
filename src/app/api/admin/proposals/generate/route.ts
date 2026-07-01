@@ -23,7 +23,7 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
       companyWebsite: settings?.companyWebsite || null,
       companyAddress: settings?.companyAddress || null,
       whatsappNumber: settings?.whatsappNumber || null,
-      supportHours: settings?.supportHours || null,
+      supportHours: settings?.supportHours || undefined,
       primaryBrandColor: settings?.primaryBrandColor || undefined,
     };
 
@@ -55,7 +55,7 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
       const pdfBuffer = await generateProposalPDF(templateProposal, proposalSettings);
       const filename = `proposal-template-${bodyType}.pdf`;
 
-      return new NextResponse(pdfBuffer, {
+      return new NextResponse(new Uint8Array(pdfBuffer), {
         status: 200,
         headers: {
           "Content-Type": "application/pdf",
@@ -89,7 +89,7 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
         type: proposal.type,
         title: proposal.title,
         status: proposal.status,
-        totalCost: proposal.totalCost,
+        totalCost: proposal.totalCost ? Number(proposal.totalCost) : null,
         currency: proposal.currency,
         currencySymbol: proposal.currencySymbol,
         validUntil: proposal.validUntil?.toISOString(),
@@ -104,7 +104,7 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
     // Return PDF as a downloadable file
     const filename = `proposal-${proposal.type || "unknown"}-${(proposal.clientName || "").replace(/\s+/g, "-").toLowerCase()}.pdf`;
 
-    return new NextResponse(pdfBuffer, {
+    return new NextResponse(new Uint8Array(pdfBuffer), {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",

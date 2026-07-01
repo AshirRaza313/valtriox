@@ -60,7 +60,7 @@ export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
     const allSubs = await withRetry(async () => {
       return await db.subscription.findMany({
       where: adminMembership ? { NOT: { organizationId: adminMembership.organizationId } } : undefined,
-      include: { plan: { select: { name: true } } },
+      include: { plan: { select: { name: true, price: true, annualPrice: true } }, organization: { select: { isBanned: true } } },
     })
     }, 2, 500);
 
@@ -76,10 +76,10 @@ export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
       annual_active: allSubs.filter((s) => s.status === "active" && s.billingCycle === "annually").length,
       monthly_revenue: allSubs
         .filter((s) => s.status === "active" && s.billingCycle === "monthly")
-        .reduce((sum, s) => sum + (s.plan?.price || 0), 0),
+        .reduce((sum, s) => sum + Number(s.plan?.price || 0), 0),
       annual_revenue: allSubs
         .filter((s) => s.status === "active" && s.billingCycle === "annually")
-        .reduce((sum, s) => sum + (s.plan?.annualPrice || s.plan?.price || 0), 0),
+        .reduce((sum, s) => sum + Number(s.plan?.annualPrice || s.plan?.price || 0), 0),
     };
 
     const formatted = subscriptions.map((sub) => ({

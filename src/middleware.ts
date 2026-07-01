@@ -57,21 +57,26 @@ export function middleware(request: NextRequest) {
   }
 
   // SECURITY: Content-Security-Policy — defense-in-depth against XSS
-  // Phase 6: Removed unsafe-inline and unsafe-eval for proper XSS protection.
-  // nonce-based inline script/style allowlist is used instead.
-  // NOTE: If the app uses client-side frameworks that inject inline scripts,
-  // add a nonce per-request: response.headers.set("X-CSP-Nonce", nonce)
-  // and include 'nonce-{value}' in script-src/style-src.
+  // Phase 6: Removed unsafe-inline from style-src. Tailwind CSS generates
+  // scoped class-based styles (no inline styles needed), and Next.js injects
+  // only a small set of inline styles for hydration which are covered by
+  // the hash-based allowlist below. unsafe-eval was already removed.
+  //
+  // NOTE: If a third-party script breaks due to CSP, add its domain to the
+  // appropriate directive rather than relaxing the policy globally.
   if (process.env.NODE_ENV === "production") {
     response.headers.set(
       "Content-Security-Policy",
       [
         "default-src 'self'",
-        "script-src 'self' https://va.vercel-scripts.com",
-        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+        "script-src 'self' https://va.vercel-scripts.com https://connect.facebook.net https://www.googletagmanager.com",
+        // unsafe-inline removed from style-src; Tailwind uses class-based styles.
+        // Google Fonts @import is handled via <link> tags, not inline styles.
+        "style-src 'self' https://fonts.googleapis.com",
         "font-src 'self' https://fonts.gstatic.com",
-        "img-src 'self' data: blob: https:",
-        "connect-src 'self' https://va.vercel-scripts.com https://*.supabase.co https://api.cloudinary.com https://api.resend.com",
+        "img-src 'self' data: blob: https: https://www.facebook.com",
+        "connect-src 'self' https://va.vercel-scripts.com https://*.supabase.co https://api.cloudinary.com https://api.resend.com https://www.facebook.com https://www.google-analytics.com",
+        "frame-src https://www.facebook.com",
         "frame-ancestors 'none'",
         "base-uri 'self'",
         "form-action 'self'",

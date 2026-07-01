@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, dbErrorResponse, withRetry } from "@/lib/db";
 import { notFoundOrUnauthorizedResponse } from "@/lib/api-utils";
 import { withAuth, RouteContext } from "@/lib/auth-middleware";
-import { sanitizeObject, sanitizeEmail, sanitizePhone } from "@/lib/sanitize";
+import { validateBody } from "@/lib/validations/api";
+import { updateCustomerDetailSchema } from "@/lib/validations/schemas";
 import logger from "@/lib/logger";
 
 export const GET = withAuth(async (
@@ -53,8 +54,10 @@ export const PATCH = withAuth(async (
     }, 2, 500);
     if (!existing) return notFoundOrUnauthorizedResponse();
 
-    const body = await req.json();
-    Object.assign(body, sanitizeObject(body));
+    const result = await validateBody(req, updateCustomerDetailSchema);
+    if (!result.success) return result.response;
+    const body = result.data;
+
     const data: Record<string, any> = {};
     if (body.name !== undefined) data.name = body.name;
     if (body.email !== undefined) data.email = body.email || null;

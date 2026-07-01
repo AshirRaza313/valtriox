@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, dbErrorResponse, withRetry } from "@/lib/db";
 import { notFoundOrUnauthorizedResponse } from "@/lib/api-utils";
 import { withAuth, RouteContext } from "@/lib/auth-middleware";
-import { sanitizeObject } from "@/lib/sanitize";
+import { validateBody } from "@/lib/validations/api";
+import { updateProductSchema } from "@/lib/validations/schemas";
 import logger from "@/lib/logger";
 
 // GET /api/products/[id] - Fetch a single product by ID
@@ -55,8 +56,10 @@ export const PATCH = withAuth(async (
       return notFoundOrUnauthorizedResponse();
     }
 
-    const body = await req.json();
-    Object.assign(body, sanitizeObject(body));
+    const result = await validateBody(req, updateProductSchema);
+    if (!result.success) return result.response;
+    const body = result.data;
+
     const product = await withRetry(async () => {
       return db.product.update({
       where: { id },
@@ -64,11 +67,11 @@ export const PATCH = withAuth(async (
         ...(body.name !== undefined && { name: body.name }),
         ...(body.sku !== undefined && { sku: body.sku || null }),
         ...(body.description !== undefined && { description: body.description || null }),
-        ...(body.price !== undefined && { price: body.price ? parseFloat(body.price) : 0 }),
+        ...(body.price !== undefined && { price: body.price ?? 0 }),
         ...(body.costPrice !== undefined && {
-          costPrice: body.costPrice ? parseFloat(body.costPrice) : null,
+          costPrice: body.costPrice ?? null,
         }),
-        ...(body.stock !== undefined && { stock: body.stock !== "" ? parseInt(body.stock) : 0 }),
+        ...(body.stock !== undefined && { stock: body.stock ?? 0 }),
         ...(body.category !== undefined && { category: body.category || null }),
         ...(body.status !== undefined && { status: body.status }),
         ...(body.imageUrl !== undefined && { imageUrl: body.imageUrl || null }),

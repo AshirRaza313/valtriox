@@ -20,6 +20,7 @@ import {
 import { toast } from "sonner";
 import { useValtrioxStore } from "@/store/brandflow-store";
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
+import { formatTimeAgo } from "@/lib/utils-extended";
 
 // ── Types ──
 interface FollowUpRule {
@@ -180,14 +181,6 @@ export function FollowUpPage() {
     return <Badge className="bg-red-500/15 text-red-400 border border-red-500/25 text-xs">Failed</Badge>;
   };
 
-  const timeAgo = (dateStr: string) => {
-    const diff = Date.now() - new Date(dateStr).getTime();
-    const hrs = Math.floor(diff / 3600000);
-    if (hrs < 1) return "Just now";
-    if (hrs < 24) return `${hrs}h ago`;
-    return `${Math.floor(hrs / 24)}d ago`;
-  };
-
   const cardCls = isDark ? "bg-white/[0.03] border-white/[0.08]" : "bg-white border-slate-200";
   const textPrimary = isDark ? "text-white" : "text-slate-900";
   const textSecondary = isDark ? "text-slate-400" : "text-slate-500";
@@ -339,7 +332,7 @@ export function FollowUpPage() {
                       </div>
                       <div className="flex items-center gap-2 sm:shrink-0">
                         {statusBadge(entry.status)}
-                        <span className={`text-xs ${textSecondary}`}>{timeAgo(entry.sentAt)}</span>
+                        <span className={`text-xs ${textSecondary}`}>{formatTimeAgo(entry.sentAt)}</span>
                       </div>
                     </div>
                   ))}

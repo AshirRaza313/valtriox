@@ -44,7 +44,7 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
     }
 
     // ── Validate Proposal ──
-    if (!proposal.totalCost || proposal.totalCost <= 0) {
+    if (!proposal.totalCost || Number(proposal.totalCost) <= 0) {
       return NextResponse.json(
         { error: "Proposal must have a total cost greater than 0 to generate a payment link" },
         { status: 400 }

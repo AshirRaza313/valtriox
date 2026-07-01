@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAllTables } from "@/lib/db";
 import crypto from "crypto";
+import logger from "@/lib/logger";
 
 // POST /api/setup/init - Creates all tables, admin account, seeds plans
 // This is a ONE-TIME setup endpoint called after DATABASE_URL is configured.
@@ -51,7 +52,7 @@ export async function POST(req: NextRequest) {
     await prisma.$queryRaw`SELECT 1`;
 
     // Step 1: Create all tables via raw SQL (works on Vercel)
-    console.log("[Setup] Creating all database tables...");
+    logger.info("[Setup] Creating all database tables");
     const tablesCreated = await createAllTables();
     if (!tablesCreated) {
       await prisma.$disconnect();
@@ -60,7 +61,7 @@ export async function POST(req: NextRequest) {
         { status: 500 }
       );
     }
-    console.log("[Setup] All tables created successfully");
+    logger.info("[Setup] All tables created successfully");
 
     // Step 2: Check if admin already exists
     let admin = await prisma.user.findFirst({
@@ -109,7 +110,7 @@ export async function POST(req: NextRequest) {
       where: { name: { notIn: ALLOWED_PLANS } },
     });
     if (deletedCount.count > 0) {
-      console.log(`[Setup] Deleted ${deletedCount.count} stale plans`);
+      logger.info("[Setup] Deleted stale plans", { count: deletedCount.count });
     }
 
     // Upsert the 4 correct plans — Valtriox Pricing 2026
@@ -142,7 +143,7 @@ export async function POST(req: NextRequest) {
         create: plan,
       });
     }
-    console.log("[Setup] Plans synced (4 plans: starter, growth, professional, enterprise)");
+    logger.info("[Setup] Plans synced (4 plans: starter, growth, professional, enterprise)");
 
     // Step 5: Create PlatformSettings
     const settingsCount = await prisma.platformSettings.count();
@@ -177,7 +178,7 @@ export async function POST(req: NextRequest) {
       admin: { email: admin.email },
     });
   } catch (error: any) {
-    console.error("[Setup] Error:", error?.message);
+    logger.error("[Setup] Error", error);
     return NextResponse.json(
       { error: "Setup failed", hint: "Make sure DATABASE_URL is set correctly." },
       { status: 500 }

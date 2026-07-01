@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
-import { withAuth } from "@/lib/auth-middleware";
+import { withAuth, RouteContext } from "@/lib/auth-middleware";
 import { generateInvoiceNumber } from "@/lib/pdf-generator";
 import { getCurrencyForCountry } from "@/lib/currency";
 import logger from "@/lib/logger";
@@ -9,11 +9,11 @@ import logger from "@/lib/logger";
 export const PUT = withAuth(async (
   req: NextRequest,
   authCtx,
-  { params }: { params: Promise<{ id: string }> }
+  ctx: RouteContext
 ) => {
+  const { id } = await ctx.params;
   logger.info("[Admin Subscriptions] PUT request", { userId: authCtx.userId });
   try {
-    const { id } = await params;
     const body = await req.json();
     const {
       action,
@@ -62,9 +62,9 @@ export const PUT = withAuth(async (
         where: { id },
         data: {
           planId: targetPlan.id,
-          status: targetPlan.price === 0 ? "active" : (status || subscription.status),
+          status: Number(targetPlan.price) === 0 ? "active" : (status || subscription.status),
           billingCycle: cycle,
-          currentPeriodEnd: targetPlan.price === 0 ? null : new Date(Date.now() + periodDays * 24 * 60 * 60 * 1000),
+          currentPeriodEnd: Number(targetPlan.price) === 0 ? null : new Date(Date.now() + periodDays * 24 * 60 * 60 * 1000),
           reminderCount: 0,
           lastReminderAt: null,
         },
@@ -91,7 +91,7 @@ export const PUT = withAuth(async (
       }, 2, 500);
 
       // ── AUTO-GENERATE INVOICE for plan change ──
-      if (targetPlan.price > 0) {
+      if (Number(targetPlan.price) > 0) {
         try {
           const org = await withRetry(async () => {
             return await db.organization.findUnique({ where: { id: subscription.organization.id } })

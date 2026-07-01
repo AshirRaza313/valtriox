@@ -43,7 +43,7 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
       return NextResponse.json({ error: `Validation failed: ${errors}` }, { status: 422 });
     }
     const { type, provider, name, config, metadata } = body;
-    const orgId = authCtx.organizationId;
+    const orgId = authCtx.organizationId!;
 
     if (!type || !provider || !name) {
       return NextResponse.json({ error: "type, provider, and name are required" }, { status: 400 });

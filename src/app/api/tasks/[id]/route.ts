@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, dbErrorResponse, withRetry} from "@/lib/db";
 import { notFoundOrUnauthorizedResponse } from "@/lib/api-utils";
 import { withAuth, RouteContext } from "@/lib/auth-middleware";
-import { sanitizeObject } from "@/lib/sanitize";
+import { validateBody } from "@/lib/validations/api";
+import { updateTaskSchema } from "@/lib/validations/schemas";
 import logger from "@/lib/logger";
 
 export const PATCH = withAuth(async (
@@ -21,8 +22,10 @@ export const PATCH = withAuth(async (
     }, 2, 500);
     if (!existing) return notFoundOrUnauthorizedResponse();
 
-    const body = await req.json();
-    Object.assign(body, sanitizeObject(body));
+    const result = await validateBody(req, updateTaskSchema);
+    if (!result.success) return result.response;
+    const body = result.data;
+
     const task = await withRetry(async () => {
       return await db.teamTask.update({ where: { id }, data: body })
     }, 2, 500);

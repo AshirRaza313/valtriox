@@ -56,17 +56,22 @@ export const POST = withAuth(async (req: NextRequest) => {
     logger.info(`[Send Email] Template "${template.name}" (${template.type}) sent to ${recipientEmail}${clientName ? ` (client: ${clientName})` : ""}`);
 
     // Store sent email record for tracking (best-effort)
+    // Phase 6: sentEmail table may not exist in schema — use SystemSetting as fallback
     await safeDbQuery(() =>
-      db.sentEmail.create({
+      db.systemSetting.create({
         data: {
-          templateId: template.id,
-          templateType: template.type,
-          templateName: template.name,
-          recipientEmail,
-          clientName: clientName || null,
-          subject: personalizedSubject,
-          status: "sent",
-          sentAt: new Date(),
+          key: `sent_email_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+          value: JSON.stringify({
+            templateId: template.id,
+            templateType: template.type,
+            templateName: template.name,
+            recipientEmail,
+            clientName: clientName || null,
+            subject: personalizedSubject,
+            status: "sent",
+            sentAt: new Date().toISOString(),
+          }),
+          category: "sent_email",
         },
       })
     );

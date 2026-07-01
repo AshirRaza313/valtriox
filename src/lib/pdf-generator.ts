@@ -7,6 +7,13 @@
 
 import PDFDocument from "pdfkit";
 import { FONT_REGULAR, FONT_BOLD, FONT_ITALIC, FONT_BOLD_ITALIC } from "./font-buffers";
+import { safeDate } from "@/lib/utils-extended";
+
+// PDFKit.PDFDocument is missing the `arc` method in @types/pdfkit.
+// Cast to this type where arc is needed (donut chart rendering).
+type PDFDocWithArc = PDFKit.PDFDocument & {
+  arc(x: number, y: number, radius: number, startAngle: number, endAngle: number, anticlockwise?: boolean): PDFDocWithArc;
+};
 
 // ── Font Registration ──
 // CRITICAL FIX: NO caching flag! On Vercel serverless, if first request fails
@@ -20,7 +27,7 @@ const FONT = {
   boldItalic: "LiberationSans-BoldItalic",
 };
 
-function ensureFontsRegistered(doc: any): void {
+function ensureFontsRegistered(doc: PDFKit.PDFDocument): void {
   // CRITICAL: Validate ALL 4 font buffers before registering.
   // If any font buffer is null/undefined, pdfkit's registerFont internally
   // accesses .length on the source and throws: "Cannot read properties of null (reading 'length')"
@@ -36,12 +43,13 @@ function ensureFontsRegistered(doc: any): void {
     }
     try {
       doc.registerFont(f.name, f.buf);
-    } catch (fontErr: any) {
-      console.error(`[PDF] Font registration failed for ${f.label}:`, fontErr?.message);
+    } catch (fontErr: unknown) {
+      const fontErrMsg = fontErr instanceof Error ? fontErr.message : String(fontErr);
+      console.error(`[PDF] Font registration failed for ${f.label}:`, fontErrMsg);
       // Only throw for REGULAR and BOLD (essential fonts);
       // ITALIC/BOLD_ITALIC can fall back to REGULAR/BOLD
       if (f.label === 'REGULAR' || f.label === 'BOLD') {
-        throw new Error(`Critical font ${f.label} failed to register: ${fontErr?.message || String(fontErr)}`);
+        throw new Error(`Critical font ${f.label} failed to register: ${fontErrMsg}`);
       }
       // For italic/bold-italic, try to register with regular/bold as fallback
       try {
@@ -185,13 +193,6 @@ const C = {
 
 // ── Helpers ──
 
-function safeDate(value: Date | string | null | undefined): Date | null {
-  if (!value) return null;
-  if (value instanceof Date) return value;
-  const parsed = new Date(value);
-  return isNaN(parsed.getTime()) ? null : parsed;
-}
-
 function formatDate(date: Date | string | null | undefined): string {
   const d = safeDate(date);
   if (!d) return "N/A";
@@ -208,18 +209,18 @@ export function generateInvoiceNumber(existingCount: number): string {
   return `VTX-${year}-${seq}`;
 }
 
-function goldLine(doc: any, x1: number, y1: number, x2: number, y2: number, width: number = 0.5) {
+function goldLine(doc: PDFKit.PDFDocument, x1: number, y1: number, x2: number, y2: number, width: number = 0.5) {
   doc.save().moveTo(x1, y1).lineTo(x2, y2).lineWidth(width).strokeColor(C.goldBorder).stroke().restore();
 }
 
-function drawCard(doc: any, x: number, y: number, w: number, h: number, radius: number = 8) {
+function drawCard(doc: PDFKit.PDFDocument, x: number, y: number, w: number, h: number, radius: number = 8) {
   doc.save();
   doc.roundedRect(x, y, w, h, radius).fill(C.goldBg);
   doc.roundedRect(x, y, w, h, radius).lineWidth(0.5).strokeColor(C.goldBorder).stroke();
   doc.restore();
 }
 
-function drawCardBright(doc: any, x: number, y: number, w: number, h: number, radius: number = 8) {
+function drawCardBright(doc: PDFKit.PDFDocument, x: number, y: number, w: number, h: number, radius: number = 8) {
   doc.save();
   doc.roundedRect(x, y, w, h, radius).fill(C.goldBg2);
   doc.roundedRect(x, y, w, h, radius).lineWidth(0.8).strokeColor(C.goldBorder2).stroke();
@@ -234,7 +235,7 @@ function parseBase64DataUri(dataUri: string): { mimeType: string; base64: string
 }
 
 // Helper: render default Valtriox logo and return right X position
-async function renderDefaultLogo(doc: any, x: number, y: number): Promise<number> {
+async function renderDefaultLogo(doc: PDFKit.PDFDocument, x: number, y: number): Promise<number> {
   try {
     const fs = await import("fs");
     const path = await import("path");
@@ -275,7 +276,7 @@ function isEmptyData(stats: Array<{ label: string; value: string | number }>): b
  * Green for positive, red for negative.
  * Returns the approximate width consumed (for layout chaining).
  */
-function drawTrendIndicator(doc: any, x: number, y: number, change: number, font?: string): number {
+function drawTrendIndicator(doc: PDFKit.PDFDocument, x: number, y: number, change: number, font?: string): number {
   const isPositive = change >= 0;
   const arrow = isPositive ? "▲" : "▼";
   const color = isPositive ? C.green : C.red;
@@ -297,7 +298,7 @@ function drawTrendIndicator(doc: any, x: number, y: number, change: number, font
  * Includes horizontal grid lines, Y-axis labels, X-axis labels, and value labels above bars.
  */
 function drawVerticalBarChart(
-  doc: any,
+  doc: PDFKit.PDFDocument,
   x: number,
   y: number,
   w: number,
@@ -425,7 +426,7 @@ function drawVerticalBarChart(
  * Labels on the left, gold bars extending right, values at the end.
  */
 function drawHorizontalBarChart(
-  doc: any,
+  doc: PDFKit.PDFDocument,
   x: number,
   y: number,
   w: number,
@@ -514,7 +515,7 @@ function drawHorizontalBarChart(
  * Returns the total height consumed (chart + legend) so the caller can position the next element.
  */
 function drawDonutChart(
-  doc: any,
+  doc: PDFKit.PDFDocument,
   cx: number,
   cy: number,
   radius: number,
@@ -562,9 +563,9 @@ function drawDonutChart(
 
     doc.save();
     doc.moveTo(ox1, oy1);
-    doc.arc(cx, cy, outerR, currentAngle, endAngle, false);
+    (doc as PDFDocWithArc).arc(cx, cy, outerR, currentAngle, endAngle, false);
     doc.lineTo(ix1, iy1);
-    doc.arc(cx, cy, innerR, endAngle, currentAngle, true);
+    (doc as PDFDocWithArc).arc(cx, cy, innerR, endAngle, currentAngle, true);
     doc.closePath();
     doc.fill(item.color);
     // Subtle border
@@ -636,7 +637,7 @@ function drawDonutChart(
  * If not, add a new page with standard background, and update y to the new top.
  * Returns the updated Y position.
  */
-function ensureSpace(doc: any, y: number, needed: number, W: number, H: number, P: number): number {
+function ensureSpace(doc: PDFKit.PDFDocument, y: number, needed: number, W: number, H: number, P: number): number {
   if (y + needed > H - 80) {
     doc.addPage();
     doc.rect(0, 0, W, H).fill(C.bg);
@@ -1716,7 +1717,7 @@ export async function generateReportPDF(report: ReportData): Promise<Buffer> {
         doc.restore();
       }
 
-    } catch (renderErr: any) {
+    } catch (renderErr: unknown) {
       hasErrored = true;
       const errMsg = renderErr instanceof Error ? renderErr.message : String(renderErr);
       const errStack = renderErr instanceof Error ? renderErr.stack : 'N/A';
@@ -1740,7 +1741,7 @@ export async function generateReportPDF(report: ReportData): Promise<Buffer> {
 // Cover Page Logo Helper - Renders a larger centered logo for the cover page
 // ============================================================================
 
-function renderCoverDefaultLogo(doc: any, centerX: number, y: number, size: number, color: string): void {
+function renderCoverDefaultLogo(doc: PDFKit.PDFDocument, centerX: number, y: number, size: number, color: string): void {
   doc.save();
   doc.roundedRect(centerX - size / 2 - 4, y - 4, size + 8, size + 8, 10).fill(C.goldBg2);
   doc.roundedRect(centerX - size / 2 - 4, y - 4, size + 8, size + 8, 10).lineWidth(0.5).strokeColor(C.goldBorder2).stroke();
@@ -1754,7 +1755,7 @@ function renderCoverDefaultLogo(doc: any, centerX: number, y: number, size: numb
 // Empty State Drawing Helper
 // ============================================================================
 
-function drawEmptyState(doc: any, x: number, y: number, w: number, _W: number, _H: number): void {
+function drawEmptyState(doc: PDFKit.PDFDocument, x: number, y: number, w: number, _W: number, _H: number): void {
   const centerY = y + 120;
 
   // Icon placeholder - large gold circle with "!" inside

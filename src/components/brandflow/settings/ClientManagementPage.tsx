@@ -81,6 +81,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { buildWhatsAppLink } from "@/lib/utils-extended";
 import { isPlatformRole } from "@/lib/roles";
 
 // ─── Types ──────────────────────────────────────────────────────────────
@@ -2066,11 +2067,8 @@ Looking forward to a great partnership! 🚀
                 <Button
                   onClick={() => {
                     if (!whatsappInviteData) return;
-                    const cleanPhone = whatsappInviteData.phone.replace(/[^0-9+]/g, "");
                     const message = `Assalam o Alaikum! 🌟\n\nI'm from Valtriox - your brand management platform is ready!\n\n📝 Brand: ${whatsappInviteData.brandName}\n📧 Login: ${whatsappInviteData.email}\n🌐 Portal: ${whatsappInviteData.loginUrl}\n\nYour 14-day free trial starts now. Log in with your credentials and explore all features.\n\nLooking forward to a great partnership! 🚀\n- Valtriox Team`;
-                    const url = cleanPhone
-                      ? `https://wa.me/${cleanPhone.replace("+", "")}?text=${encodeURIComponent(message)}`
-                      : `https://wa.me/?text=${encodeURIComponent(message)}`;
+                    const url = buildWhatsAppLink(whatsappInviteData.phone, message);
                     window.open(url, "_blank");
                     toast.success("Opening WhatsApp");
                     setWhatsappDialogOpen(false);

@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { buildWhatsAppLink } from "@/lib/utils-extended";
 import {
   Check,
   X,
@@ -704,7 +705,7 @@ export function SubscriptionPage() {
                     )}
                     {platformSettings?.whatsappNumber && (
                       <a
-                        href={`https://wa.me/${platformSettings.whatsappNumber?.replace(/[^0-9]/g, "")}`}
+                        href={buildWhatsAppLink(platformSettings.whatsappNumber)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className={cn(

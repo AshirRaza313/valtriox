@@ -5,42 +5,14 @@ import { sanitizeObject } from "@/lib/sanitize";
 import logger from "@/lib/logger";
 import { pushSubscribeSchema } from "@/lib/validations/schemas";
 
-// ── Ensure the push_subscriptions table exists (raw SQL for flexibility) ──
-
-// Phase 6: Only create push table ONCE per warm instance, not on every request
-const globalForPush = globalThis as unknown as { __valtrioxPushTableEnsured?: boolean };
-
-async function ensurePushTable() {
-  if (globalForPush.__valtrioxPushTableEnsured) return;
-  await db.$executeRawUnsafe(`
-    CREATE TABLE IF NOT EXISTS push_subscriptions (
-      id            TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
-      "userId"      TEXT NOT NULL,
-      "orgId"       TEXT,
-      endpoint      TEXT NOT NULL,
-      "keysAuth"    TEXT NOT NULL,
-      "keysP256dh"  TEXT NOT NULL,
-      "userAgent"   TEXT,
-      "createdAt"   TIMESTAMPTZ DEFAULT now()
-    );
-  `);
-  // Add indexes if they don't exist (safe to run multiple times)
-  try {
-    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS idx_push_sub_userId ON push_subscriptions ("userId");`);
-    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS idx_push_sub_orgId ON push_subscriptions ("orgId");`);
-    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS idx_push_sub_endpoint ON push_subscriptions (endpoint);`);
-  } catch {
-    // Indexes may already exist, that's fine
-  }
-  globalForPush.__valtrioxPushTableEnsured = true;
-}
+// Instead of raw SQL DDL, just let Prisma handle schema.
+// If the table doesn't exist, the Prisma query will fail and we return a 503.
 
 // ── POST /api/push/subscribe - Save a push subscription ──
 
 export const POST = withAuth(async (req: NextRequest, authCtx) => {
   try {
     logger.info("[Push Subscribe] POST request", { userId: authCtx.userId });
-    await ensurePushTable();
 
     const body = await req.json();
     Object.assign(body, sanitizeObject(body));
@@ -92,7 +64,6 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
 export const DELETE = withAuth(async (req: NextRequest, authCtx) => {
   try {
     logger.info("[Push Subscribe] DELETE request", { userId: authCtx.userId });
-    await ensurePushTable();
 
     const { searchParams } = new URL(req.url);
     const endpoint = searchParams.get("endpoint");

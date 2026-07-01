@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import { canAssignRole, getAdminEmail } from "@/lib/roles";
-import { sanitizeObject } from "@/lib/sanitize";
+import { validateBody } from "@/lib/validations/api";
+import { updateMemberRoleApiSchema } from "@/lib/validations/schemas";
 import logger from "@/lib/logger";
 
 // PUT /api/organization/members/[id]/role
@@ -16,16 +17,10 @@ export const PUT = withAuth(async (
     // Extract member ID from URL path
     const urlParts = req.url.split("/");
     const id = urlParts[urlParts.length - 1] || urlParts[urlParts.length - 2];
-    const body = await req.json();
-    Object.assign(body, sanitizeObject(body));
+    const result = await validateBody(req, updateMemberRoleApiSchema);
+    if (!result.success) return result.response;
+    const body = result.data;
     const { roleId, roleName } = body;
-
-    if (!roleId && !roleName) {
-      return NextResponse.json(
-        { error: "roleId or roleName is required" },
-        { status: 400 }
-      );
-    }
 
     // Authorization check — uses authCtx.role from middleware (server-side, cannot be forged)
     const allowedRoles = ["platform_owner", "platform_admin", "brand_owner", "brand_admin"];

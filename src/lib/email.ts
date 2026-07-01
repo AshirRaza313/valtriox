@@ -1,5 +1,6 @@
 import { Resend } from 'resend';
 import nodemailer from 'nodemailer';
+import logger from '@/lib/logger';
 
 // ============================================================================
 // Resend SDK — Initialized once, reused across requests
@@ -50,16 +51,16 @@ async function sendViaResend({ to, subject, html, text }: EmailOptions): Promise
     });
 
     if (data.error) {
-      console.error(`[Email/Resend] API error for ${to}:`, data.error);
+      logger.error('[Email/Resend] API error', { to, error: data.error });
       return false;
     }
 
-    console.log(`[Email/Resend] Email sent successfully: ${data.id} → ${to} (from: ${fromAddress})`);
+    logger.info('[Email/Resend] Email sent successfully', { id: data.id, to, from: fromAddress });
     return true;
   } catch (error: any) {
-    console.error(`[Email/Resend] Error sending email to ${to}:`, error?.message);
+    logger.error('[Email/Resend] Error sending email', error, { to });
     if (error?.statusCode === 403) {
-      console.error(`[Email/Resend] 403 Forbidden — domain not verified in Resend dashboard.`);
+      logger.error('[Email/Resend] 403 Forbidden — domain not verified in Resend dashboard');
     }
     return false;
   }
@@ -98,7 +99,7 @@ async function sendViaSmtp({ to, subject, html, text }: EmailOptions): Promise<b
 
   const transporter = getSmtpTransporter();
   if (!transporter) {
-    console.warn('[Email/SMTP] SMTP not configured. Set SMTP_HOST, SMTP_USER, SMTP_PASS.');
+    logger.warn('[Email/SMTP] SMTP not configured. Set SMTP_HOST, SMTP_USER, SMTP_PASS');
     return false;
   }
 
@@ -110,10 +111,10 @@ async function sendViaSmtp({ to, subject, html, text }: EmailOptions): Promise<b
       html,
       text: text || html.replace(/<[^>]*>/g, ''),
     });
-    console.log(`[Email/SMTP] Sent to ${to}`);
+    logger.info('[Email/SMTP] Sent', { to });
     return true;
   } catch (error: any) {
-    console.error(`[Email/SMTP] Failed to send to ${to}:`, error?.message);
+    logger.error('[Email/SMTP] Failed to send', error, { to });
     return false;
   }
 }
@@ -131,7 +132,7 @@ export async function sendEmail(options: EmailOptions): Promise<boolean> {
   if (smtpResult) return true;
 
   // Neither worked — testing mode will handle this in API routes
-  console.warn('[Email] No email provider configured. Set RESEND_API_KEY or SMTP_* env vars.');
+  logger.warn('[Email] No email provider configured. Set RESEND_API_KEY or SMTP_* env vars');
   return false;
 }
 

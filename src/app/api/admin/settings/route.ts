@@ -243,7 +243,7 @@ export const PUT = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
           where: { id: existing.id },
           data,
         });
-        logger.info("[Admin Settings] Updated row:", existing.id);
+        logger.info("[Admin Settings] Updated row:", { id: existing.id });
       } else {
         row = await db.platformSettings.create({
           data: {

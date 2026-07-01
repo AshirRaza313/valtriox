@@ -16,6 +16,7 @@
 
 import { v2 as cloudinary, UploadApiResponse, ResourceApiResponse, DeleteApiResponse } from "cloudinary";
 import { db, ensureDb, withRetry } from "@/lib/db";
+import logger from "@/lib/logger";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -105,7 +106,7 @@ async function loadConfig(): Promise<CloudinaryConfig | null> {
       }
     }
   } catch (err) {
-    console.warn("[Cloudinary] Failed to load DB config:", err);
+    logger.warn("[Cloudinary] Failed to load DB config", { error: String(err) });
   }
 
   // Fallback to environment variables
@@ -146,7 +147,7 @@ async function ensureConfigured(): Promise<boolean> {
     _configured = true;
     return true;
   } catch (err) {
-    console.error("[Cloudinary] Configuration failed:", err);
+    logger.error("[Cloudinary] Configuration failed", err);
     return false;
   }
 }
@@ -304,7 +305,7 @@ export async function uploadFile(
       size: result.bytes,
     };
   } catch (err: any) {
-    console.error("[Cloudinary] Upload failed:", err?.message || err);
+    logger.error("[Cloudinary] Upload failed", err);
     return { success: false, error: err?.message || "Upload failed" };
   }
 }
@@ -363,7 +364,7 @@ export async function deleteFile(publicId: string): Promise<{ success: boolean; 
 
     return { success: false, error: `Delete failed: ${result.result}` };
   } catch (err: any) {
-    console.error("[Cloudinary] Delete failed:", err?.message || err);
+    logger.error("[Cloudinary] Delete failed", err);
     return { success: false, error: err?.message || "Delete failed" };
   }
 }
@@ -406,7 +407,7 @@ export async function deleteOrgFolder(orgId: string, bucket: CloudinaryBucket): 
 
     return { deleted: publicIds.length };
   } catch (err: any) {
-    console.error("[Cloudinary] Folder delete failed:", err?.message || err);
+    logger.error("[Cloudinary] Folder delete failed", err);
     return { deleted: 0, error: err?.message || "Delete failed" };
   }
 }
@@ -482,7 +483,7 @@ export async function getOrgCloudinaryUsage(orgId: string): Promise<CloudinaryUs
       }
     }
   } catch (err: any) {
-    console.warn("[Cloudinary] Usage fetch failed:", err?.message || err);
+    logger.warn("[Cloudinary] Usage fetch failed", { error: err?.message || String(err) });
   }
 
   return {

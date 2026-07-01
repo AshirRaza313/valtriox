@@ -117,11 +117,10 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
 
     const breakdown = categories.map((cat) => ({
       key: cat.key,
-      label: cat.label,
+      label: getLimitLabel(cat.usage, cat.limit),
       usage: cat.usage,
       limit: cat.limit,
       percent: getUsagePercent(cat.usage, cat.limit),
-      label: getLimitLabel(cat.usage, cat.limit),
       isUnlimited: cat.limit === -1,
       atLimit: cat.limit !== -1 && cat.usage >= cat.limit,
     }));

@@ -47,12 +47,12 @@ export const GET = withRateLimit(withAuth(async (req, authCtx) => {
 
       for (const o of orders) {
         if (o.createdAt >= weekStart && o.createdAt < new Date(weekStart.getTime() + 7 * 86400000)) {
-          weeklyRevenue[key] += o.total;
+          weeklyRevenue[key] += Number(o.total);
         }
       }
       for (const e of expenses) {
         if (e.date >= weekStart && e.date < new Date(weekStart.getTime() + 7 * 86400000)) {
-          weeklyExpenses[key] += e.amount;
+          weeklyExpenses[key] += Number(e.amount);
         }
       }
     }
@@ -102,7 +102,7 @@ export const GET = withRateLimit(withAuth(async (req, authCtx) => {
     // Expense by category
     const expenseByCategory: Record<string, number> = {};
     for (const e of expenses) {
-      expenseByCategory[e.category] = (expenseByCategory[e.category] || 0) + e.amount;
+      expenseByCategory[e.category] = (expenseByCategory[e.category] || 0) + Number(e.amount);
     }
     const expenseCategoryData = Object.entries(expenseByCategory).map(([category, amount]) => ({
       category: category.charAt(0).toUpperCase() + category.slice(1),
@@ -158,11 +158,11 @@ export const GET = withRateLimit(withAuth(async (req, authCtx) => {
       customerTierDistribution,
       topCustomers,
       newCustomersData,
-      totalRevenue: orders.reduce((s, o) => s + o.total, 0),
-      totalExpenses: expenses.reduce((s, e) => s + e.amount, 0),
-      avgOrderValue: orders.length > 0 ? orders.reduce((s, o) => s + o.total, 0) / orders.length : 0,
+      totalRevenue: orders.reduce((s, o) => s + Number(o.total), 0),
+      totalExpenses: expenses.reduce((s, e) => s + Number(e.amount), 0),
+      avgOrderValue: orders.length > 0 ? orders.reduce((s, o) => s + Number(o.total), 0) / orders.length : 0,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("Analytics error", error, { orgId: authCtx?.organizationId });
     if (isDbUnavailable(error)) {
       return NextResponse.json({

@@ -14,7 +14,7 @@ import { createLeadSchema } from "@/lib/validations/schemas";
  * Wrapped in try-catch so email failures never break the lead submission.
  */
 function sendLeadConfirmationEmail(leadEmail: string, leadName: string) {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://valtriox.com';
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_BASE_URL || 'https://valtriox.com';
   // Dynamic PDF - generated on-the-fly from PlatformSettings (logo + contact info)
   const downloadUrl = `${baseUrl}/api/lead-magnet`;
 

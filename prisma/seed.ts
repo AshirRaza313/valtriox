@@ -88,7 +88,11 @@ async function seed() {
   console.log('✅ Subscription plans created');
 
   // 3. Create admin user
-  const hashedPassword = await bcrypt.hash(process.env.SEED_ADMIN_PASSWORD || 'Admin@123', 10);
+  if (!process.env.SEED_ADMIN_PASSWORD) {
+    console.error('ERROR: SEED_ADMIN_PASSWORD environment variable is required. Refusing to seed with a default password.');
+    process.exit(1);
+  }
+  const hashedPassword = await bcrypt.hash(process.env.SEED_ADMIN_PASSWORD, 10);
   const admin = await db.user.create({
     data: {
       name: 'Admin User',
@@ -347,7 +351,7 @@ async function seed() {
 
   console.log('\n🎉 Seed completed successfully!');
   console.log('📧 6 email templates, 5 automations, and 3 demo leads seeded!');
-  console.log(`  Email: admin@valtriox.com / Password: ${process.env.SEED_ADMIN_PASSWORD ? '***' : 'Admin@123 (CHANGE IMMEDIATELY!)'}`);
+  console.log(`  Email: admin@valtriox.com / Password: ***`);
   console.log('🏪 Demo org: Demo Store');
 }
 

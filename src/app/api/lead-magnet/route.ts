@@ -18,7 +18,7 @@ export async function GET() {
   try {
     // Check cache first
     if (cachedPdf && Date.now() - cachedPdf.timestamp < CACHE_TTL) {
-      return new NextResponse(cachedPdf.buffer, {
+      return new NextResponse(new Uint8Array(cachedPdf.buffer), {
         status: 200,
         headers: {
           "Content-Type": "application/pdf",
@@ -65,7 +65,7 @@ export async function GET() {
     // Cache the result
     cachedPdf = { buffer: pdfBuffer, timestamp: Date.now() };
 
-    return new NextResponse(pdfBuffer, {
+    return new NextResponse(new Uint8Array(pdfBuffer), {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",

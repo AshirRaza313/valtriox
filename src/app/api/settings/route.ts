@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, isDbUnavailable, withRetry } from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
-import { sanitizeObject } from "@/lib/sanitize";
+import { validateBody } from "@/lib/validations/api";
+import { updateSettingsApiSchema } from "@/lib/validations/schemas";
 import logger from "@/lib/logger";
 import { withRateLimit } from "@/lib/rate-limit";
 
@@ -82,8 +83,9 @@ export const GET = withAuth(async (req, authCtx) => {
 // PUT - Update organization settings in DB
 export const PUT = withRateLimit(withAuth(async (req, authCtx) => {
   try {
-    const body = await req.json();
-    Object.assign(body, sanitizeObject(body));
+    const validResult = await validateBody(req, updateSettingsApiSchema);
+    if (!validResult.success) return validResult.response;
+    const body = validResult.data;
     const {
       id,
       name,

@@ -12,7 +12,7 @@ function calculatePriorityScore(order: {
   status: string;
 }): { score: number; level: string; breakdown: { revenue: number; age: number; channel: number; status: number } } {
   // Revenue weight
-  const revenue = order.total > 10000 ? 30 : order.total > 5000 ? 22 : order.total > 2000 ? 14 : 6;
+  const revenue = Number(order.total) > 10000 ? 30 : Number(order.total) > 5000 ? 22 : Number(order.total) > 2000 ? 14 : 6;
 
   // Age weight
   const ageMs = Date.now() - order.createdAt.getTime();
@@ -85,7 +85,7 @@ export const GET = withAuth(async (req, authCtx) => {
     // Calculate priority for each order
     const ordersWithPriority = orders.map((order) => {
       const priority = calculatePriorityScore({
-        total: order.total,
+        total: Number(order.total),
         createdAt: order.createdAt,
         channel: order.channel,
         status: order.status,
@@ -96,7 +96,7 @@ export const GET = withAuth(async (req, authCtx) => {
         orderNumber: order.orderNumber,
         customerName: order.customer?.name || "Unknown",
         customerPhone: order.customer?.phone || null,
-        total: order.total,
+        total: Number(order.total),
         channel: order.channel,
         status: order.status,
         priorityScore: priority.score,

@@ -3,6 +3,7 @@ import { withAuth } from "@/lib/auth-middleware";
 import { db, withRetry } from "@/lib/db";
 import { sendEmail, isEmailConfigured } from "@/lib/email";
 import { withRateLimit } from "@/lib/rate-limit";
+import logger from "@/lib/logger";
 import {
   getUltraPremiumInviteHtml,
   getUltraPremiumWhatsAppMessage,
@@ -25,7 +26,7 @@ function generateToken(): string {
 
 async function getPlatformSettings() {
   let platformName = "Valtriox",
-    platformWebsite = "https://valtriox.com",
+    platformWebsite = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_BASE_URL || "https://valtriox.com",
     companyEmail = "ashir@valtriox.com",
     companyPhone: string | null = null,
     companyAddress: string | null = null;
@@ -108,7 +109,7 @@ export const GET = withRateLimit(withAuth(async (req, _ctx) => {
 
     return NextResponse.json({ invites });
   } catch (error: any) {
-    console.error("[BetaInvite GET]", error?.message);
+    logger.error("[BetaInvite GET]", error);
     return NextResponse.json(
       { error: "Failed to fetch invites", detail: process.env.NODE_ENV === 'production' ? undefined : error?.message },
       { status: 500 }
@@ -191,7 +192,7 @@ export const POST = withRateLimit(withAuth(async (req, ctx) => {
           text: textPlain,
         });
       } catch (e: any) {
-        console.error("[BetaInvite] Email send failed:", e?.message);
+        logger.error("[BetaInvite] Email send failed", e);
         sendResults.email = false;
       }
     }
@@ -217,7 +218,7 @@ export const POST = withRateLimit(withAuth(async (req, ctx) => {
       { status: 201 }
     );
   } catch (error: any) {
-    console.error("[BetaInvite POST]", error?.code, error?.message);
+    logger.error("[BetaInvite POST]", error, { code: error?.code });
 
     // Unique constraint — invite already exists
     if (error?.code === "P2002") {
@@ -265,7 +266,7 @@ export const DELETE = withRateLimit(withAuth(async (req, _ctx) => {
     await withRetry(() => db.betaInvite.delete({ where: { id } }));
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    console.error("[BetaInvite DELETE]", error?.message);
+    logger.error("[BetaInvite DELETE]", error);
     return NextResponse.json(
       { error: "Failed to delete invite" },
       { status: 500 }
@@ -299,7 +300,7 @@ export const PATCH = withRateLimit(withAuth(async (req, _ctx) => {
 
     return NextResponse.json({ invite });
   } catch (error: any) {
-    console.error("[BetaInvite PATCH]", error?.message);
+    logger.error("[BetaInvite PATCH]", error);
     return NextResponse.json(
       { error: "Failed to update invite" },
       { status: 500 }

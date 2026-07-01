@@ -48,7 +48,7 @@ export const GET = withRateLimit(withAuth(async (req: NextRequest) => {
 
   const proposals = r1.data;
   const total = r2.data;
-  return NextResponse.json({ proposals, total, page, totalPages: Math.ceil(total / limit) });
+  return NextResponse.json({ proposals, total: total ?? 0, page, totalPages: Math.ceil((total ?? 0) / limit) });
 }, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 15, windowSeconds: 60 });
 
 // POST /api/admin/proposals - Create a new proposal (admin only)

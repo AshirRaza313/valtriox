@@ -117,7 +117,7 @@ export const POST = withAuth(async (req: NextRequest, authCtx: AuthContext) => {
         return NextResponse.json({ error: "Failed to send document" }, { status: 503 });
       }
 
-      if (!result.emailSent) {
+      if (!result?.emailSent) {
         logger.warn("[Documents/Send] Email not sent (no provider configured)", { documentKey, clientOrgId });
         return NextResponse.json({
           ...result,
@@ -182,7 +182,7 @@ export const POST = withAuth(async (req: NextRequest, authCtx: AuthContext) => {
         return NextResponse.json({ error: "Failed to send file" }, { status: 503 });
       }
 
-      if (!result.emailSent) {
+      if (!result?.emailSent) {
         logger.warn("[Documents/Send] File email not sent (no provider configured)", { fileId, clientOrgId });
         return NextResponse.json({
           ...result,

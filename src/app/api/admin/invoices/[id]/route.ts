@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { withAuth } from "@/lib/auth-middleware";
+import { withAuth, RouteContext } from "@/lib/auth-middleware";
 import { db, safeDbQuery } from "@/lib/db";
 import logger from "@/lib/logger";
 
@@ -16,7 +16,7 @@ const VALID_TRANSITIONS: Record<string, string[]> = {
 };
 
 // ── GET /api/admin/invoices/:id ──
-export const GET = withAuth(async (req: NextRequest, authCtx, ctx: { params: Promise<{ id: string }> }) => {
+export const GET = withAuth(async (req: NextRequest, authCtx, ctx: RouteContext) => {
     logger.info("[Admin Invoice Detail] GET request", {
       userId: authCtx.userId,
       invoiceId: (await ctx.params).id,
@@ -86,7 +86,7 @@ export const GET = withAuth(async (req: NextRequest, authCtx, ctx: { params: Pro
 
 // ── PUT /api/admin/invoices/:id ──
 // Body: { status, dueDate, notes, paidAt, paymentMethod, paymentReference }
-export const PUT = withAuth(async (req: NextRequest, authCtx, ctx: { params: Promise<{ id: string }> }) => {
+export const PUT = withAuth(async (req: NextRequest, authCtx, ctx: RouteContext) => {
     logger.info("[Admin Invoice Update] PUT request", {
       userId: authCtx.userId,
       invoiceId: (await ctx.params).id,

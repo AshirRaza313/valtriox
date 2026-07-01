@@ -9,6 +9,23 @@ import { z } from "zod";
 import { getAdminEmail } from "@/lib/roles";
 import { withRateLimit } from "@/lib/rate-limit";
 
+/** Safely extract message and code from an unknown error */
+function getErrorInfo(e: unknown): { message: string; code: string } {
+  if (e && typeof e === "object") {
+    const message = "message" in e && typeof (e as Record<string, unknown>).message === "string" ? (e as Record<string, unknown>).message as string : String(e);
+    const code = "code" in e && typeof (e as Record<string, unknown>).code === "string" ? (e as Record<string, unknown>).code as string : "";
+    return { message, code };
+  }
+  return { message: String(e), code: "" };
+}
+
+/** Type for org with included subscription relation (used for team limit check) */
+type OrgWithSubscription = {
+  id: string; name: string; email: string | null; slug: string; logo: string | null;
+  website: string | null; phone: string | null; plan: string; currency: string; timezone: string;
+  subscription: { plan: { teamLimit: number; name: string } } | null;
+};
+
 /**
  * POST /api/team - Add a team member via PIN-based invitation
  *
@@ -55,8 +72,8 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    let members: any[] = [];
-    let pendingInvitations: any[] = [];
+    let members: Awaited<ReturnType<typeof db.organizationMember.findMany>> = [];
+    let pendingInvitations: Awaited<ReturnType<typeof db.teamInvitation.findMany>> = [];
     let teamLimit = 3;
 
     try {
@@ -71,8 +88,8 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
       take: 100,
         });
       }, 2, 500);
-    } catch (e: any) {
-      logger.warn("[Team] Failed to fetch members:", e?.message);
+    } catch (e: unknown) {
+      logger.warn("[Team] Failed to fetch members:", getErrorInfo(e).message);
     }
 
     try {
@@ -83,8 +100,8 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
       take: 100,
         });
       }, 2, 500);
-    } catch (e: any) {
-      logger.warn("[Team] Failed to fetch invitations:", e?.message);
+    } catch (e: unknown) {
+      logger.warn("[Team] Failed to fetch invitations:", getErrorInfo(e).message);
     }
 
     try {
@@ -97,13 +114,13 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
       if (org?.subscription?.plan) {
         teamLimit = org.subscription.plan.teamLimit;
       }
-    } catch (e: any) {
-      logger.warn("[Team] Failed to fetch org plan:", e?.message);
+    } catch (e: unknown) {
+      logger.warn("[Team] Failed to fetch org plan:", getErrorInfo(e).message);
     }
 
     return NextResponse.json({ members, pendingInvitations, teamLimit, currentCount: members.length });
-  } catch (error: any) {
-    console.error("Team API error:", error?.message || error);
+  } catch (error: unknown) {
+    console.error("Team API error:", getErrorInfo(error).message || error);
     // Always return 200 with empty data — never crash the UserManagement page
     return NextResponse.json({ members: [], pendingInvitations: [], teamLimit: 3, currentCount: 0, fallback: true });
   }
@@ -130,8 +147,8 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
     try {
       const platformSettings = await db.platformSettings.findFirst();
       platformName = platformSettings?.companyName || "Valtriox";
-    } catch (e: any) {
-      logger.warn("[Team] platformSettings fetch failed, using default:", e?.message);
+    } catch (e: unknown) {
+      logger.warn("[Team] platformSettings fetch failed, using default:", getErrorInfo(e).message);
     }
 
     if (!organizationId || !email || !role) {
@@ -147,15 +164,16 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
     }
 
     // ── Team Limit Check ──
-    let org: any;
+    let org: OrgWithSubscription | null = null;
     try {
       org = await db.organization.findUnique({
         where: { id: organizationId },
         include: { subscription: { include: { plan: true } } },
       });
-    } catch (e: any) {
-      logger.error("[Team] Failed to fetch organization:", e?.message);
-      return NextResponse.json({ error: "Failed to fetch organization details. Please try again.", _step: "fetch_org", _details: process.env.NODE_ENV === "production" ? undefined : e?.message }, { status: 500 });
+    } catch (e: unknown) {
+      const { message: errMsg } = getErrorInfo(e);
+      logger.error("[Team] Failed to fetch organization:", errMsg);
+      return NextResponse.json({ error: "Failed to fetch organization details. Please try again.", _step: "fetch_org", _details: process.env.NODE_ENV === "production" ? undefined : errMsg }, { status: 500 });
     }
 
     if (!org) {
@@ -253,14 +271,15 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
     }
 
     // ── Check if already a member ──
-    let existingUser: any;
+    let existingUser: Awaited<ReturnType<typeof db.user.findUnique>>;
     try {
       existingUser = await db.user.findUnique({
         where: { email: sanitizeEmail(email) },
       });
-    } catch (e: any) {
-      logger.error("[Team] Failed to check existing user:", e?.message);
-      return NextResponse.json({ error: "Database error while checking user. Please try again.", _step: "check_user", _details: process.env.NODE_ENV === "production" ? undefined : e?.message }, { status: 500 });
+    } catch (e: unknown) {
+      const { message: errMsg } = getErrorInfo(e);
+      logger.error("[Team] Failed to check existing user:", errMsg);
+      return NextResponse.json({ error: "Database error while checking user. Please try again.", _step: "check_user", _details: process.env.NODE_ENV === "production" ? undefined : errMsg }, { status: 500 });
     }
 
     if (existingUser) {
@@ -272,9 +291,10 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
           logger.warn("Duplicate membership attempt", { email: sanitizeEmail(email), organizationId });
           return NextResponse.json({ error: "User is already a member of this organization" }, { status: 400 });
         }
-      } catch (e: any) {
-        logger.error("[Team] Failed to check membership:", e?.message);
-        return NextResponse.json({ error: "Database error while checking membership. Please try again.", _step: "check_membership", _details: process.env.NODE_ENV === "production" ? undefined : e?.message }, { status: 500 });
+      } catch (e: unknown) {
+        const { message: errMsg } = getErrorInfo(e);
+        logger.error("[Team] Failed to check membership:", errMsg);
+        return NextResponse.json({ error: "Database error while checking membership. Please try again.", _step: "check_membership", _details: process.env.NODE_ENV === "production" ? undefined : errMsg }, { status: 500 });
       }
     }
 
@@ -286,18 +306,19 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
       if (existingInvitation) {
         return NextResponse.json({ error: "An invitation is already pending for this email" }, { status: 400 });
       }
-    } catch (e: any) {
-      logger.error("[Team] Failed to check invitation:", e?.message);
-      return NextResponse.json({ error: "Database error while checking invitations. Please try again.", _step: "check_invitation", _details: process.env.NODE_ENV === "production" ? undefined : e?.message }, { status: 500 });
+    } catch (e: unknown) {
+      const { message: errMsg } = getErrorInfo(e);
+      logger.error("[Team] Failed to check invitation:", errMsg);
+      return NextResponse.json({ error: "Database error while checking invitations. Please try again.", _step: "check_invitation", _details: process.env.NODE_ENV === "production" ? undefined : errMsg }, { status: 500 });
     }
 
     // ── Create User (if doesn't exist) + OrganizationMember + Invitation ──
     const inviteeName = name || email.split("@")[0];
-    let inviter: any;
+    let inviter: Awaited<ReturnType<typeof db.user.findUnique>> | null;
     try {
       inviter = invitedBy ? await db.user.findUnique({ where: { id: invitedBy } }) : null;
-    } catch (e: any) {
-      logger.warn("[Team] Failed to fetch inviter (non-critical):", e?.message);
+    } catch (e: unknown) {
+      logger.warn("[Team] Failed to fetch inviter (non-critical):", getErrorInfo(e).message);
       inviter = null;
     }
     const expiresAt = new Date();
@@ -316,9 +337,10 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
           },
         });
         logger.info("New user created for team invitation", { userId: user.id, email: sanitizeEmail(email), role: targetRole });
-      } catch (e: any) {
-        logger.error("[Team] Failed to create user:", e?.message);
-        return NextResponse.json({ error: "Failed to create user account. Please try again.", _step: "create_user", _details: process.env.NODE_ENV === "production" ? undefined : e?.message, _code: process.env.NODE_ENV === "production" ? undefined : e?.code }, { status: 500 });
+      } catch (e: unknown) {
+        const { message: errMsg, code: errCode } = getErrorInfo(e);
+        logger.error("[Team] Failed to create user:", errMsg);
+        return NextResponse.json({ error: "Failed to create user account. Please try again.", _step: "create_user", _details: process.env.NODE_ENV === "production" ? undefined : errMsg, _code: process.env.NODE_ENV === "production" ? undefined : errCode }, { status: 500 });
       }
     }
 
@@ -326,7 +348,7 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
     const hashedPin = await bcrypt.hash(userPin, 10);
 
     // Create OrganizationMember with hashed PIN
-    let member: any;
+    let member: Awaited<ReturnType<typeof db.organizationMember.create>>;
     try {
       member = await db.organizationMember.create({
         data: {
@@ -340,14 +362,15 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
           user: { select: { id: true, name: true, email: true, role: true } },
         },
       });
-    } catch (e: any) {
-      logger.error("[Team] Failed to create organization member:", e?.message, e?.code);
-      return NextResponse.json({ error: "Failed to add team member. Please try again.", _step: "create_member", _details: process.env.NODE_ENV === "production" ? undefined : e?.message, _code: process.env.NODE_ENV === "production" ? undefined : e?.code }, { status: 500 });
+    } catch (e: unknown) {
+      const { message: errMsg, code: errCode } = getErrorInfo(e);
+      logger.error("[Team] Failed to create organization member:", errMsg, errCode);
+      return NextResponse.json({ error: "Failed to add team member. Please try again.", _step: "create_member", _details: process.env.NODE_ENV === "production" ? undefined : errMsg, _code: process.env.NODE_ENV === "production" ? undefined : errCode }, { status: 500 });
     }
 
     // Create invitation record — mark as "accepted" immediately since the member
     // is added to the team right away (avoids "fake" pending invitations in UI)
-    let invitation: any;
+    let invitation: Awaited<ReturnType<typeof db.teamInvitation.create>> | { id: string; pin: string };
     try {
       invitation = await db.teamInvitation.create({
         data: {
@@ -361,8 +384,9 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
           expiresAt,
         },
       });
-    } catch (e: any) {
-      logger.error("[Team] Failed to create invitation record:", e?.message, e?.code);
+    } catch (e: unknown) {
+      const { message: errMsg, code: errCode } = getErrorInfo(e);
+      logger.error("[Team] Failed to create invitation record:", errMsg, errCode);
       // Member was already created — keep it, invitation record is non-critical
       invitation = { id: "temp", pin: hashedPin };
     }
@@ -373,8 +397,8 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
       const { getRoleByName } = await import("@/lib/roles");
       const roleDef = getRoleByName(targetRole);
       roleLabel = roleDef?.label || targetRole;
-    } catch (e: any) {
-      logger.warn("[Team] Failed to get role label (non-critical):", e?.message);
+    } catch (e: unknown) {
+      logger.warn("[Team] Failed to get role label (non-critical):", getErrorInfo(e).message);
     }
     const orgName = org.name || platformName;
     const inviterName = inviter?.name || "Admin";
@@ -402,9 +426,8 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
       },
       message: `Team member ${inviteeName} invited successfully! Share the PIN securely via email.`,
     }, { status: 201 });
-  } catch (error: any) {
-    const errMsg = error?.message || String(error);
-    const errCode = error?.code || "";
+  } catch (error: unknown) {
+    const { message: errMsg, code: errCode } = getErrorInfo(error);
     logger.error("Team POST error", error, { organizationId: authCtx?.organizationId });
     if (isDbUnavailable(error)) {
       return NextResponse.json({ error: "Database is currently unavailable. Please try again later.", fallback: true }, { status: 503 });
@@ -472,7 +495,7 @@ export const DELETE = withAuth(async (req: NextRequest, authCtx) => {
     });
 
     return NextResponse.json({ success: true, message: "Member removed successfully" });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("Team DELETE error", error, { memberId });
     if (isDbUnavailable(error)) {
       return NextResponse.json({ error: "Database is currently unavailable. Please try again later.", fallback: true }, { status: 503 });

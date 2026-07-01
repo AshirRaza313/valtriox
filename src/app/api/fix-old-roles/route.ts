@@ -209,10 +209,11 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
         role: u.role,
       })),
     });
-  } catch (error: any) {
-    console.error("Role migration error:", error?.message || error);
+  } catch (error: unknown) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+    console.error("Role migration error:", errMsg);
     return NextResponse.json(
-      { error: process.env.NODE_ENV === 'production' ? "Migration failed" : "Migration failed: " + (error?.message || "Unknown error") },
+      { error: "Migration failed: " + errMsg },
       { status: 500 }
     );
   }

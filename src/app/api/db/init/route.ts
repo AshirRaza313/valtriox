@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAllTables, getCreateError, getLastCreateDetail, resetSchemaFlag, CREATE_ALL_TABLES_SQL, db, withRetry, getDirectPool } from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
+import logger from "@/lib/logger";
 
 /**
  * PATCH /api/db/init - Repair missing columns in existing tables.
@@ -116,7 +117,7 @@ CREATE INDEX IF NOT EXISTS "BetaInvite_invitedBy_idx" ON "BetaInvite"("invitedBy
       poolOk = true;
     } catch (directErr: any) {
       poolError = directErr?.message || String(directErr);
-      console.warn('[DB Repair] Direct pool failed, trying PgBouncer Prisma raw query:', poolError.substring(0, 100));
+      logger.warn('[DB Repair] Direct pool failed, trying PgBouncer Prisma raw query', { error: poolError?.substring(0, 100) });
     }
     
     if (!poolOk) {
@@ -139,7 +140,7 @@ CREATE INDEX IF NOT EXISTS "BetaInvite_invitedBy_idx" ON "BetaInvite"("invitedBy
           await db.$executeRawUnsafe(stmt);
         } catch (stmtErr: any) {
           // Ignore - IF NOT EXISTS makes it safe
-          console.warn('[DB Repair] Statement error (ignored):', stmtErr?.message?.substring(0, 80));
+          logger.warn('[DB Repair] Statement error (ignored)', { error: stmtErr?.message?.substring(0, 80) });
         }
       }
     }

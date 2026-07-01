@@ -119,6 +119,7 @@ export const POST = withAuth(async (req, authCtx) => {
       isActive: true,
       autoDetectDaysBefore: 7,
       category: (category as RegionEvent["category"]) || "cultural",
+      promotionalMessage: "",
       theme: theme || {
         primary: "#D4A73A",
         secondary: "#f59e0b",

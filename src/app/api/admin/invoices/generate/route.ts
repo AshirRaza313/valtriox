@@ -159,7 +159,7 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
       const pdfBuffer = await generateInvoicePDF(invoiceData);
 
       // Return PDF as downloadable blob
-      return new NextResponse(pdfBuffer, {
+      return new NextResponse(new Uint8Array(pdfBuffer), {
         status: 200,
         headers: {
           "Content-Type": "application/pdf",

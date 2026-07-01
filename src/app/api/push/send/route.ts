@@ -23,34 +23,14 @@ function configureVapid(): boolean {
   return true;
 }
 
-// ── Ensure the push_subscriptions table exists ──
-
-// Phase 6: Only create push table ONCE per warm instance, not on every request
-const globalForPush = globalThis as unknown as { __valtrioxPushTableEnsured?: boolean };
-
-async function ensurePushTable() {
-  if (globalForPush.__valtrioxPushTableEnsured) return;
-  await db.$executeRawUnsafe(`
-    CREATE TABLE IF NOT EXISTS push_subscriptions (
-      id            TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
-      "userId"      TEXT NOT NULL,
-      "orgId"       TEXT,
-      endpoint      TEXT NOT NULL,
-      "keysAuth"    TEXT NOT NULL,
-      "keysP256dh"  TEXT NOT NULL,
-      "userAgent"   TEXT,
-      "createdAt"   TIMESTAMPTZ DEFAULT now()
-    );
-  `);
-  globalForPush.__valtrioxPushTableEnsured = true;
-}
+// Instead of raw SQL DDL, just let Prisma handle schema.
+// If the table doesn't exist, the Prisma query will fail and we return a 503.
 
 // ── POST /api/push/send - Send a push notification ──
 
 export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   try {
     logger.info("[Push Send] POST request", { userId: authCtx.userId });
-    await ensurePushTable();
     const vapidOk = configureVapid();
     if (!vapidOk) {
       return NextResponse.json({ error: "Push notifications not configured. Set VAPID keys in environment variables." }, { status: 503 });

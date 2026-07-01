@@ -67,13 +67,13 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
   const allPayments = r2.data;
 
   const stats = {
-    total: allPayments.length,
-    pending: allPayments.filter((p) => p.status === "pending").length,
-    approved: allPayments.filter((p) => p.status === "approved").length,
-    rejected: allPayments.filter((p) => p.status === "rejected").length,
+    total: allPayments?.length ?? 0,
+    pending: allPayments?.filter((p) => p.status === "pending").length ?? 0,
+    approved: allPayments?.filter((p) => p.status === "approved").length ?? 0,
+    rejected: allPayments?.filter((p) => p.status === "rejected").length ?? 0,
   };
 
-  const formatted = payments.map((p) => ({
+  const formatted = (payments ?? []).map((p) => ({
     id: p.id,
     planName: p.planName,
     planId: p.planId,

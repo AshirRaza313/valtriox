@@ -3,6 +3,7 @@
 // ============================================================================
 
 import { z } from "zod";
+import logger from "@/lib/logger";
 
 const envSchema = z.object({
   // ── Required ──
@@ -94,11 +95,7 @@ export function validateEnv(): EnvSchema {
       );
     }
 
-    console.error("\n" + "=".repeat(60));
-    console.error("ENVIRONMENT VARIABLE VALIDATION FAILED");
-    console.error("=".repeat(60));
-    console.error(errors);
-    console.error("=".repeat(60) + "\n");
+    logger.error("ENVIRONMENT VARIABLE VALIDATION FAILED", { errors });
 
     _validatedEnv = result.data as EnvSchema;
     return _validatedEnv;

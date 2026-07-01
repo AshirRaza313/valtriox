@@ -87,7 +87,8 @@ export const POST = withRateLimit(withAuth(async (req, authCtx) => {
     }
 
     // Generate 6-digit PIN token — SECURITY: Use crypto.randomInt() instead of Math.random()
-    const token = (100000 + crypto.randomInt(900000)).toString();
+    const { randomInt } = await import('crypto');
+    const token = (100000 + randomInt(900000)).toString();
 
     // Create invitation (expires in 7 days)
     const expiresAt = new Date();
@@ -125,7 +126,7 @@ export const POST = withRateLimit(withAuth(async (req, authCtx) => {
         expiresAt: expiresAt.toISOString(),
         inviterName,
         platformName: "Valtriox",
-        platformWebsite: "https://valtriox.com",
+        platformWebsite: process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_BASE_URL || "https://valtriox.com",
         supportEmail: "ashir@valtriox.com",
       });
 

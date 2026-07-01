@@ -403,6 +403,53 @@ export const paginationQuerySchema = z.object({
   sortDir: z.enum(["asc", "desc"]).default("desc"),
 });
 
+// ── Extended schemas for API routes ──────────────────────────────────────────
+// These extend base schemas to cover all fields handled by specific routes,
+// preventing mass-assignment while preserving existing functionality.
+
+/** Customer update schema covering all route-handled fields including city, loyaltyTier, etc. */
+export const updateCustomerDetailSchema = updateCustomerSchema.extend({
+  city: z.string().max(200).optional(),
+  loyaltyTier: z.string().max(50).optional(),
+  totalSpent: z.number().min(0).optional(),
+  orderCount: z.number().int().min(0).optional(),
+});
+
+/** Coupon update schema matching Prisma model field names (type, value, minOrder, etc.) */
+export const updateCouponApiSchema = z.object({
+  code: z.string().min(1).max(50).optional(),
+  type: z.enum(["percentage", "fixed"]).optional(),
+  value: z.number().min(0).max(1000000).optional(),
+  minOrder: z.number().min(0).max(99999999.99).optional(),
+  usageLimit: z.number().int().min(0).max(2147483647).optional(),
+  isActive: z.boolean().optional(),
+  expiresAt: z.string().datetime().optional().nullable(),
+}).refine(data => Object.keys(data).length > 0, { message: "At least one field must be provided" });
+
+/** Order update schema with courier, trackingNumber, and priority fields */
+export const updateOrderDetailSchema = z.object({
+  status: z.enum(["pending", "confirmed", "packed", "dispatched", "delivered", "cancelled", "returned"]).optional(),
+  notes: optionalString,
+  channel: z.enum(["manual", "whatsapp", "website", "instagram", "facebook", "phone"]).optional(),
+  courier: z.string().max(200).optional(),
+  trackingNumber: z.string().max(200).optional(),
+  priority: z.number().int().min(0).max(100).optional(),
+}).refine(data => Object.keys(data).length > 0, { message: "At least one field must be provided" });
+
+/** Member role update schema matching the actual API shape (roleId / roleName) */
+export const updateMemberRoleApiSchema = z.object({
+  roleId: z.string().min(1).max(50).optional(),
+  roleName: z.string().min(1).max(100).optional(),
+}).refine(data => data.roleId || data.roleName, { message: "roleId or roleName is required" });
+
+/** Settings update schema covering all fields handled by the settings route */
+export const updateSettingsApiSchema = updateOrganizationSchema.extend({
+  id: z.string().max(50).optional(),
+  logo: z.string().max(2048).optional().nullable(),
+  favicon: z.string().max(2048).optional().nullable(),
+  taxId: z.string().max(100).optional().nullable(),
+});
+
 // ── Type exports (inferred from schemas) ─────────────────────────────────────
 
 export type RegisterInput = z.infer<typeof registerSchema>;
@@ -428,4 +475,9 @@ export type CreateLeadInput = z.infer<typeof createLeadSchema>;
 export type CreateProposalInput = z.infer<typeof createProposalSchema>;
 export type CreatePaymentInput = z.infer<typeof createPaymentSchema>;
 export type UpdateSettingsInput = z.infer<typeof updateSettingsSchema>;
+export type UpdateCustomerDetailInput = z.infer<typeof updateCustomerDetailSchema>;
+export type UpdateCouponApiInput = z.infer<typeof updateCouponApiSchema>;
+export type UpdateOrderDetailInput = z.infer<typeof updateOrderDetailSchema>;
+export type UpdateMemberRoleApiInput = z.infer<typeof updateMemberRoleApiSchema>;
+export type UpdateSettingsApiInput = z.infer<typeof updateSettingsApiSchema>;
 export type PaginationQueryInput = z.infer<typeof paginationQuerySchema>;

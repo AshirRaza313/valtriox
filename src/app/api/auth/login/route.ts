@@ -8,12 +8,47 @@ import { validateBody, loginSchema } from "@/lib/validations";
 import { z } from "zod";
 import { signAuthData } from "@/lib/auth-middleware";
 
+/** Safely extract message from an unknown error */
+function getErrorMessage(e: unknown): string {
+  if (e && typeof e === "object" && "message" in e && typeof (e as Record<string, unknown>).message === "string") {
+    return (e as Record<string, unknown>).message as string;
+  }
+  return String(e);
+}
+
+/** Shape of user data passed to createLoginResponse */
+interface LoginUserData {
+  id: string;
+  name: string | null;
+  email: string;
+  image: string | null;
+  role: string;
+  loginType: string;
+  visibleSections: string[] | null;
+}
+
+/** Shape of org data passed to createLoginResponse */
+interface LoginOrgData {
+  id: string;
+  name: string | null;
+  slug: string | null;
+  logo: string | null;
+  website: string | null;
+  phone: string | null;
+  email: string | null;
+  currency: string | null;
+  timezone: string | null;
+  plan: string | null;
+  workingHoursStart: string | null;
+  workingHoursEnd: string | null;
+}
+
 /**
  * Helper to create a login response with auth cookies.
  * These cookies are read by Next.js middleware to inject auth headers
  * into all subsequent API requests.
  */
-function createLoginResponse(userData: any, orgData: any) {
+function createLoginResponse(userData: LoginUserData, orgData: LoginOrgData | null) {
   const response = NextResponse.json({ user: userData, organization: orgData });
   const maxAge = 24 * 60 * 60; // 1 day (was 30 days)
   const cookieOptions = {
@@ -86,8 +121,8 @@ export const POST = withRateLimit(async (req: NextRequest) => {
           }
         }
       });
-    } catch (dbErr: any) {
-      const errMsg = dbErr?.message || String(dbErr);
+    } catch (dbErr: unknown) {
+      const errMsg = getErrorMessage(dbErr);
       console.error("Database connection error:", errMsg);
       if (!process.env.DATABASE_URL) {
         return NextResponse.json(
@@ -119,8 +154,8 @@ export const POST = withRateLimit(async (req: NextRequest) => {
               }
             }
           });
-        } catch (fixErr: any) {
-          console.error("[Login] Auto-fix failed:", fixErr?.message);
+        } catch (fixErr: unknown) {
+          console.error("[Login] Auto-fix failed:", getErrorMessage(fixErr));
           // Last resort: try without includes
           try {
             user = await db.user.findUnique({
@@ -166,13 +201,14 @@ export const POST = withRateLimit(async (req: NextRequest) => {
       let isPinValid = false;
       if (membership.pin && membership.pin.startsWith("$2")) {
         // bcrypt hash - use compare
-        isPinValid = await bcrypt.compare(pin, membership.pin);
+        const compareResult = await (bcrypt.compare as (data: string, hash: string) => Promise<boolean>)(pin || "", membership.pin!);
+        isPinValid = !!compareResult;
       } else {
         // Legacy plain-text PIN - compare directly then upgrade to hash
         isPinValid = membership.pin === pin;
         if (isPinValid) {
           // Upgrade to bcrypt hash in background
-          const hashedPin = await bcrypt.hash(pin, 10);
+          const hashedPin = await (bcrypt.hash as (data: string, salt: string | number) => Promise<string>)(pin || "", 10);
           await withRetry(async () => {
             return await db.organizationMember.update({
             where: { id: membership.id },
@@ -212,7 +248,7 @@ export const POST = withRateLimit(async (req: NextRequest) => {
           effectiveRole = "valtriox_team";
           // Parse visibleSections (JSON array of hidden section IDs)
           try {
-            visibleSections = JSON.parse((vtMember as any).visibleSections || "[]");
+            visibleSections = JSON.parse(String((vtMember as Record<string, unknown>).visibleSections || "[]"));
           } catch { visibleSections = []; }
           // Fix existing OrganizationMember record if it has wrong role
           if (membership.role !== "valtriox_team" && membership.id) {
@@ -260,8 +296,8 @@ export const POST = withRateLimit(async (req: NextRequest) => {
             })
             }, 2, 500);
           }
-        } catch (notifErr: any) {
-          console.error("Failed to create notification:", notifErr?.message);
+        } catch (notifErr: unknown) {
+          console.error("Failed to create notification:", getErrorMessage(notifErr));
         }
       }
 
@@ -305,7 +341,7 @@ export const POST = withRateLimit(async (req: NextRequest) => {
       })
       }, 2, 500);
       if (vtMember) {
-        try { pwVisibleSections = JSON.parse((vtMember as any).visibleSections || "[]"); } catch { pwVisibleSections = []; }
+        try { pwVisibleSections = JSON.parse(String((vtMember as Record<string, unknown>).visibleSections || "[]")); } catch { pwVisibleSections = []; }
         if (!org) {
           // No org yet - auto-assign one
           const anyOrg = await withRetry(async () => {
@@ -335,8 +371,9 @@ export const POST = withRateLimit(async (req: NextRequest) => {
             }, 2, 500);
             org = anyOrg;
             membership = {
+              ...membership,
               role: "valtriox_team",
-            } as any;
+            } as typeof membership;
           }
         } else if (membership && membership.role !== "valtriox_team") {
           // Has org but wrong role - fix it
@@ -347,12 +384,12 @@ export const POST = withRateLimit(async (req: NextRequest) => {
               data: { role: "valtriox_team" },
             })
             }, 2, 500);
-            membership = { ...membership, role: "valtriox_team" } as any;
+            membership = { ...membership, role: "valtriox_team" } as typeof membership;
           } catch { /* non-critical */ }
         }
       }
-    } catch (autoOrgErr: any) {
-      console.error("[Login] Auto-assign org for VT member failed:", autoOrgErr?.message);
+    } catch (autoOrgErr: unknown) {
+      console.error("[Login] Auto-assign org for VT member failed:", getErrorMessage(autoOrgErr));
     }
 
     return createLoginResponse(
@@ -367,8 +404,8 @@ export const POST = withRateLimit(async (req: NextRequest) => {
         workingHoursStart: org.workingHoursStart, workingHoursEnd: org.workingHoursEnd,
       } : null
     );
-  } catch (err: any) {
-    logger.error("Login error", err, { email });
+  } catch (err: unknown) {
+    logger.error("Login error", err);
     return NextResponse.json({ error: "Login failed. Please try again." }, { status: 500 });
   }
 }, { maxRequests: 5, windowSeconds: 60 });

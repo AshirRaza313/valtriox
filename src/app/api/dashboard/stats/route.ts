@@ -156,7 +156,7 @@ export const GET = withRateLimit(withAuth(async (req, authCtx) => {
     for (const order of dailyRevenue) {
       const key = order.createdAt.toISOString().split("T")[0];
       if (revenueByDay[key] !== undefined) {
-        revenueByDay[key] += order.total;
+        revenueByDay[key] += Number(order.total);
       }
     }
     const revenueChartData = Object.entries(revenueByDay).map(([date, revenue]) => ({
@@ -164,8 +164,8 @@ export const GET = withRateLimit(withAuth(async (req, authCtx) => {
       revenue: Math.round(revenue * 100) / 100,
     }));
 
-    const currentRev = totalRevenue._sum.total || 0;
-    const prevRev = prevRevenue._sum.total || 0;
+    const currentRev = Number(totalRevenue._sum.total || 0);
+    const prevRev = Number(prevRevenue._sum.total || 0);
     const revenueChange = prevRev > 0 ? ((currentRev - prevRev) / prevRev) * 100 : 0;
 
     const orderChange = prevOrderCount > 0 ? ((orderCount - prevOrderCount) / prevOrderCount) * 100 : 0;
@@ -217,7 +217,7 @@ export const GET = withRateLimit(withAuth(async (req, authCtx) => {
     if (isDbUnavailable(error)) {
       // Return zero/placeholder stats when DB is unavailable
       const now = new Date();
-      const revenueChartData = [];
+      const revenueChartData: { date: string; revenue: number }[] = [];
       for (let i = 6; i >= 0; i--) {
         const d = new Date(now);
         d.setDate(d.getDate() - i);

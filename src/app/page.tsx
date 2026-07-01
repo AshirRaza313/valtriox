@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef, Component, ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { useValtrioxStore } from "@/store/brandflow-store";
+import { useAuth, useUI, useOrganization, useUIActions } from "@/hooks/useStoreSelectors";
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { useSubscriptionSync } from "@/hooks/useSubscriptionSync";
 
@@ -148,9 +149,13 @@ function SafeRender({ children, name }: { children: ReactNode; name: string }) {
 }
 
 export default function Home() {
-  // TODO: Optimize with individual selectors or useShallow to prevent unnecessary re-renders
-  // Example: const view = useValtrioxStore(s => s.view);
-  const { view, activeSection, appTheme, setAppTheme, sidebarCollapsed, setView, setAuthModalOpen, setAuthModalMode, user, organization, initializeAuth } = useValtrioxStore();
+  // ── Optimized store selectors (useShallow) — prevents re-render on unrelated state changes
+  const { user } = useAuth();
+  const { view, activeSection, appTheme, sidebarCollapsed } = useUI();
+  const { organization } = useOrganization();
+  const { setView, setAppTheme, setAuthModalOpen, setAuthModalMode } = useUIActions();
+  // Single-action selectors don't need useShallow — zustand returns stable function references
+  const initializeAuth = useValtrioxStore((state) => state.initializeAuth);
   const [legalPage, setLegalPage] = useState<string | null>(null);
   const [adminLockedFeatures, setAdminLockedFeatures] = useState<Set<string>>(new Set());
 

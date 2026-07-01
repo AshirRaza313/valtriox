@@ -4,6 +4,21 @@ import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
 import { withRateLimit } from "@/lib/rate-limit";
 
+/** Safely extract message and code from an unknown error */
+function getErrorInfo(e: unknown): { message: string; code: string } {
+  if (e && typeof e === "object") {
+    const message = "message" in e && typeof (e as Record<string, unknown>).message === "string" ? (e as Record<string, unknown>).message as string : String(e);
+    const code = "code" in e && typeof (e as Record<string, unknown>).code === "string" ? (e as Record<string, unknown>).code as string : "";
+    return { message, code };
+  }
+  return { message: String(e), code: "" };
+}
+
+/** Row shape returned by $queryRaw for revenue aggregation */
+interface RevenueRow { organizationId: string; total: string }
+interface MonthlyOrderRow { organizationId: string; count: number }
+interface LastOrderRow { organizationId: string; createdAt: string }
+
 // Allow up to 30 seconds for DB operations on Vercel serverless
 export const maxDuration = 30;
 
@@ -41,9 +56,9 @@ export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
           }),
         ]);
 
-        for (const row of (revenueRows as any[])) revenueMap[row.organizationId] = parseFloat(row.total) || 0;
-        for (const row of (monthlyRows as any[])) monthlyOrdersMap[row.organizationId] = parseInt(row.count) || 0;
-        for (const row of (lastOrderRows as any[])) lastOrderMap[row.organizationId] = row.createdAt;
+        for (const row of (revenueRows as RevenueRow[])) revenueMap[row.organizationId] = parseFloat(row.total) || 0;
+        for (const row of (monthlyRows as MonthlyOrderRow[])) monthlyOrdersMap[row.organizationId] = parseInt(String(row.count)) || 0;
+        for (const row of (lastOrderRows as LastOrderRow[])) lastOrderMap[row.organizationId] = row.createdAt;
         for (const m of firstMembers) ownerMap[m.organizationId] = { id: m.user.id, name: m.user.name, email: m.user.email, role: m.user.role };
       }
 
@@ -72,14 +87,15 @@ export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
     }, 3, 1000);
 
     return NextResponse.json(result);
-  } catch (error: any) {
-    console.error("Admin clients API error:", error?.message || error);
+  } catch (error: unknown) {
+    const { message: errMsg } = getErrorInfo(error);
+    console.error("Admin clients API error:", errMsg || error);
     // Return empty data instead of 503 so the page still loads
     return NextResponse.json({
       clients: [],
       summary: { totalClients: 0, newThisMonth: 0, totalRevenue: 0, totalOrders: 0, planDistribution: {} },
       _dbError: true,
-      error: process.env.NODE_ENV === 'production' ? "Database temporarily unavailable" : (error?.message || "Database temporarily unavailable")
+      error: process.env.NODE_ENV === 'production' ? "Database temporarily unavailable" : (errMsg || "Database temporarily unavailable")
     });
   }
 }, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 20, windowSeconds: 60 });
@@ -109,8 +125,8 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
         { status: 503 }
       );
     }
-  } catch (err: any) {
-    logger.error("[Register Brand] ensureDb threw:", err?.message);
+  } catch (err: unknown) {
+    logger.error("[Register Brand] ensureDb threw:", err);
     // Don't hard-fail - the individual operations have their own retries
   }
 
@@ -137,16 +153,17 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
     const hashedPassword = await bcrypt.hash(password, 12);
 
     // Step 1: Check if email already exists
-    let existingUser: any;
+    let existingUser: Awaited<ReturnType<typeof db.user.findUnique>>;
     try {
       existingUser = await withRetry(
         () => db.user.findUnique({ where: { email: cleanEmail } }),
         3, 500
       );
-    } catch (err: any) {
-      logger.error("[Register Brand] Step 1 failed (email check):", err?.message, err?.code);
+    } catch (err: unknown) {
+      const { message: errMsg, code: errCode } = getErrorInfo(err);
+      logger.error("[Register Brand] Step 1 failed (email check):", err, { errCode });
       return NextResponse.json(
-        { error: "Database error while checking email. Please try again.", _step: "email_check", _details: process.env.NODE_ENV === "production" ? undefined : err?.message },
+        { error: "Database error while checking email. Please try again.", _step: "email_check", _details: process.env.NODE_ENV === "production" ? undefined : errMsg },
         { status: 503 }
       );
     }
@@ -158,18 +175,18 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
     }
 
     // Step 2: Find subscription plan (non-critical - continue if not found)
-    let subPlan: any = null;
+    let subPlan: Awaited<ReturnType<typeof db.subscriptionPlan.findFirst>> = null;
     try {
       subPlan = await withRetry(
         () => db.subscriptionPlan.findFirst({ where: { name: planValue } }),
         2, 500
       );
-    } catch (err: any) {
-      logger.warn("[Register Brand] Step 2 warning (plan lookup failed, continuing):", err?.message);
+    } catch (err: unknown) {
+      logger.warn("[Register Brand] Step 2 warning (plan lookup failed, continuing):", { error: getErrorInfo(err).message });
     }
 
     // Step 3: Create user
-    let user: any;
+    let user: Awaited<ReturnType<typeof db.user.create>>;
     try {
       user = await withRetry(
         () => db.user.create({
@@ -182,19 +199,20 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
         }),
         3, 500
       );
-    } catch (err: any) {
-      logger.error("[Register Brand] Step 3 failed (create user):", err?.message, err?.code);
-      if (err?.code === "P2002") {
+    } catch (err: unknown) {
+      const { message: errMsg, code: errCode } = getErrorInfo(err);
+      logger.error("[Register Brand] Step 3 failed (create user):", err, { errCode });
+      if (errCode === "P2002") {
         return NextResponse.json({ error: "Email already registered" }, { status: 409 });
       }
       return NextResponse.json(
-        { error: "Failed to create user account. Please try again.", _step: "create_user", _details: process.env.NODE_ENV === "production" ? undefined : err?.message, _code: process.env.NODE_ENV === "production" ? undefined : err?.code },
+        { error: "Failed to create user account. Please try again.", _step: "create_user", _details: process.env.NODE_ENV === "production" ? undefined : errMsg, _code: process.env.NODE_ENV === "production" ? undefined : errCode },
         { status: 500 }
       );
     }
 
     // Step 4: Create organization with brand details & auto-configured plan features
-    let org: any;
+    let org: Awaited<ReturnType<typeof db.organization.create>>;
     try {
       // Import plan configuration for auto-configuration
       const { getPlanLimits, getFeatureAccess, PLAN_FEATURE_MATRIX, getPlanDisplayName } = await import("@/lib/plan-limits");
@@ -202,7 +220,6 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
       const featureMap = getFeatureAccess(planValue);
       const planFeatures = PLAN_FEATURE_MATRIX[planValue] || [];
 
-      // Phase 6: Fixed type — use Prisma-compatible type instead of Record<string, any>
       const orgData = {
         name: cleanBrandName,
         slug,
@@ -227,12 +244,13 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
         featuresEnabled: planFeatures,
         featureFlags: Object.entries(featureMap).filter(([, v]) => v).map(([k]) => k).join(", "),
       });
-    } catch (err: any) {
-      logger.error("[Register Brand] Step 4 failed (create org):", err?.message, err?.code);
+    } catch (err: unknown) {
+      const { message: errMsg, code: errCode } = getErrorInfo(err);
+      logger.error("[Register Brand] Step 4 failed (create org):", err, { errCode });
       // Cleanup: delete the user we just created
       await db.user.delete({ where: { id: user.id } }).catch(() => {});
       return NextResponse.json(
-        { error: "Failed to create organization. Please try again.", _step: "create_org", _details: process.env.NODE_ENV === "production" ? undefined : err?.message, _code: process.env.NODE_ENV === "production" ? undefined : err?.code },
+        { error: "Failed to create organization. Please try again.", _step: "create_org", _details: process.env.NODE_ENV === "production" ? undefined : errMsg, _code: process.env.NODE_ENV === "production" ? undefined : errCode },
         { status: 500 }
       );
     }
@@ -249,13 +267,14 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
         }),
         3, 500
       );
-    } catch (err: any) {
-      logger.error("[Register Brand] Step 5 failed (create membership):", err?.message, err?.code);
+    } catch (err: unknown) {
+      const { message: errMsg, code: errCode } = getErrorInfo(err);
+      logger.error("[Register Brand] Step 5 failed (create membership):", err, { errCode });
       // Cleanup: delete org and user
       await db.organization.delete({ where: { id: org.id } }).catch(() => {});
       await db.user.delete({ where: { id: user.id } }).catch(() => {});
       return NextResponse.json(
-        { error: "Failed to create team membership. Please try again.", _step: "create_membership", _details: process.env.NODE_ENV === "production" ? undefined : err?.message, _code: process.env.NODE_ENV === "production" ? undefined : err?.code },
+        { error: "Failed to create team membership. Please try again.", _step: "create_membership", _details: process.env.NODE_ENV === "production" ? undefined : errMsg, _code: process.env.NODE_ENV === "production" ? undefined : errCode },
         { status: 500 }
       );
     }
@@ -270,10 +289,10 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
             data: {
               organizationId: org.id,
               planId: subPlan.id,
-              status: subPlan.price === 0 ? "active" : "trial",
+              status: Number(subPlan.price) === 0 ? "active" : "trial",
               billingCycle: "monthly",
               trialEndsAt: trialEnd,
-              currentPeriodEnd: subPlan.price === 0 ? null : trialEnd,
+              currentPeriodEnd: Number(subPlan.price) === 0 ? null : trialEnd,
             },
           }),
           3, 500
@@ -339,8 +358,8 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
       );
 
       logger.info("[Register Brand] Step 7: Welcome notification created", { userId: user.id });
-    } catch (err: any) {
-      logger.warn("[Register Brand] Step 7 warning (notification creation failed, non-critical):", err?.message);
+    } catch (err: unknown) {
+      logger.warn("[Register Brand] Step 7 warning (notification creation failed, non-critical):", { error: getErrorInfo(err).message });
     }
 
     // Step 8: Create consultation tracking entry (Lead record for follow-up)
@@ -371,9 +390,9 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
           consultationDate: consultationDate || "none",
           hasNotes: !!notes,
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
         // Lead creation failure is non-critical
-        logger.warn("[Register Brand] Step 8 warning (lead creation failed, non-critical):", err?.message);
+        logger.warn("[Register Brand] Step 8 warning (lead creation failed, non-critical):", { error: getErrorInfo(err).message });
       }
     }
 
@@ -395,47 +414,50 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
       organization: { id: org.id, name: cleanBrandName, slug },
       consultationScheduled: !!consultationDate,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const { message: errMsg, code: errCode } = getErrorInfo(error);
+    const errStack = error instanceof Error ? error.stack?.slice(0, 200) : undefined;
+    const errMeta = error && typeof error === 'object' && 'meta' in error ? (error as Record<string, unknown>).meta : undefined;
     console.error("[Register Brand] Unexpected error:", {
-      message: error?.message,
-      code: error?.code,
-      meta: error?.meta,
-      stack: error?.stack?.slice(0, 200),
+      message: errMsg,
+      code: errCode,
+      meta: errMeta,
+      stack: errStack,
     });
 
     // Handle application-level errors (thrown with status)
-    if (error?.status && error?.message) {
-      return NextResponse.json({ error: error.message }, { status: error.status });
+    const errStatus = error && typeof error === 'object' && 'status' in error && typeof (error as Record<string, unknown>).status === 'number' ? (error as Record<string, unknown>).status as number : undefined;
+    if (errStatus && errMsg) {
+      return NextResponse.json({ error: errMsg }, { status: errStatus });
     }
 
     // Handle Prisma unique constraint violations (P2002)
-    const code = error?.code || "";
-    const msg = (error?.message || "").toLowerCase();
-    if (code === "P2002" || msg.includes("unique constraint")) {
+    const msg = errMsg.toLowerCase();
+    if (errCode === "P2002" || msg.includes("unique constraint")) {
       return NextResponse.json({ error: "Email already registered" }, { status: 409 });
     }
 
     // Handle schema mismatch errors (P2021/P2022) - show real details
     if (isSchemaError(error)) {
-      logger.error("[Register Brand] Schema mismatch:", error?.message);
+      logger.error("[Register Brand] Schema mismatch:", error);
       return NextResponse.json(
-        { error: "Database schema mismatch. Contact support.", _details: process.env.NODE_ENV === "production" ? undefined : error?.message, _code: error?.code },
+        { error: "Database schema mismatch. Contact support.", _details: process.env.NODE_ENV === "production" ? undefined : errMsg, _code: errCode },
         { status: 500 }
       );
     }
 
     // Handle genuine DB connection errors
     if (isDbUnavailable(error)) {
-      logger.error("[Register Brand] DB unavailable:", error?.message);
+      logger.error("[Register Brand] DB unavailable:", error);
       return NextResponse.json(
-        { error: "Database connection timeout. Please try again in a moment.", _details: process.env.NODE_ENV === "production" ? undefined : error?.message, _code: error?.code },
+        { error: "Database connection timeout. Please try again in a moment.", _details: process.env.NODE_ENV === "production" ? undefined : errMsg, _code: errCode },
         { status: 503 }
       );
     }
 
     // Unknown error - return with full details for debugging
     return NextResponse.json(
-      { error: "Failed to register brand", _details: process.env.NODE_ENV === "production" ? undefined : error?.message || String(error), _code: error?.code },
+      { error: "Failed to register brand", _details: process.env.NODE_ENV === "production" ? undefined : errMsg || String(error), _code: errCode },
       { status: 500 }
     );
   }

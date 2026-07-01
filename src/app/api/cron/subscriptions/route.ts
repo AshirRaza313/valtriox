@@ -79,9 +79,9 @@ export async function GET(req: Request) {
         const emoji = daysUntilExpiry <= 1 ? "🚨" : daysUntilExpiry <= 3 ? "⚠️" : "📅";
 
         const cycleLabel = isAnnual ? "annual" : "monthly";
-        const priceLabel = isAnnual && sub.plan.annualPrice > 0
-          ? `Rs. ${sub.plan.annualPrice.toLocaleString()}/year`
-          : `Rs. ${sub.plan.price.toLocaleString()}/month`;
+        const priceLabel = isAnnual && Number(sub.plan.annualPrice) > 0
+          ? `Rs. ${Number(sub.plan.annualPrice).toLocaleString()}/year`
+          : `Rs. ${Number(sub.plan.price).toLocaleString()}/month`;
 
         await withRetry(async () => {
           return await db.notification.create({

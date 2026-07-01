@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
-import { withAuth } from "@/lib/auth-middleware";
+import { withAuth, RouteContext } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
 
 // PUT /api/admin/payments/[id] - Approve or reject a payment proof
@@ -9,11 +9,11 @@ import logger from "@/lib/logger";
 export const PUT = withAuth(async (
   req: NextRequest,
   authCtx,
-  { params }: { params: Promise<{ id: string }> }
+  ctx: RouteContext
 ) => {
+  const { id } = await ctx.params;
   logger.info("[Admin Payments] PUT request", { userId: authCtx.userId });
   try {
-    const { id } = await params;
     const body = await req.json();
     const { status, adminNote } = body;
 

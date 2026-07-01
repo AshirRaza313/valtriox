@@ -46,16 +46,16 @@ export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
         const d = inv.paidAt || inv.issuedAt;
         return d && d >= currentMonthStart && d <= now;
       })
-      .reduce((s, inv) => s + inv.amount, 0);
+      .reduce((s, inv) => s + Number(inv.amount), 0);
 
     const paidThisYear = allPaidInvoices
       .filter((inv) => {
         const d = inv.paidAt || inv.issuedAt;
         return d && d.getFullYear() === year;
       })
-      .reduce((s, inv) => s + inv.amount, 0);
+      .reduce((s, inv) => s + Number(inv.amount), 0);
 
-    const totalRevenue = allPaidInvoices.reduce((s, inv) => s + inv.amount, 0);
+    const totalRevenue = allPaidInvoices.reduce((s, inv) => s + Number(inv.amount), 0);
 
     // ── 2. Monthly Recurring Revenue (active subscriptions) ──
     const activeSubscriptions = await db.subscription.findMany({
@@ -69,9 +69,11 @@ export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
     });
 
     const monthlyRecurring = activeSubscriptions.reduce((sum, sub) => {
-      const price = sub.billingCycle === "annually" && sub.plan.annualPrice > 0
-        ? sub.plan.annualPrice / 12
-        : sub.plan.price;
+      const annualPrice = Number(sub.plan.annualPrice ?? 0);
+      const planPrice = Number(sub.plan.price ?? 0);
+      const price = sub.billingCycle === "annually" && annualPrice > 0
+        ? annualPrice / 12
+        : planPrice;
       return sum + price;
     }, 0);
 
@@ -85,7 +87,7 @@ export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
       _sum: { amount: true },
     });
 
-    const pendingPayments = pendingPaymentsAmount._sum.amount || 0;
+    const pendingPayments = Number(pendingPaymentsAmount._sum.amount || 0);
 
     // ── 4. Average Order Value ──
     const totalOrders = await db.order.count();
@@ -94,7 +96,7 @@ export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
     });
 
     const averageOrderValue = totalOrders > 0
-      ? (totalOrderRevenue._sum.total || 0) / totalOrders
+      ? Number(totalOrderRevenue._sum.total || 0) / totalOrders
       : 0;
 
     // ── 5. Proposal Conversion Rate ──
@@ -123,7 +125,7 @@ export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
           const invDate = inv.paidAt || inv.issuedAt;
           return invDate && invDate >= d && invDate <= monthEnd;
         })
-        .reduce((s, inv) => s + inv.amount, 0);
+        .reduce((s, inv) => s + Number(inv.amount), 0);
 
       // Expenses for this month
       const monthExpenses = await db.expense.aggregate({
@@ -133,7 +135,7 @@ export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
         _sum: { amount: true },
       });
 
-      const expenses = monthExpenses._sum.amount || 0;
+      const expenses = Number(monthExpenses._sum.amount || 0);
       const totalMonthCost = expenses + FIXED_MONTHLY_COST;
 
       revenueByMonthData.push({
@@ -163,10 +165,10 @@ export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
     };
 
     const revenueByService = proposalsGrouped
-      .filter((p) => p._sum.totalCost && p._sum.totalCost > 0)
+      .filter((p) => p._sum.totalCost && Number(p._sum.totalCost) > 0)
       .map((p) => ({
         service: serviceTypeLabels[p.type] || p.type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
-        revenue: Math.round(p._sum.totalCost || 0),
+        revenue: Math.round(Number(p._sum.totalCost || 0)),
         count: p._count.id,
       }));
 
@@ -184,7 +186,7 @@ export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
       });
       if (plan) {
         const existingIdx = revenueByService.findIndex((r) => r.service === `Subscription: ${plan.name}`);
-        const rev = Math.round(plan.price * subGroup._count.id);
+        const rev = Math.round(Number(plan.price) * subGroup._count.id);
         if (existingIdx >= 0) {
           revenueByService[existingIdx].revenue += rev;
           revenueByService[existingIdx].count += subGroup._count.id;
@@ -210,14 +212,14 @@ export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
           select: { amount: true, createdAt: true, paymentMethod: true },
         });
 
-        const totalPaid = orgPayments.reduce((s, p) => s + p.amount, 0);
+        const totalPaid = orgPayments.reduce((s, p) => s + Number(p.amount), 0);
         const orderCount = await db.order.count({
           where: { organizationId: sub.organization.id },
         });
 
         return {
           name: sub.organization.name,
-          revenue: Math.round(totalPaid + (sub.billingCycle === "annually" && sub.plan.annualPrice > 0 ? sub.plan.annualPrice / 12 : sub.plan.price)),
+          revenue: Math.round(totalPaid + (sub.billingCycle === "annually" && Number(sub.plan.annualPrice) > 0 ? Number(sub.plan.annualPrice) / 12 : Number(sub.plan.price))),
           orders: orderCount,
           plan: sub.plan.name,
         };
@@ -238,7 +240,7 @@ export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
     const recentPayments = recentPaymentProofs.map((p) => ({
       id: p.id,
       clientName: p.organization?.name || "Unknown",
-      amount: p.amount,
+      amount: Number(p.amount),
       method: p.paymentMethod === "paypro" ? "PayPro" : p.paymentMethod === "bank_transfer" ? "Bank Transfer" : p.paymentMethod,
       status: p.status,
       date: p.createdAt.toISOString(),
@@ -253,14 +255,14 @@ export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
 
     const expensesByCategory = expensesGrouped.map((e) => ({
       category: e.category,
-      amount: Math.round(e._sum.amount || 0),
+      amount: Math.round(Number(e._sum.amount || 0)),
     }));
 
     // ── 12. Total Expenses (for net profit margin) ──
     const totalExpensesAgg = await db.expense.aggregate({
       _sum: { amount: true },
     });
-    const totalExpenses = totalExpensesAgg._sum.amount || 0;
+    const totalExpenses = Number(totalExpensesAgg._sum.amount || 0);
     const totalCostWithFixed = totalExpenses + FIXED_MONTHLY_COST;
     const netProfitMargin = totalRevenue > 0
       ? ((totalRevenue - totalCostWithFixed) / totalRevenue) * 100

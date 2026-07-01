@@ -3,18 +3,7 @@ import { db, dbErrorResponse, isDbUnavailable, withRetry } from "@/lib/db";
 import { generateInvoicePDF } from "@/lib/pdf-generator";
 import { withAuth, RouteContext, isPlatformRole } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
-
-// Helper: safely parse date from DB
-function safeDate(value: any): Date | null {
-  if (!value) return null;
-  if (value instanceof Date) return value;
-  try {
-    const parsed = new Date(value);
-    return isNaN(parsed.getTime()) ? null : parsed;
-  } catch {
-    return null;
-  }
-}
+import { safeDate } from "@/lib/utils-extended";
 
 // GET /api/invoices/[id] - Get single invoice data or PDF
 export const GET = withAuth(async (
@@ -106,7 +95,7 @@ export const GET = withAuth(async (
         );
       }
 
-      return new Response(pdfBuffer, {
+      return new Response(new Uint8Array(pdfBuffer), {
         headers: {
           "Content-Type": "application/pdf",
           "Content-Disposition": `inline; filename="${invoice.invoiceNumber || "invoice"}.pdf"`,

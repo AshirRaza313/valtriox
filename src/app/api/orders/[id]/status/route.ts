@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, dbErrorResponse, withRetry } from "@/lib/db";
 import { notFoundOrUnauthorizedResponse } from "@/lib/api-utils";
 import { withAuth, RouteContext } from "@/lib/auth-middleware";
+import { validateBody } from "@/lib/validations/api";
+import { updateOrderStatusSchema } from "@/lib/validations/schemas";
 import logger from "@/lib/logger";
 
 export const PATCH = withAuth(async (
@@ -24,13 +26,14 @@ export const PATCH = withAuth(async (
       return notFoundOrUnauthorizedResponse();
     }
 
-    const { status } = await req.json();
-    if (!status) return NextResponse.json({ error: "Status required" }, { status: 400 });
+    const result = await validateBody(req, updateOrderStatusSchema);
+    if (!result.success) return result.response;
+    const body = result.data;
 
     const order = await withRetry(async () => {
       return db.order.update({
         where: { id },
-        data: { status },
+        data: { status: body.status },
         include: { customer: { select: { name: true } }, items: true },
       });
     }, 2, 500);

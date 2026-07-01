@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, dbErrorResponse, withRetry } from "@/lib/db";
 import { missingOrgIdResponse, notFoundOrUnauthorizedResponse } from "@/lib/api-utils";
 import { withAuth, RouteContext } from "@/lib/auth-middleware";
+import { validateBody } from "@/lib/validations/api";
+import { updateOrderDetailSchema } from "@/lib/validations/schemas";
 import logger from "@/lib/logger";
 
 export const DELETE = withAuth(async (
@@ -93,11 +95,13 @@ export const PATCH = withAuth(async (
       return notFoundOrUnauthorizedResponse();
     }
 
-    const body = await req.json();
+    const result = await validateBody(req, updateOrderDetailSchema);
+    if (!result.success) return result.response;
+    const body = result.data;
 
-    // Only allow certain fields to be updated
-    const allowedFields = ["status", "notes", "courier", "trackingNumber", "priority", "channel"];
-    const updateData: any = {};
+    // Only allow certain fields to be updated (schema-validated)
+    const allowedFields = ["status", "notes", "courier", "trackingNumber", "priority", "channel"] as const;
+    const updateData: Record<string, unknown> = {};
     for (const field of allowedFields) {
       if (body[field] !== undefined) {
         updateData[field] = body[field];

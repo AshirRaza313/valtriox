@@ -66,7 +66,7 @@ export const GET = withRateLimit(withAuth(async (req, authCtx) => {
         organizationId: orgId,
         updatedAt: { gte: twentyFourHoursAgo },
         createdAt: { lt: twentyFourHoursAgo },
-        status: { not: "cancelled", not: "pending" },
+        status: { notIn: ["cancelled", "pending"] },
       },
       include: { customer: { select: { name: true } } },
       orderBy: { updatedAt: "desc" },

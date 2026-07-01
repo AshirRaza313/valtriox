@@ -65,7 +65,7 @@ export const GET = withAuth(async (req: NextRequest) => {
       versionNumber: 1,
       content: currentContent,
       title: proposal.title,
-      totalCost: proposal.totalCost,
+      totalCost: proposal.totalCost ? Number(proposal.totalCost) : null,
       currency: proposal.currency,
       createdAt: proposal.createdAt.toISOString(),
       createdBy: "system",
@@ -143,7 +143,7 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
         // Store acceptance metadata inside content JSON
         let parsedContent: Record<string, unknown> = {};
         try {
-          parsedContent = JSON.parse(updated.content || "{}");
+          parsedContent = JSON.parse(updated?.content || "{}");
         } catch {
           parsedContent = {};
         }
@@ -203,7 +203,7 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
         // Store rejection metadata inside content JSON
         let parsedContent: Record<string, unknown> = {};
         try {
-          parsedContent = JSON.parse(updated.content || "{}");
+          parsedContent = JSON.parse(updated?.content || "{}");
         } catch {
           parsedContent = {};
         }
