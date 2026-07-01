@@ -4,11 +4,18 @@ import { withAuth } from "@/lib/auth-middleware";
 import { sanitizeObject } from "@/lib/sanitize";
 import logger from "@/lib/logger";
 import { withRateLimit } from "@/lib/rate-limit";
+import { markAttendanceSchema } from "@/lib/validations/schemas";
 
 export const POST = withRateLimit(withAuth(async (req, authCtx) => {
   try {
     const body = await req.json();
     Object.assign(body, sanitizeObject(body));
+    // Phase 6: Zod validation
+    const parseResult = markAttendanceSchema.safeParse(body);
+    if (!parseResult.success) {
+      const errors = parseResult.error.issues.map(i => `${i.path.join(".")}: ${i.message}`).join(", ");
+      return NextResponse.json({ error: `Validation failed: ${errors}` }, { status: 422 });
+    }
     const { userId, organizationId, status, clockIn, clockOut, lateReason, leaveReason } = body;
     const orgId = organizationId || authCtx.organizationId;
 

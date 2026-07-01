@@ -3,10 +3,15 @@ import { db, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import { sanitizeObject } from "@/lib/sanitize";
 import logger from "@/lib/logger";
+import { pushSubscribeSchema } from "@/lib/validations/schemas";
 
 // ── Ensure the push_subscriptions table exists (raw SQL for flexibility) ──
 
+// Phase 6: Only create push table ONCE per warm instance, not on every request
+const globalForPush = globalThis as unknown as { __valtrioxPushTableEnsured?: boolean };
+
 async function ensurePushTable() {
+  if (globalForPush.__valtrioxPushTableEnsured) return;
   await db.$executeRawUnsafe(`
     CREATE TABLE IF NOT EXISTS push_subscriptions (
       id            TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
@@ -27,6 +32,7 @@ async function ensurePushTable() {
   } catch {
     // Indexes may already exist, that's fine
   }
+  globalForPush.__valtrioxPushTableEnsured = true;
 }
 
 // ── POST /api/push/subscribe - Save a push subscription ──
@@ -38,6 +44,12 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
 
     const body = await req.json();
     Object.assign(body, sanitizeObject(body));
+    // Phase 6: Zod validation
+    const parseResult = pushSubscribeSchema.safeParse(body);
+    if (!parseResult.success) {
+      const errors = parseResult.error.issues.map(i => `${i.path.join(".")}: ${i.message}`).join(", ");
+      return NextResponse.json({ error: `Validation failed: ${errors}` }, { status: 422 });
+    }
     const { userId, orgId, endpoint, keysAuth, keysP256dh, userAgent } = body;
 
     if (!userId || !endpoint || !keysAuth || !keysP256dh) {
@@ -65,8 +77,9 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
     );
 
     return NextResponse.json({ success: true, message: "Push subscription saved" });
-  } catch (error: any) {
-    console.error("[Push/Subscribe] Error:", error?.message || error);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    logger.error("[Push/Subscribe] Error:", message);
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
@@ -94,8 +107,9 @@ export const DELETE = withAuth(async (req: NextRequest, authCtx) => {
     );
 
     return NextResponse.json({ success: true, message: "Push subscription removed" });
-  } catch (error: any) {
-    console.error("[Push/Subscribe] Delete error:", error?.message || error);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    logger.error("[Push/Subscribe] Delete error:", message);
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }

@@ -133,8 +133,9 @@ export const GET = withAuth(async (req, authCtx) => {
         callInfo: m.callInfoData ? JSON.parse(m.callInfoData) : undefined,
       })),
     });
-  } catch (error: any) {
-    logger.error("Support chat GET error", error);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    logger.error("Support chat GET error", message);
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
@@ -267,8 +268,9 @@ export const POST = withRateLimit(withAuth(async (req, authCtx) => {
         callInfo: message.callInfoData ? JSON.parse(message.callInfoData) : undefined,
       },
     }, { status: 201 });
-  } catch (error: any) {
-    logger.error("Support chat POST error", error);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    logger.error("Support chat POST error", message);
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
@@ -328,8 +330,9 @@ export const DELETE = withAuth(async (req, authCtx) => {
     }, 2, 500);
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    logger.error("Support chat DELETE error", error);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    logger.error("Support chat DELETE error", message);
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }

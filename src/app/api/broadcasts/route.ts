@@ -4,6 +4,7 @@ import { withAuth } from "@/lib/auth-middleware";
 import { sanitizeObject } from "@/lib/sanitize";
 import logger from "@/lib/logger";
 import { withRateLimit } from "@/lib/rate-limit";
+import { createBroadcastSchema } from "@/lib/validations/schemas";
 
 interface Broadcast {
   id: string;
@@ -51,8 +52,9 @@ export const GET = withAuth(async (req, authCtx) => {
 
     const broadcasts = await getBroadcasts(orgId);
     return NextResponse.json({ broadcasts });
-  } catch (error: any) {
-    logger.error("Broadcasts GET error", error, { orgId: authCtx?.organizationId });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    logger.error("Broadcasts GET error", message, { orgId: authCtx?.organizationId });
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
@@ -67,6 +69,12 @@ export const POST = withRateLimit(withAuth(async (req, authCtx) => {
 
     const body = await req.json();
     Object.assign(body, sanitizeObject(body));
+    // Phase 6: Zod validation
+    const parseResult = createBroadcastSchema.safeParse(body);
+    if (!parseResult.success) {
+      const errors = parseResult.error.issues.map(i => `${i.path.join(".")}: ${i.message}`).join(", ");
+      return NextResponse.json({ error: `Validation failed: ${errors}` }, { status: 422 });
+    }
     const { name, channel, targetAudience, message, scheduledAt, status } = body;
 
     if (!name?.trim() || !message?.trim()) {
@@ -91,8 +99,9 @@ export const POST = withRateLimit(withAuth(async (req, authCtx) => {
     await saveBroadcasts(orgId, broadcasts);
 
     return NextResponse.json({ broadcast: newBroadcast }, { status: 201 });
-  } catch (error: any) {
-    logger.error("Broadcasts POST error", error, { orgId: authCtx?.organizationId });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    logger.error("Broadcasts POST error", message, { orgId: authCtx?.organizationId });
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
@@ -119,8 +128,9 @@ export const PUT = withAuth(async (req, authCtx) => {
     await saveBroadcasts(orgId, broadcasts);
 
     return NextResponse.json({ broadcast: broadcasts[idx] });
-  } catch (error: any) {
-    logger.error("Broadcasts PUT error", error, { orgId: authCtx?.organizationId });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    logger.error("Broadcasts PUT error", message, { orgId: authCtx?.organizationId });
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
@@ -145,8 +155,9 @@ export const DELETE = withAuth(async (req, authCtx) => {
     await saveBroadcasts(orgId, filtered);
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    logger.error("Broadcasts DELETE error", error, { orgId: authCtx?.organizationId });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    logger.error("Broadcasts DELETE error", message, { orgId: authCtx?.organizationId });
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }

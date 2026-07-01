@@ -71,8 +71,8 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
         select: { id: true, name: true, createdAt: true, totalSpent: true },
       })),
       safeQuery(() => db.teamInvitation.findMany({
-        where: { organizationId: orgId, createdAt: { gte: timeLimit } },
-        orderBy: { createdAt: "desc" },
+        where: { organizationId: orgId, invitedAt: { gte: timeLimit } },
+        orderBy: { invitedAt: "desc" },
         take: 5,
         select: {
           id: true, inviteeName: true, role: true, status: true,
@@ -147,7 +147,7 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
           type: "customer",
           action: "New customer joined",
           description: `${customer.name} started shopping`,
-          details: customer.totalSpent > 0 ? `Total spent: Rs. ${customer.totalSpent.toLocaleString()}` : "New customer",
+          details: Number(customer.totalSpent) > 0 ? `Total spent: Rs. ${Number(customer.totalSpent).toLocaleString()}` : "New customer",
           icon: "Users",
           timestamp: customer.createdAt.toISOString(),
           meta: { customerId: customer.id },

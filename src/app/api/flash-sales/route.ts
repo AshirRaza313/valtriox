@@ -4,6 +4,7 @@ import { withAuth } from "@/lib/auth-middleware";
 import { sanitizeObject } from "@/lib/sanitize";
 import logger from "@/lib/logger";
 import { withRateLimit } from "@/lib/rate-limit";
+import { createFlashSaleSchema } from "@/lib/validations/schemas";
 
 interface FlashSale {
   id: string;
@@ -68,8 +69,9 @@ export const GET = withAuth(async (req, authCtx) => {
     await saveFlashSales(orgId, sales);
 
     return NextResponse.json({ flashSales: sales });
-  } catch (error: any) {
-    logger.error("FlashSales GET error", error, { orgId: authCtx?.organizationId });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    logger.error("FlashSales GET error", message, { orgId: authCtx?.organizationId });
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
@@ -84,6 +86,12 @@ export const POST = withRateLimit(withAuth(async (req, authCtx) => {
 
     const body = await req.json();
     Object.assign(body, sanitizeObject(body));
+    // Phase 6: Zod validation
+    const parseResult = createFlashSaleSchema.safeParse(body);
+    if (!parseResult.success) {
+      const errors = parseResult.error.issues.map(i => `${i.path.join(".")}: ${i.message}`).join(", ");
+      return NextResponse.json({ error: `Validation failed: ${errors}` }, { status: 422 });
+    }
     const { name, description, productId, discountType, discountValue, startAt, endAt, maxRedemptions } = body;
 
     if (!name?.trim() || !startAt || !endAt) {
@@ -114,8 +122,9 @@ export const POST = withRateLimit(withAuth(async (req, authCtx) => {
     await saveFlashSales(orgId, sales);
 
     return NextResponse.json({ flashSale: newSale }, { status: 201 });
-  } catch (error: any) {
-    logger.error("FlashSales POST error", error, { orgCtx: authCtx?.organizationId });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    logger.error("FlashSales POST error", message, { orgCtx: authCtx?.organizationId });
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
@@ -142,8 +151,9 @@ export const PUT = withAuth(async (req, authCtx) => {
     await saveFlashSales(orgId, sales);
 
     return NextResponse.json({ flashSale: sales[idx] });
-  } catch (error: any) {
-    logger.error("FlashSales PUT error", error, { orgId: authCtx?.organizationId });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    logger.error("FlashSales PUT error", message, { orgId: authCtx?.organizationId });
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
@@ -168,8 +178,9 @@ export const DELETE = withAuth(async (req, authCtx) => {
     await saveFlashSales(orgId, filtered);
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    logger.error("FlashSales DELETE error", error, { orgId: authCtx?.organizationId });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    logger.error("FlashSales DELETE error", message, { orgId: authCtx?.organizationId });
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }

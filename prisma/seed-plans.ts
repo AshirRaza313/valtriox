@@ -126,7 +126,8 @@ async function main() {
       update: { ...plan },
       create: { ...plan },
     });
-    const priceStr = result.price > 0 ? `Rs. ${result.price.toLocaleString()}` : "Custom";
+    // Phase 6: Fixed Decimal comparison — Prisma Decimal doesn't support direct `>` with number
+    const priceStr = Number(result.price) > 0 ? `Rs. ${Number(result.price).toLocaleString()}` : "Custom";
     console.log(`  ✓ ${result.name} — ${priceStr}/${result.period}`);
   }
 

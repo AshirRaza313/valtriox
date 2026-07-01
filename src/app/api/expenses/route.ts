@@ -4,6 +4,7 @@ import { withAuth } from "@/lib/auth-middleware";
 import { sanitizeObject } from "@/lib/sanitize";
 import logger from "@/lib/logger";
 import { withRateLimit } from "@/lib/rate-limit";
+import { createExpenseSchema } from "@/lib/validations/schemas";
 
 export const GET = withAuth(async (req, authCtx) => {
   try {
@@ -35,8 +36,9 @@ expenses = await withRetry(async () => {
       return [result, count];
     }, 2, 500) as [any[], number];
     return NextResponse.json({ expenses: expenses[0] || [], pagination: { page, limit, totalCount: expenses[1] || 0, totalPages: Math.ceil((expenses[1] || 0) / limit) } });
-  } catch (error: any) {
-    logger.error("Expenses GET error", error, { orgId: authCtx?.organizationId });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    logger.error("Expenses GET error", message, { orgId: authCtx?.organizationId });
     if (isDbUnavailable(error)) {
       return NextResponse.json({ expenses: [], fallback: true });
     }
@@ -48,6 +50,12 @@ export const POST = withRateLimit(withAuth(async (req, authCtx) => {
   try {
     const body = await req.json();
     Object.assign(body, sanitizeObject(body));
+    // Phase 6: Zod validation
+    const parseResult = createExpenseSchema.safeParse(body);
+    if (!parseResult.success) {
+      const errors = parseResult.error.issues.map(i => `${i.path.join(".")}: ${i.message}`).join(", ");
+      return NextResponse.json({ error: `Validation failed: ${errors}` }, { status: 422 });
+    }
     const { organizationId, title, amount, category, date, description } = body;
     const orgId = organizationId || authCtx.organizationId;
 
@@ -74,8 +82,9 @@ export const POST = withRateLimit(withAuth(async (req, authCtx) => {
     }, 2, 500);
 
     return NextResponse.json({ expense }, { status: 201 });
-  } catch (error: any) {
-    logger.error("Expenses POST error", error, { orgId: authCtx?.organizationId });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    logger.error("Expenses POST error", message, { orgId: authCtx?.organizationId });
     if (isDbUnavailable(error)) {
       return NextResponse.json({ error: "Database is currently unavailable. Please try again later.", fallback: true }, { status: 503 });
     }

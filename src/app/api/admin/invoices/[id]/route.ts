@@ -16,11 +16,7 @@ const VALID_TRANSITIONS: Record<string, string[]> = {
 };
 
 // ── GET /api/admin/invoices/:id ──
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  return withAuth(async (req, authCtx, ctx) => {
+export const GET = withAuth(async (req: NextRequest, authCtx, ctx: { params: Promise<{ id: string }> }) => {
     logger.info("[Admin Invoice Detail] GET request", {
       userId: authCtx.userId,
       invoiceId: (await ctx.params).id,
@@ -83,19 +79,14 @@ export async function GET(
     }));
 
     return NextResponse.json({ invoice, statusHistory });
-  }, {
-    requireRole: ["platform_owner", "platform_admin"],
-    requireOrg: false,
-  });
-}
+}, {
+  requireRole: ["platform_owner", "platform_admin"],
+  requireOrg: false,
+});
 
 // ── PUT /api/admin/invoices/:id ──
 // Body: { status, dueDate, notes, paidAt, paymentMethod, paymentReference }
-export async function PUT(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  return withAuth(async (req, authCtx, ctx) => {
+export const PUT = withAuth(async (req: NextRequest, authCtx, ctx: { params: Promise<{ id: string }> }) => {
     logger.info("[Admin Invoice Update] PUT request", {
       userId: authCtx.userId,
       invoiceId: (await ctx.params).id,
@@ -256,8 +247,7 @@ export async function PUT(
       invoice: updated,
       message: `Invoice updated successfully`,
     });
-  }, {
-    requireRole: ["platform_owner", "platform_admin"],
-    requireOrg: false,
-  });
-}
+}, {
+  requireRole: ["platform_owner", "platform_admin"],
+  requireOrg: false,
+});

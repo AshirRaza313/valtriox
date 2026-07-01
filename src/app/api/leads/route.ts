@@ -4,6 +4,8 @@ import { sanitizeObject } from "@/lib/sanitize";
 import logger from "@/lib/logger";
 import { sendEmail } from "@/lib/email";
 import { getLeadCaptureEmailHtml } from "@/lib/email-templates";
+import { withRateLimit } from "@/lib/rate-limit";
+import { createLeadSchema } from "@/lib/validations/schemas";
 
 /**
  * Fire-and-forget: send a lead capture confirmation email to the new lead.
@@ -78,11 +80,17 @@ function sendLeadConfirmationEmail(leadEmail: string, leadName: string) {
 }
 
 // POST /api/leads - Submit contact form (PUBLIC - no auth required)
-export async function POST(req: NextRequest) {
+// Phase 6: Added withRateLimit (5 req/min) + Zod validation
+async function leadsPostHandler(req: NextRequest) {
   try {
-    const body = await req.json();
-    const sanitized = sanitizeObject(body);
-
+    const rawBody = await req.json();
+    const sanitized = sanitizeObject(rawBody);
+    // Phase 6: Zod validation for lead submission
+    const parseResult = createLeadSchema.safeParse(sanitized);
+    if (!parseResult.success) {
+      const errors = parseResult.error.issues.map(i => `${i.path.join(".")}: ${i.message}`).join(", ");
+      return NextResponse.json({ error: `Validation failed: ${errors}` }, { status: 422 });
+    }
     const { fullName, email, phone, company, companySize, industry, interest, message, consultationType, calendlyBookingLink } = sanitized;
 
     // Validation
@@ -143,97 +151,10 @@ export async function POST(req: NextRequest) {
         message: "Thank you! Your inquiry has been received. We'll respond within 24 hours.",
         leadId: lead.id,
       });
-    } catch (dbError: any) {
-      // If the Lead table doesn't exist or column is missing, try to fix
-      const errMsg = dbError?.message || "";
-      if (errMsg.includes("does not exist") || errMsg.includes("relation") || errMsg.includes("table") || errMsg.includes("Unknown field") || errMsg.includes("Unknown argument") || errMsg.includes("column")) {
-        logger.warn("[Leads] DB error detected, attempting auto-repair:", errMsg);
-        try {
-          // Create table with ALL columns (including consultation scheduling fields)
-          await db.$executeRawUnsafe(`
-            CREATE TABLE IF NOT EXISTS "Lead" (
-              "id" TEXT NOT NULL,
-              "fullName" TEXT NOT NULL,
-              "email" TEXT NOT NULL,
-              "phone" TEXT,
-              "company" TEXT,
-              "companySize" TEXT,
-              "industry" TEXT,
-              "interest" TEXT,
-              "message" TEXT,
-              "consultationType" TEXT,
-              "preferredDate" TEXT,
-              "preferredTime" TEXT,
-              "timezone" TEXT,
-              "availabilityNote" TEXT,
-              "calendlyBookingLink" TEXT,
-              "status" TEXT NOT NULL DEFAULT 'new',
-              "source" TEXT NOT NULL DEFAULT 'website',
-              "notes" TEXT,
-              "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-              "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-              CONSTRAINT "Lead_pkey" PRIMARY KEY ("id")
-            );
-          `);
-          // Add missing columns individually (safe if they already exist)
-          const alterCols = [
-            'ALTER TABLE "Lead" ADD COLUMN IF NOT EXISTS "consultationType" TEXT',
-            'ALTER TABLE "Lead" ADD COLUMN IF NOT EXISTS "preferredDate" TEXT',
-            'ALTER TABLE "Lead" ADD COLUMN IF NOT EXISTS "preferredTime" TEXT',
-            'ALTER TABLE "Lead" ADD COLUMN IF NOT EXISTS "timezone" TEXT',
-            'ALTER TABLE "Lead" ADD COLUMN IF NOT EXISTS "availabilityNote" TEXT',
-            'ALTER TABLE "Lead" ADD COLUMN IF NOT EXISTS "calendlyBookingLink" TEXT',
-          ];
-          for (const col of alterCols) {
-            try { await db.$executeRawUnsafe(col); } catch { /* column may already exist */ }
-          }
-          logger.info("[Leads] Table repaired successfully, retrying insert...");
-
-          // Retry the lead creation
-          const lead = await withRetry(async () => {
-            return await db.lead.create({
-            data: {
-              fullName: fullName.trim(),
-              email: email.trim().toLowerCase(),
-              phone: phone?.trim() || null,
-              company: company?.trim() || null,
-              companySize: companySize || null,
-              industry: industry || null,
-              interest: interest || null,
-              message: message?.trim() || null,
-              consultationType: consultationType || null,
-              calendlyBookingLink: calendlyBookingLink?.trim() || null,
-              status: "new",
-              source: sanitized.source || "website",
-            },
-          })
-          }, 2, 500);
-
-          logger.info("[Leads] New lead captured after table creation", { leadId: lead.id, email: lead.email });
-
-          // Fire-and-forget: send confirmation email
-          sendLeadConfirmationEmail(lead.email, lead.fullName);
-
-          return NextResponse.json({
-            success: true,
-            message: "Thank you! Your inquiry has been received. We'll respond within 24 hours.",
-            leadId: lead.id,
-          });
-        } catch (retryErr: any) {
-          logger.error("[Leads] Failed to create table or insert lead", retryErr);
-          // Still return success so the user gets a good experience
-          const fallbackEmail = (email as string).trim().toLowerCase();
-          const fallbackName = (fullName as string).trim();
-          if (fallbackEmail) {
-            sendLeadConfirmationEmail(fallbackEmail, fallbackName);
-          }
-          return NextResponse.json({
-            success: true,
-            message: "Thank you! Your inquiry has been received. We'll respond within 24 hours.",
-            fallback: true,
-          });
-        }
-      }
+    } catch (dbError: unknown) {
+      // Phase 6: Removed auto-repair DDL — schema changes must be done via migrations, not in request handlers
+      const errMsg = dbError instanceof Error ? dbError.message : String(dbError);
+      logger.error("[Leads] DB error during lead creation", { error: errMsg });
 
       // Database connection error - still return success for UX
       if (errMsg.includes("DATABASE_URL") || errMsg.includes("connection") || errMsg.includes("ENOTFOUND") || errMsg.includes("ECONNREFUSED") || errMsg.includes("ETIMEDOUT") || errMsg.includes("too many connections") || errMsg.includes("pool")) {
@@ -253,17 +174,20 @@ export async function POST(req: NextRequest) {
 
       throw dbError;
     }
-  } catch (error: any) {
-    logger.error("[Leads] Submit error", { message: error?.message, stack: error?.stack, name: error?.constructor?.name });
+  } catch (error: unknown) {
+    const errMsg = error instanceof Error ? error.message : "Unknown error";
+    logger.error("[Leads] Submit error", { message: errMsg });
     // Still return success for better UX - log lead data for manual processing
-    logger.warn("[Leads] Returning success despite error (UX fallback)", { fullName, email });
- return NextResponse.json({
+    logger.warn("[Leads] Returning success despite error (UX fallback)");
+    return NextResponse.json({
       success: true,
       message: "Thank you! Your inquiry has been received. We'll respond within 24 hours.",
       fallback: true,
     });
   }
 }
+
+export const POST = withRateLimit(leadsPostHandler, { maxRequests: 5, windowSeconds: 60 });
 
 // GET /api/leads - List leads (admin only)
 export { GET } from "@/app/api/admin/leads/route";

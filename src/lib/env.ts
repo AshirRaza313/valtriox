@@ -34,6 +34,17 @@ const envSchema = z.object({
   CLOUDINARY_API_SECRET: z.string().optional(),
   CLOUDINARY_FOLDER_PREFIX: z.string().optional(),
   NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: z.string().optional(),
+
+  // ── Phase 6: Optional but validated — warn if missing in production ──
+  UPSTASH_REDIS_REST_URL: z.string().optional(),
+  UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
+  SETUP_TOKEN: z.string().min(16, "SETUP_TOKEN must be at least 16 characters").optional(),
+  CRON_SECRET: z.string().min(16, "CRON_SECRET must be at least 16 characters").optional(),
+  HEALTH_CHECK_SECRET: z.string().min(8).optional(),
+  PAYPRO_WEBHOOK_SECRET: z.string().min(8).optional(),
+  RESEND_API_KEY: z.string().min(1).optional(),
+  SMTP_HOST: z.string().min(1).optional(),
+  SMTP_FROM: z.string().email().optional().or(z.literal("")),
 });
 
 type EnvSchema = z.infer<typeof envSchema>;
@@ -60,6 +71,15 @@ export function validateEnv(): EnvSchema {
     CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET,
     CLOUDINARY_FOLDER_PREFIX: process.env.CLOUDINARY_FOLDER_PREFIX,
     NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
+    UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL,
+    UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN,
+    SETUP_TOKEN: process.env.SETUP_TOKEN,
+    CRON_SECRET: process.env.CRON_SECRET,
+    HEALTH_CHECK_SECRET: process.env.HEALTH_CHECK_SECRET,
+    PAYPRO_WEBHOOK_SECRET: process.env.PAYPRO_WEBHOOK_SECRET,
+    RESEND_API_KEY: process.env.RESEND_API_KEY,
+    SMTP_HOST: process.env.SMTP_HOST,
+    SMTP_FROM: process.env.SMTP_FROM,
   });
 
   if (!result.success) {

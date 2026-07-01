@@ -5,20 +5,24 @@ const nextConfig: NextConfig = {
   // "standalone" output for Railway deployment
   output: "standalone",
   typescript: {
-    // NOTE: TypeScript 6.0.2 has a known stack overflow issue with large projects
-    // (collectLinkedAliases exceeds max call stack). Keep ignoreBuildErrors enabled
-    // until upstream fix is available. Type safety is enforced via strict: true in tsconfig.json
-    // and ESLint rules. All new code is written with proper types.
+    // Phase 6: Temporarily kept enabled — there are 20+ pre-existing TS errors in the codebase
+    // that were hidden before Phase 6. We've fixed the most critical ones. Track remaining
+    // errors in the Phase 6 tech debt list and resolve incrementally.
+    // TODO(Phase 7): Set to false once all TS errors are resolved.
     ignoreBuildErrors: true,
   },
   reactStrictMode: true, // Enable strict mode for better React practices
   allowedDevOrigins: ["http://localhost:3000"],
   images: {
     remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "**",
-      },
+      // Phase 6: Replaced wildcard with explicit allowlist for security
+      { protocol: "https", hostname: "res.cloudinary.com" },
+      { protocol: "https", hostname: "*.supabase.co" },
+      { protocol: "https", hostname: "valtriox.com" },
+      { protocol: "https", hostname: "www.valtriox.com" },
+      { protocol: "https", hostname: "valtriox-portal.vercel.app" },
+      { protocol: "https", hostname: "lh3.googleusercontent.com" },
+      { protocol: "https", hostname: "avatars.githubusercontent.com" },
     ],
   },
   // Ensure pdfkit is not bundled by webpack (uses native Node.js features)
@@ -136,7 +140,8 @@ const nextConfig: NextConfig = {
           { key: "X-DNS-Prefetch-Control", value: "on" },
           { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
           { key: "X-Content-Type-Options", value: "nosniff" },
-          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          // Phase 6: Changed SAMEORIGIN → DENY to match middleware.ts (no iframing allowed)
+          { key: "X-Frame-Options", value: "DENY" },
           { key: "X-XSS-Protection", value: "1; mode=block" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
@@ -152,14 +157,15 @@ const nextConfig: NextConfig = {
 
 // Wrap with Sentry for automatic error tracking and performance monitoring
 export default withSentryConfig(nextConfig, {
-  // Suppress all source map uploading during build (faster builds)
-  // Set to true in production to enable proper stack traces
+  // Phase 6: Fixed Sentry config — hideSourceMaps renamed to sourcemaps in newer SDK
   silent: true,
-  hideSourceMaps: true,
+  sourcemaps: {
+    disable: true,
+  },
 
   // Automatically tree-shake Sentry logger statements to reduce bundle size
   disableLogger: true,
 
-  // Only enable Sentry in production-like environments
-  disableAutomaticSessionTracking: process.env.NODE_ENV === "development",
+  // Phase 6: Removed invalid Sentry build option — disableAutomaticSessionTracking
+  // is a runtime option, not a build option. Configure it in sentry.client.config.ts instead.
 });

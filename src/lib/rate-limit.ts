@@ -57,19 +57,29 @@ async function getUpstashRatelimit(
 }
 
 // ── In-Memory Fallback (development) ─────────────────────────────────────────
+// Phase 6: Added per-request global rate limiting for serverless without Redis.
+// Each serverless function invocation gets a fresh in-memory store, so we use
+// a "global singleton" pattern via globalThis to persist across warm invocations.
 
 interface RateLimitEntry {
   count: number;
   resetAt: number;
 }
 
-const memoryStore = new Map<string, RateLimitEntry>();
+// Use globalThis to persist across warm serverless invocations
+const globalForRateLimit = globalThis as unknown as {
+  __valtrioxMemoryStore?: Map<string, RateLimitEntry>;
+  __valtrioxCleanupCounter?: number;
+};
+
+const memoryStore = globalForRateLimit.__valtrioxMemoryStore || new Map<string, RateLimitEntry>();
+globalForRateLimit.__valtrioxMemoryStore = memoryStore;
+
+let cleanupCounter = globalForRateLimit.__valtrioxCleanupCounter || 0;
 
 // Phase 5: Removed setInterval — unreliable in serverless.
 // Instead, we do lazy TTL cleanup on each memoryRateLimit call.
 const CLEANUP_THRESHOLD = 1000; // Clean up every N checks
-
-let cleanupCounter = 0;
 
 function cleanupMemoryStore() {
   const now = Date.now();
@@ -195,15 +205,11 @@ function getClientIp(req: NextRequest): string {
   const cfIp = req.headers.get("cf-connecting-ip");
   if (cfIp) return cfIp;
 
-  // Fallback: use User-Agent hash so same client gets rate limited consistently
-  const ua = req.headers.get("user-agent") || "unknown";
-  let hash = 0;
-  for (let i = 0; i < ua.length; i++) {
-    const char = ua.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash;
-  }
-  return `ua-${Math.abs(hash)}`;
+  // Phase 6: Removed User-Agent hash fallback — it was trivially bypassed by
+  // rotating User-Agent headers. If no IP header is available, use a fixed
+  // identifier so rate limiting still works (but logs a warning).
+  console.warn("[RateLimit] No IP header found — rate limiting uses anonymous identifier. Configure your proxy to forward X-Forwarded-For.");
+  return "anonymous-no-ip";
 }
 
 export { getClientIp };

@@ -51,13 +51,14 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
         where: { id: organizationId },
       });
       }, 2, 500);
-    } catch (dbErr: any) {
-      console.error("[Invoice Create] DB findUnique error:", dbErr?.message);
+    } catch (dbErr: unknown) {
+      const dbErrMsg = dbErr instanceof Error ? dbErr.message : "Unknown error";
+      logger.error("[Invoice Create] DB findUnique error:", dbErrMsg);
       if (isDbUnavailable(dbErr)) {
         return NextResponse.json({ error: "Database is currently unavailable. Please try again later.", fallback: true }, { status: 503 });
       }
       // FIX: Never expose internal error details in production
-      const detail = process.env.NODE_ENV === 'production' ? undefined : dbErr?.message;
+      const detail = process.env.NODE_ENV === 'production' ? undefined : dbErrMsg;
       return NextResponse.json(
         { error: "Database error fetching organization", ...(detail ? { details: detail } : {}) },
         { status: 500 }
@@ -80,8 +81,9 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
           where: { organizationId },
         });
       }, 2, 500);
-    } catch (countErr: any) {
-      console.warn("[Invoice Create] Invoice count failed, using 0:", countErr?.message);
+    } catch (countErr: unknown) {
+      const countErrMsg = countErr instanceof Error ? countErr.message : "Unknown error";
+      logger.warn("[Invoice Create] Invoice count failed, using 0:", countErrMsg);
     }
     const invoiceNumber = generateInvoiceNumber(invoiceCount);
 
@@ -114,16 +116,17 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
         },
       });
       }, 2, 500);
-    } catch (createErr: any) {
-      console.error("[Invoice Create] DB create error:", createErr?.message);
-      if (createErr?.code === "P2002") {
+    } catch (createErr: unknown) {
+      const createErrMsg = createErr instanceof Error ? createErr.message : "Unknown error";
+      logger.error("[Invoice Create] DB create error:", createErrMsg);
+      if ((createErr as any)?.code === "P2002") {
         return NextResponse.json({ error: "Invoice number conflict. Please retry." }, { status: 409 });
       }
       if (isDbUnavailable(createErr)) {
         return NextResponse.json({ error: "Database is currently unavailable. Please try again later.", fallback: true }, { status: 503 });
       }
       // FIX: Never expose internal error details in production
-      const createDetail = process.env.NODE_ENV === 'production' ? undefined : createErr?.message;
+      const createDetail = process.env.NODE_ENV === 'production' ? undefined : createErrMsg;
       return NextResponse.json(
         { error: "Failed to create invoice in database", ...(createDetail ? { details: createDetail } : {}) },
         { status: 500 }
@@ -131,13 +134,14 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
     }
 
     return NextResponse.json({ invoice }, { status: 201 });
-  } catch (error: any) {
-    console.error("[Invoice Create] Unhandled error:", error?.message);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    logger.error("[Invoice Create] Unhandled error:", message);
     if (isDbUnavailable(error)) {
       return NextResponse.json({ error: "Database is currently unavailable. Please try again later.", fallback: true }, { status: 503 });
     }
     // FIX: Never expose internal error details in production
-    const unhandledDetail = process.env.NODE_ENV === 'production' ? undefined : error?.message;
+    const unhandledDetail = process.env.NODE_ENV === 'production' ? undefined : message;
     return NextResponse.json({ error: "Failed to create invoice", ...(unhandledDetail ? { details: unhandledDetail } : {}) }, { status: 500 });
   }
 }), { maxRequests: 10, windowSeconds: 60 });

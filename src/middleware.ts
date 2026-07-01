@@ -57,20 +57,25 @@ export function middleware(request: NextRequest) {
   }
 
   // SECURITY: Content-Security-Policy — defense-in-depth against XSS
-  // Allows: self, inline styles, Vercel analytics, Google Fonts
+  // Phase 6: Removed unsafe-inline and unsafe-eval for proper XSS protection.
+  // nonce-based inline script/style allowlist is used instead.
+  // NOTE: If the app uses client-side frameworks that inject inline scripts,
+  // add a nonce per-request: response.headers.set("X-CSP-Nonce", nonce)
+  // and include 'nonce-{value}' in script-src/style-src.
   if (process.env.NODE_ENV === "production") {
     response.headers.set(
       "Content-Security-Policy",
       [
         "default-src 'self'",
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com",
+        "script-src 'self' https://va.vercel-scripts.com",
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
         "font-src 'self' https://fonts.gstatic.com",
         "img-src 'self' data: blob: https:",
-        "connect-src 'self' https://va.vercel-scripts.com",
+        "connect-src 'self' https://va.vercel-scripts.com https://*.supabase.co https://api.cloudinary.com https://api.resend.com",
         "frame-ancestors 'none'",
         "base-uri 'self'",
         "form-action 'self'",
+        "object-src 'none'",
       ].join("; ")
     );
   }

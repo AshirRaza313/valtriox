@@ -45,6 +45,34 @@ const ALLOWED_MIME_TYPES: Record<string, string> = {
   "application/x-rar-compressed": "archive",
 };
 
+// Phase 6: Magic byte validation — verifies file content matches claimed MIME type
+const MAGIC_BYTES: Record<string, number[]> = {
+  "application/pdf": [0x25, 0x50, 0x44, 0x46], // %PDF
+  "image/jpeg": [0xFF, 0xD8, 0xFF],
+  "image/png": [0x89, 0x50, 0x4E, 0x47],
+  "image/gif": [0x47, 0x49, 0x46], // GIF
+  "image/webp": [0x52, 0x49, 0x46, 0x46], // RIFF (WebP container)
+  "application/zip": [0x50, 0x4B, 0x03, 0x04], // PK
+  "application/x-rar-compressed": [0x52, 0x61, 0x72], // Rar
+};
+
+function validateMagicBytes(buffer: Buffer, mimeType: string): boolean {
+  const expected = MAGIC_BYTES[mimeType];
+  if (!expected) return true; // No magic byte check for this type — allow
+  if (buffer.length < expected.length) return false;
+  return expected.every((byte, i) => buffer[i] === byte);
+}
+
+// Phase 6: Filename sanitization — prevents path traversal and XSS in filenames
+function sanitizeFileName(name: string): string {
+  return name
+    .replace(/[<>:"/\\|?*\x00-\x1f]/g, "") // Remove invalid chars
+    .replace(/\.\./g, "")                    // Remove path traversal
+    .replace(/^\s+|\s+$/g, "")              // Trim
+    .substring(0, 255)                       // Limit length
+    || "unnamed-file";                       // Fallback name
+}
+
 // Max file size: 50MB for platform documents
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
 
@@ -72,14 +100,15 @@ export const GET = withAuth(async (_req: NextRequest, authCtx: AuthContext) => {
     }
 
     // Add human-readable size
-    const formatted = files.map((f) => ({
+    const formatted = (files || []).map((f) => ({
       ...f,
       sizeFormatted: formatFileSize(f.fileSize),
     }));
 
     return NextResponse.json({ files: formatted });
-  } catch (error: any) {
-    logger.error("[DocumentFiles] GET error:", error);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    logger.error("[DocumentFiles] GET error:", message);
     return NextResponse.json({ files: [] });
   }
 }, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
@@ -122,6 +151,16 @@ export const POST = withAuth(async (req: NextRequest, authCtx: AuthContext) => {
     // Read file buffer
     const buffer = Buffer.from(await file.arrayBuffer());
 
+    // Phase 6: Validate magic bytes to detect spoofed MIME types
+    if (!validateMagicBytes(buffer, file.type)) {
+      return NextResponse.json({
+        error: `File content does not match the claimed type '${file.type}'. Upload rejected for security.`,
+      }, { status: 400 });
+    }
+
+    // Phase 6: Sanitize filename
+    const safeFileName = sanitizeFileName(file.name);
+
     // Upload to Cloudinary
     // Use "documents" bucket with a platform-specific org ID
     const platformOrgId = "valtriox-platform";
@@ -132,7 +171,7 @@ export const POST = withAuth(async (req: NextRequest, authCtx: AuthContext) => {
       file.name,
       file.type,
       {
-        publicId: `platform-docs/${Date.now()}-${file.name.replace(/\.[^.]+$/, "")}`,
+        publicId: `platform-docs/${Date.now()}-${safeFileName.replace(/\.[^.]+$/, "")}`,
       }
     );
 
@@ -147,9 +186,9 @@ export const POST = withAuth(async (req: NextRequest, authCtx: AuthContext) => {
     const { data: saved, error: dbError } = await safeDbQuery(async () => {
       return await db.platformDocument.create({
         data: {
-          title: title || file.name.replace(/\.[^.]+$/, ""),
+          title: title || safeFileName.replace(/\.[^.]+$/, ""),
           description: description || null,
-          fileName: file.name,
+          fileName: safeFileName,
           fileSize: file.size,
           mimeType: file.type,
           fileType,
@@ -171,6 +210,10 @@ export const POST = withAuth(async (req: NextRequest, authCtx: AuthContext) => {
       return NextResponse.json({ error: "Failed to save file metadata" }, { status: 503 });
     }
 
+    if (!saved) {
+      return NextResponse.json({ error: "Failed to save file metadata" }, { status: 503 });
+    }
+
     logger.info("[DocumentFiles] File uploaded successfully", {
       id: saved.id,
       title: saved.title,
@@ -188,8 +231,9 @@ export const POST = withAuth(async (req: NextRequest, authCtx: AuthContext) => {
       },
       message: "File uploaded successfully!",
     });
-  } catch (error: any) {
-    logger.error("[DocumentFiles] POST error:", error?.message || error);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    logger.error("[DocumentFiles] POST error:", message);
     return NextResponse.json({ error: "Failed to upload file" }, { status: 500 });
   }
 }, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
@@ -237,7 +281,7 @@ export const PUT = withAuth(async (req: NextRequest, authCtx: AuthContext) => {
       });
     }, 2, 500);
 
-    if (error) {
+    if (error || !updated) {
       logger.error("[DocumentFiles] PUT error:", error);
       return NextResponse.json({ error: "Failed to update file metadata" }, { status: 503 });
     }
@@ -249,8 +293,9 @@ export const PUT = withAuth(async (req: NextRequest, authCtx: AuthContext) => {
         sizeFormatted: formatFileSize(updated.fileSize),
       },
     });
-  } catch (error: any) {
-    logger.error("[DocumentFiles] PUT error:", error?.message || error);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    logger.error("[DocumentFiles] PUT error:", message);
     return NextResponse.json({ error: "Failed to update file" }, { status: 500 });
   }
 }, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
@@ -311,8 +356,9 @@ export const DELETE = withAuth(async (req: NextRequest, authCtx: AuthContext) =>
       success: true,
       message: "File deleted successfully",
     });
-  } catch (error: any) {
-    logger.error("[DocumentFiles] DELETE error:", error?.message || error);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    logger.error("[DocumentFiles] DELETE error:", message);
     return NextResponse.json({ error: "Failed to delete file" }, { status: 500 });
   }
 }, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });

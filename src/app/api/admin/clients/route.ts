@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, isDbUnavailable, isSchemaError, withRetry } from "@/lib/db";
+import { db, isDbUnavailable, isSchemaError, withRetry, ensureDb } from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
 import { withRateLimit } from "@/lib/rate-limit";
@@ -202,8 +202,8 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
       const featureMap = getFeatureAccess(planValue);
       const planFeatures = PLAN_FEATURE_MATRIX[planValue] || [];
 
-      // Build the org data with new brand fields
-      const orgData: Record<string, any> = {
+      // Phase 6: Fixed type — use Prisma-compatible type instead of Record<string, any>
+      const orgData = {
         name: cleanBrandName,
         slug,
         email: cleanEmail,
@@ -278,10 +278,11 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
           }),
           3, 500
         );
-      } catch (err: any) {
+      } catch (err: unknown) {
         // Subscription creation failure is non-critical
         // The org and user exist, subscription can be added later
-        logger.warn("[Register Brand] Step 6 warning (subscription creation failed, non-critical):", err?.message, err?.code);
+        const errMsg = err instanceof Error ? err.message : String(err);
+        logger.warn("[Register Brand] Step 6 warning (subscription creation failed, non-critical):", { message: errMsg });
       }
     }
 
@@ -346,7 +347,8 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
     // This creates a trackable record so the team knows a consultation may be needed.
     if (consultationDate || notes) {
       try {
-        const leadData: Record<string, any> = {
+        // Phase 6: Fixed type — removed Record<string, any> for Prisma compatibility
+        const leadData = {
           fullName: cleanName,
           email: cleanEmail,
           phone: phone || null,

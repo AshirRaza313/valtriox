@@ -5,6 +5,7 @@ import { withAuth } from "@/lib/auth-middleware";
 import { sanitizeObject } from "@/lib/sanitize";
 import logger from "@/lib/logger";
 import { withRateLimit } from "@/lib/rate-limit";
+import { pushSendSchema } from "@/lib/validations/schemas";
 
 // ── Configure VAPID ──
 
@@ -14,7 +15,7 @@ function configureVapid(): boolean {
   const subject = process.env.VAPID_SUBJECT || "mailto:noreply@valtriox-portal.vercel.app";
 
   if (!publicKey || !privateKey) {
-    console.warn("[Push] VAPID keys not configured. Push notifications disabled.");
+    logger.warn("[Push] VAPID keys not configured. Push notifications disabled.");
     return false;
   }
 
@@ -24,7 +25,11 @@ function configureVapid(): boolean {
 
 // ── Ensure the push_subscriptions table exists ──
 
+// Phase 6: Only create push table ONCE per warm instance, not on every request
+const globalForPush = globalThis as unknown as { __valtrioxPushTableEnsured?: boolean };
+
 async function ensurePushTable() {
+  if (globalForPush.__valtrioxPushTableEnsured) return;
   await db.$executeRawUnsafe(`
     CREATE TABLE IF NOT EXISTS push_subscriptions (
       id            TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
@@ -37,6 +42,7 @@ async function ensurePushTable() {
       "createdAt"   TIMESTAMPTZ DEFAULT now()
     );
   `);
+  globalForPush.__valtrioxPushTableEnsured = true;
 }
 
 // ── POST /api/push/send - Send a push notification ──
@@ -52,6 +58,12 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
 
     const body = await req.json();
     Object.assign(body, sanitizeObject(body));
+    // Phase 6: Zod validation
+    const parseResult = pushSendSchema.safeParse(body);
+    if (!parseResult.success) {
+      const errors = parseResult.error.issues.map(i => `${i.path.join(".")}: ${i.message}`).join(", ");
+      return NextResponse.json({ error: `Validation failed: ${errors}` }, { status: 422 });
+    }
     const {
       userId,       // Send to a specific user
       orgId,        // Or send to all users in an org
@@ -145,8 +157,9 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
       failed,
       total: subscriptions.length,
     });
-  } catch (error: any) {
-    console.error("[Push/Send] Error:", error?.message || error);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    logger.error("[Push/Send] Error:", message);
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }

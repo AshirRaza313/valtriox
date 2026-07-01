@@ -7,8 +7,9 @@ import { withRateLimit } from "@/lib/rate-limit";
 // GET /api/admin/contact-form - Fetch current form configuration
 export const GET = withRateLimit(withAuth(async (req: NextRequest) => {
   try {
+    // Phase 6: Fixed query — PlatformSettings is a singleton model, no 'key' field
     const setting = await withRetry(async () => {
-      return await db.platformSettings.findFirst({
+      return await db.systemSetting.findUnique({
       where: { key: "contact_form_config" },
     })
     }, 2, 500);
@@ -56,16 +57,18 @@ export const PUT = withRateLimit(withAuth(async (req: NextRequest) => {
       }
     }
 
+    // Phase 6: Fixed query — use SystemSetting model (has key/value), not PlatformSettings
     await withRetry(async () => {
-      return await db.platformSettings.upsert({
+      return await db.systemSetting.upsert({
       where: { key: "contact_form_config" },
       update: { value: JSON.stringify(fields) },
-      create: { key: "contact_form_config", value: JSON.stringify(fields) },
+      create: { key: "contact_form_config", value: JSON.stringify(fields), category: "contact-form" },
     })
     }, 2, 500);
 
     return NextResponse.json({ success: true, fields });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
     logger.error("[Admin Contact Form] PUT error", error);
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);

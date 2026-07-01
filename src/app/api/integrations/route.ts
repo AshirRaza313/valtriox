@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, withRetry, isDbUnavailable, dbErrorResponse } from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import { withRateLimit } from "@/lib/rate-limit";
+import { createIntegrationSchema } from "@/lib/validations/schemas";
+import logger from "@/lib/logger";
 
 // GET /api/integrations?orgId=... — List all integration connections for the org
 export const GET = withAuth(async (req: NextRequest, authCtx) => {
@@ -22,8 +24,9 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
   , 2, 500);
 
     return NextResponse.json({ connections });
-  } catch (error: any) {
-    console.error("[Integrations GET] Error:", error?.message || error);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    logger.error("[Integrations GET] Error:", message);
     if (isDbUnavailable(error)) return dbErrorResponse(error);
     return NextResponse.json({ connections: [] });
   }
@@ -33,6 +36,12 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
 export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   try {
     const body = await req.json();
+    // Phase 6: Zod validation
+    const parseResult = createIntegrationSchema.safeParse(body);
+    if (!parseResult.success) {
+      const errors = parseResult.error.issues.map(i => `${i.path.join(".")}: ${i.message}`).join(", ");
+      return NextResponse.json({ error: `Validation failed: ${errors}` }, { status: 422 });
+    }
     const { type, provider, name, config, metadata } = body;
     const orgId = authCtx.organizationId;
 
@@ -66,8 +75,9 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
     , 2, 500);
 
     return NextResponse.json({ connection });
-  } catch (error: any) {
-    console.error("[Integrations POST] Error:", error?.message || error);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    logger.error("[Integrations POST] Error:", message);
     if (isDbUnavailable(error)) return dbErrorResponse(error);
     return NextResponse.json({ error: "Failed to save integration" }, { status: 500 });
   }
@@ -84,8 +94,9 @@ export async function DELETE(req: NextRequest) {
     }
     await db.integrationConnection.delete({ where: { id } });
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    console.error("[Integrations DELETE] Error:", error?.message || error);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    logger.error("[Integrations DELETE] Error:", message);
     return NextResponse.json({ error: "Failed to disconnect" }, { status: 500 });
   }
 }

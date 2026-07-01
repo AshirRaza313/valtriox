@@ -109,7 +109,7 @@ export const GET = withAuth(async (req: NextRequest) => {
       const daysSince = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
 
       item.daysSinceFollowUp = daysSince;
-      item.lastFollowUpAt = lead.updatedAt;
+      item.lastFollowUpAt = lead.updatedAt.toISOString();
 
       if (daysSince > 3) {
         followUpDue.push(item);
@@ -209,8 +209,8 @@ export const POST = withAuth(async (req: NextRequest) => {
       companyPhone: platformSettings?.companyPhone || null,
     };
 
-    let html: string;
-    let subject: string;
+    let html: string = "";
+    let subject: string = "";
 
     switch (templateType) {
       case "reminder":
