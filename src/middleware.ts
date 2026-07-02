@@ -17,6 +17,32 @@ function generateNonce(): string {
 }
 
 export function middleware(request: NextRequest) {
+  // ── SEO: WWW Canonicalization ──────────────────────────────────────────
+  // Rank Math flagged: "The www and non-www versions of the URL are not
+  // redirected to the same site." Without this redirect, Google may index
+  // both versions separately, splitting PageRank and diluting rankings.
+  // We canonicalize on the non-www apex domain (https://valtriox.com) with a
+  // 301 permanent redirect so all link equity consolidates on one host.
+  // The redirect preserves the path + query string and only fires in
+  // production (next dev often runs on localhost / vercel.app).
+  const host = request.headers.get("host") || "";
+  if (process.env.NODE_ENV === "production" && host === "www.valtriox.com") {
+    const url = request.nextUrl.clone();
+    url.host = "valtriox.com";
+    url.protocol = "https:";
+    const redirect = NextResponse.redirect(url, 301);
+    // Preserve security headers on the redirect itself
+    redirect.headers.set("X-Content-Type-Options", "nosniff");
+    redirect.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+    if (process.env.NODE_ENV === "production") {
+      redirect.headers.set(
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains; preload"
+      );
+    }
+    return redirect;
+  }
+
   const origin = request.headers.get("origin");
 
   // Phase 7: Generate nonce for CSP inline script/style allowlist

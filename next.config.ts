@@ -132,6 +132,62 @@ const nextConfig: NextConfig = {
           { key: "Cache-Control", value: "public, max-age=86400" },
         ],
       },
+      // SEO: Cache static legal & info pages on the CDN.
+      // These pages are pure SSR output (no per-request nonce inside the body —
+      // the nonce only affects the CSP header which is set by middleware, not
+      // the HTML body). Caching at the edge dramatically reduces response time
+      // (Rank Math flagged 3.01s TTFB; CDN-cached pages return in <100ms).
+      // s-maxage = CDN cache lifetime; stale-while-revalidate = serve stale
+      // for up to 1 day while refreshing in the background.
+      {
+        source: "/about",
+        headers: [
+          { key: "Cache-Control", value: "public, s-maxage=3600, stale-while-revalidate=86400" },
+        ],
+      },
+      {
+        source: "/contact",
+        headers: [
+          { key: "Cache-Control", value: "public, s-maxage=3600, stale-while-revalidate=86400" },
+        ],
+      },
+      {
+        source: "/privacy",
+        headers: [
+          { key: "Cache-Control", value: "public, s-maxage=86400, stale-while-revalidate=604800" },
+        ],
+      },
+      {
+        source: "/terms",
+        headers: [
+          { key: "Cache-Control", value: "public, s-maxage=86400, stale-while-revalidate=604800" },
+        ],
+      },
+      {
+        source: "/cookies",
+        headers: [
+          { key: "Cache-Control", value: "public, s-maxage=86400, stale-while-revalidate=604800" },
+        ],
+      },
+      {
+        source: "/refund",
+        headers: [
+          { key: "Cache-Control", value: "public, s-maxage=86400, stale-while-revalidate=604800" },
+        ],
+      },
+      // Sitemap & robots — short cache so updates propagate within an hour
+      {
+        source: "/sitemap.xml",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=3600" },
+        ],
+      },
+      {
+        source: "/robots.txt",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=3600" },
+        ],
+      },
       // Security headers for all other routes
       // NOTE: CSP, HSTS, X-Frame-Options are set by middleware.ts with nonce support.
       // Only set supplementary headers here to avoid conflicts.
@@ -149,6 +205,9 @@ const nextConfig: NextConfig = {
   },
   // Redirect www to non-www and HTTP to HTTPS (handled by Vercel, but good practice)
   async redirects() {
+    // SEO: WWW Canonicalization is handled in middleware.ts (host-based redirect
+    // needs the request Host header, which next.config.ts redirects can't see).
+    // Keeping this array empty to avoid duplicate/conflicting redirect logic.
     return [];
   },
 };

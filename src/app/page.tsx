@@ -67,18 +67,29 @@ const FeatureLockedOverlay = dynamic(
   { ssr: false }
 );
 
-// ── Landing Page Components (dynamic - defers framer-motion from initial bundle) ──
+// ── Landing Page Components ──
+// SEO NOTE: These are intentionally NOT marked `ssr: false`.
+// Earlier they were dynamic-imported with { ssr: false } which meant the
+// initial server-rendered HTML contained NO H1 / H2 / text content — only
+// an empty <div> that filled in after hydration. Rank Math's crawler
+// (and any crawler that doesn't execute JS) therefore reported:
+//   ✘ No H1 tag was found.
+//   ⚠ No H2 tag was found on the page.
+// Removing `ssr: false` keeps the dynamic import (code-splitting benefit)
+// but enables SSR so the H1 in <Hero/> and the H2s in <Features/>, <About/>,
+// <HowItWorks/>, <Pricing/>, <Testimonials/>, <FAQ/>, <CTASection/> are
+// present in the initial HTML that search engines receive.
 import { Footer } from "@/components/brandflow/landing/Footer";
-const Navbar = dynamic(() => import("@/components/brandflow/landing/Navbar").then(m => ({ default: m.Navbar })), { ssr: false });
-const Hero = dynamic(() => import("@/components/brandflow/landing/Hero").then(m => ({ default: m.Hero })), { ssr: false });
-const Features = dynamic(() => import("@/components/brandflow/landing/Features").then(m => ({ default: m.Features })), { ssr: false });
-const About = dynamic(() => import("@/components/brandflow/landing/About").then(m => ({ default: m.About })), { ssr: false });
-const HowItWorks = dynamic(() => import("@/components/brandflow/landing/HowItWorks").then(m => ({ default: m.HowItWorks })), { ssr: false });
-const SocialProof = dynamic(() => import("@/components/brandflow/landing/SocialProof").then(m => ({ default: m.SocialProof })), { ssr: false });
-const Pricing = dynamic(() => import("@/components/brandflow/landing/Pricing").then(m => ({ default: m.Pricing })), { ssr: false });
-const Testimonials = dynamic(() => import("@/components/brandflow/landing/Testimonials").then(m => ({ default: m.Testimonials })), { ssr: false });
-const FAQ = dynamic(() => import("@/components/brandflow/landing/FAQ").then(m => ({ default: m.FAQ })), { ssr: false });
-const CTASection = dynamic(() => import("@/components/brandflow/landing/CTASection").then(m => ({ default: m.CTASection })), { ssr: false });
+const Navbar = dynamic(() => import("@/components/brandflow/landing/Navbar").then(m => ({ default: m.Navbar })));
+const Hero = dynamic(() => import("@/components/brandflow/landing/Hero").then(m => ({ default: m.Hero })));
+const Features = dynamic(() => import("@/components/brandflow/landing/Features").then(m => ({ default: m.Features })));
+const About = dynamic(() => import("@/components/brandflow/landing/About").then(m => ({ default: m.About })));
+const HowItWorks = dynamic(() => import("@/components/brandflow/landing/HowItWorks").then(m => ({ default: m.HowItWorks })));
+const SocialProof = dynamic(() => import("@/components/brandflow/landing/SocialProof").then(m => ({ default: m.SocialProof })));
+const Pricing = dynamic(() => import("@/components/brandflow/landing/Pricing").then(m => ({ default: m.Pricing })));
+const Testimonials = dynamic(() => import("@/components/brandflow/landing/Testimonials").then(m => ({ default: m.Testimonials })));
+const FAQ = dynamic(() => import("@/components/brandflow/landing/FAQ").then(m => ({ default: m.FAQ })));
+const CTASection = dynamic(() => import("@/components/brandflow/landing/CTASection").then(m => ({ default: m.CTASection })));
 
 // ── Legal Pages ──
 import { PrivacyPolicyPage } from "@/components/brandflow/legal/PrivacyPolicyPage";

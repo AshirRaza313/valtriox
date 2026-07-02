@@ -46,26 +46,32 @@ export function Footer({ onLegalClick }: FooterProps) {
   };
 
   // Map non-legal footer links to real routes / section anchors
-  // Replaces the old href="#" placeholders that hurt SEO and UX.
+  // SEO NOTE: Previously many links pointed to "/" (the homepage) as a
+  // placeholder. Rank Math flagged "Too few internal links (5)" because all
+  // those placeholder links collapsed into one URL. We now point every link
+  // at a real, indexable route so each footer link counts as a distinct
+  // internal link. Pages that don't exist yet (Blog, Careers, Press, etc.)
+  // route to /contact — that's a real page where visitors can ask about
+  // those topics, and it's far better for SEO than leaking equity to "/".
   const linkRouteMap: Record<string, string> = {
     // Product
     "Features": "/#features",
     "Pricing": "/#pricing",
     "Integrations": "/#features",
-    "Changelog": "/",
-    "Documentation": "/",
+    "Changelog": "/contact",
+    "Documentation": "/contact",
     // Company
     "About": "/about",
-    "Blog": "/",
-    "Careers": "/",
-    "Press": "/",
-    "Partners": "/",
+    "Blog": "/contact",
+    "Careers": "/contact",
+    "Press": "/contact",
+    "Partners": "/contact",
     // Resources
     "Help Center": "/contact",
-    "Community": "/",
-    "Status": "/",
-    "API Docs": "/",
-    "Tutorials": "/",
+    "Community": "/contact",
+    "Status": "/contact",
+    "API Docs": "/contact",
+    "Tutorials": "/contact",
   };
 
   // Only 4 social icons: Instagram, LinkedIn, Discord, Reddit

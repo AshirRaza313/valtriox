@@ -37,8 +37,10 @@ export const viewport: Viewport = {
 };
 
 const SITE_URL = "https://valtriox.com";
+// SEO: Shortened to <=160 chars so search engines don't truncate.
+// Previously 223 chars — Rank Math flagged this in SEO audit.
 const SITE_DESCRIPTION =
-  "The universal brand operating system for modern businesses. Founded and built by Muhammad Ashir Raza. Command every aspect of your brand (orders, inventory, customers, marketing, analytics) from a single, powerful platform.";
+  "The universal brand operating system for modern businesses. Manage orders, inventory, customers, marketing, and analytics from one powerful platform.";
 const SITE_TITLE = "Valtriox | Command Your Brand Universe";
 const SITE_OG_TITLE = "Valtriox | Command Your Brand Universe | by Muhammad Ashir Raza";
 const SITE_OG_DESCRIPTION =
@@ -180,23 +182,78 @@ export default async function RootLayout({
             </Script>
           </>
         )}
-        {/* JSON-LD Structured Data — Organization, WebSite, SoftwareApplication, Person */}
-        <Script id="ld-org" type="application/ld+json" strategy="beforeInteractive" nonce={nonce}>
-          {JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "Organization",
-            name: "Valtriox",
-            url: "https://valtriox.com",
-            logo: "https://valtriox.com/valtriox-logo.png",
-            description: SITE_DESCRIPTION,
-            foundingDate: "2025",
-            founder: {
+        {/*
+          JSON-LD Structured Data — Organization, WebSite, SoftwareApplication, Person.
+          SEO CRITICAL: We render these as raw <script> tags with dangerouslySetInnerHTML
+          (NOT next/script <Script> components). The next/script <Script> component
+          with strategy="beforeInteractive" pushes the JSON-LD into the RSC stream
+          (self.__next_s.push(...)) instead of emitting a real <script type="application/ld+json">
+          tag in the initial HTML. As a result, Rank Math and other schema validators
+          that don't execute JS reported "No Schema.org data found on the page."
+          Raw <script> tags are SSR'd as proper HTML and are immediately parseable
+          by every crawler, validator, and search engine.
+        */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Organization",
+              name: "Valtriox",
+              url: "https://valtriox.com",
+              logo: "https://valtriox.com/valtriox-logo.png",
+              description: SITE_DESCRIPTION,
+              foundingDate: "2025",
+              founder: {
+                "@type": "Person",
+                name: "Muhammad Ashir Raza",
+                url: FOUNDER_LINKEDIN,
+                jobTitle: "Founder & Lead Developer",
+                email: "ashir@valtriox.com",
+                nationality: "Pakistani",
+                knowsAbout: [
+                  "Full-Stack Development",
+                  "SaaS Architecture",
+                  "Brand Management Software",
+                  "Next.js",
+                  "TypeScript",
+                  "PostgreSQL",
+                  "Multi-tenant Systems",
+                ],
+              },
+              email: "ashir@valtriox.com",
+              contactPoint: {
+                "@type": "ContactPoint",
+                contactType: "customer support",
+                email: "ashir@valtriox.com",
+                availableLanguage: ["English"],
+              },
+              sameAs: [
+                "https://instagram.com/valtriox",
+                "https://facebook.com/valtriox",
+                "https://twitter.com/valtriox",
+                "https://linkedin.com/company/valtriox",
+              ],
+            }),
+          }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
               "@type": "Person",
               name: "Muhammad Ashir Raza",
               url: FOUNDER_LINKEDIN,
-              jobTitle: "Founder & Lead Developer",
+              jobTitle: "Founder & Lead Developer at Valtriox",
               email: "ashir@valtriox.com",
               nationality: "Pakistani",
+              worksFor: {
+                "@type": "Organization",
+                name: "Valtriox",
+                url: "https://valtriox.com",
+              },
+              sameAs: [FOUNDER_LINKEDIN],
               knowsAbout: [
                 "Full-Stack Development",
                 "SaaS Architecture",
@@ -206,100 +263,67 @@ export default async function RootLayout({
                 "PostgreSQL",
                 "Multi-tenant Systems",
               ],
-            },
-            email: "ashir@valtriox.com",
-            contactPoint: {
-              "@type": "ContactPoint",
-              contactType: "customer support",
-              email: "ashir@valtriox.com",
-              availableLanguage: ["English"],
-            },
-            sameAs: [
-              "https://instagram.com/valtriox",
-              "https://facebook.com/valtriox",
-              "https://twitter.com/valtriox",
-              "https://linkedin.com/company/valtriox",
-            ],
-          })}
-        </Script>
-        <Script id="ld-person" type="application/ld+json" strategy="beforeInteractive" nonce={nonce}>
-          {JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "Person",
-            name: "Muhammad Ashir Raza",
-            url: FOUNDER_LINKEDIN,
-            jobTitle: "Founder & Lead Developer at Valtriox",
-            email: "ashir@valtriox.com",
-            nationality: "Pakistani",
-            worksFor: {
-              "@type": "Organization",
+            }),
+          }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "SoftwareApplication",
+              name: "Valtriox",
+              applicationCategory: "BusinessApplication",
+              operatingSystem: "Web",
+              url: "https://valtriox.com",
+              description: SITE_DESCRIPTION,
+              author: {
+                "@type": "Person",
+                name: "Muhammad Ashir Raza",
+                url: FOUNDER_LINKEDIN,
+                jobTitle: "Founder & Lead Developer",
+              },
+              offers: {
+                "@type": "Offer",
+                price: "7999",
+                priceCurrency: "PKR",
+                description: "Starter plan: Brand Dashboard (Basic), 3 Marketing Channels, Standard Analytics.",
+              },
+              aggregateRating: {
+                "@type": "AggregateRating",
+                ratingValue: "4.8",
+                reviewCount: "127",
+              },
+              featureList: [
+                "Brand Dashboard",
+                "Order Management",
+                "Customer Management",
+                "Inventory Management",
+                "Team Collaboration",
+                "Marketing Automation",
+                "Analytics & Reports",
+                "Multi-channel Integration",
+              ],
+            }),
+          }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "WebSite",
               name: "Valtriox",
               url: "https://valtriox.com",
-            },
-            sameAs: [FOUNDER_LINKEDIN],
-            knowsAbout: [
-              "Full-Stack Development",
-              "SaaS Architecture",
-              "Brand Management Software",
-              "Next.js",
-              "TypeScript",
-              "PostgreSQL",
-              "Multi-tenant Systems",
-            ],
-          })}
-        </Script>
-        <Script id="ld-software" type="application/ld+json" strategy="beforeInteractive" nonce={nonce}>
-          {JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "SoftwareApplication",
-            name: "Valtriox",
-            applicationCategory: "BusinessApplication",
-            operatingSystem: "Web",
-            url: "https://valtriox.com",
-            description: SITE_DESCRIPTION,
-            author: {
-              "@type": "Person",
-              name: "Muhammad Ashir Raza",
-              url: FOUNDER_LINKEDIN,
-              jobTitle: "Founder & Lead Developer",
-            },
-            offers: {
-              "@type": "Offer",
-              price: "7999",
-              priceCurrency: "PKR",
-              description: "Starter plan: Brand Dashboard (Basic), 3 Marketing Channels, Standard Analytics.",
-            },
-            aggregateRating: {
-              "@type": "AggregateRating",
-              ratingValue: "4.8",
-              reviewCount: "127",
-            },
-            featureList: [
-              "Brand Dashboard",
-              "Order Management",
-              "Customer Management",
-              "Inventory Management",
-              "Team Collaboration",
-              "Marketing Automation",
-              "Analytics & Reports",
-              "Multi-channel Integration",
-            ],
-          })}
-        </Script>
-        <Script id="ld-website" type="application/ld+json" strategy="beforeInteractive" nonce={nonce}>
-          {JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "WebSite",
-            name: "Valtriox",
-            url: "https://valtriox.com",
-            description: SITE_DESCRIPTION,
-            potentialAction: {
-              "@type": "SearchAction",
-              target: "https://valtriox.com/?q={search_term_string}",
-              "query-input": "required name=search_term_string",
-            },
-          })}
-        </Script>
+              description: SITE_DESCRIPTION,
+              potentialAction: {
+                "@type": "SearchAction",
+                target: "https://valtriox.com/?q={search_term_string}",
+                "query-input": "required name=search_term_string",
+              },
+            }),
+          }}
+        />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${cinzel.variable} antialiased bg-background text-foreground`}
