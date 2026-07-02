@@ -9,8 +9,18 @@ const ALLOWED_ORIGINS = [
   "https://valtriox-portal.vercel.app",
 ].filter(Boolean) as string[];
 
+// Generate a cryptographically random nonce for CSP
+function generateNonce(): string {
+  const bytes = new Uint8Array(18);
+  crypto.getRandomValues(bytes);
+  return Buffer.from(bytes).toString("base64");
+}
+
 export function middleware(request: NextRequest) {
   const origin = request.headers.get("origin");
+
+  // Phase 7: Generate nonce for CSP inline script/style allowlist
+  const nonce = generateNonce();
 
   // Phase 5: Generate request correlation ID for tracing
   const requestId = request.headers.get("X-Request-ID") || crypto.randomUUID();
@@ -32,7 +42,16 @@ export function middleware(request: NextRequest) {
     return response;
   }
 
-  const response = NextResponse.next();
+  // Use NextResponse.next() with headers to pass nonce to RSC/SSR
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-nonce", nonce);
+  requestHeaders.set("X-Request-ID", requestId);
+
+  const response = NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  });
 
   // Set CORS headers for allowed origins
   if (origin && ALLOWED_ORIGINS.includes(origin)) {
@@ -57,25 +76,26 @@ export function middleware(request: NextRequest) {
   }
 
   // SECURITY: Content-Security-Policy — defense-in-depth against XSS
-  // Phase 6: Removed unsafe-inline from style-src. Tailwind CSS generates
-  // scoped class-based styles (no inline styles needed), and Next.js injects
-  // only a small set of inline styles for hydration which are covered by
-  // the hash-based allowlist below. unsafe-eval was already removed.
+  // Phase 7: Nonce-based CSP — every request gets a unique nonce that allows
+  // only our legitimate inline scripts (Next.js hydration, Meta Pixel, GA, etc.)
+  // to execute. This is MORE secure than 'unsafe-inline' because:
+  //   1. Attackers cannot inject scripts without the nonce
+  //   2. The nonce changes per request, preventing replay attacks
+  //   3. Only server-rendered scripts with the correct nonce execute
   //
-  // NOTE: If a third-party script breaks due to CSP, add its domain to the
-  // appropriate directive rather than relaxing the policy globally.
+  // 'strict-dynamic' allows scripts loaded by trusted scripts to also run,
+  // which handles third-party script chains (e.g., Facebook Pixel loading sub-scripts).
   if (process.env.NODE_ENV === "production") {
     response.headers.set(
       "Content-Security-Policy",
       [
         "default-src 'self'",
-        "script-src 'self' https://va.vercel-scripts.com https://connect.facebook.net https://www.googletagmanager.com",
-        // unsafe-inline removed from style-src; Tailwind uses class-based styles.
-        // Google Fonts @import is handled via <link> tags, not inline styles.
-        "style-src 'self' https://fonts.googleapis.com",
+        `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://va.vercel-scripts.com https://connect.facebook.net https://www.googletagmanager.com`,
+        // Nonce for style-src allows Next.js injected styles + Tailwind
+        `style-src 'self' 'nonce-${nonce}' https://fonts.googleapis.com`,
         "font-src 'self' https://fonts.gstatic.com",
         "img-src 'self' data: blob: https: https://www.facebook.com",
-        "connect-src 'self' https://va.vercel-scripts.com https://*.supabase.co https://api.cloudinary.com https://api.resend.com https://www.facebook.com https://www.google-analytics.com",
+        "connect-src 'self' https://va.vercel-scripts.com https://*.supabase.co https://api.cloudinary.com https://api.resend.com https://www.facebook.com https://www.google-analytics.com https://graph.facebook.com",
         "frame-src https://www.facebook.com",
         "frame-ancestors 'none'",
         "base-uri 'self'",

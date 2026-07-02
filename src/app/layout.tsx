@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Cinzel } from "next/font/google";
 import Script from "next/script";
+import { headers } from "next/headers";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { PlatformIdentityProvider } from "@/lib/platform-identity";
@@ -71,11 +72,14 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Phase 7: Read CSP nonce from middleware header for secure inline scripts
+  const nonce = (await headers()).get("x-nonce") || undefined;
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -87,7 +91,7 @@ export default function RootLayout({
         {/* Meta Pixel - fires fbq('track', 'Lead') on Thank You page */}
         {process.env.NEXT_PUBLIC_META_PIXEL_ID && (
           <>
-            <Script id="meta-pixel" strategy="afterInteractive">
+            <Script id="meta-pixel" strategy="afterInteractive" nonce={nonce}>
               {`
                 !function(f,b,e,v,n,t,s)
                 {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
@@ -116,8 +120,8 @@ export default function RootLayout({
         {/* Google Analytics - fires gtag('event', 'generate_lead') on Thank You page */}
         {process.env.NEXT_PUBLIC_GA_ID && (
           <>
-            <Script src={`https://www.googletagmanager.com/gtag/js?id=${process.env.NEXT_PUBLIC_GA_ID}`} strategy="afterInteractive" />
-            <Script id="google-analytics" strategy="afterInteractive">
+            <Script src={`https://www.googletagmanager.com/gtag/js?id=${process.env.NEXT_PUBLIC_GA_ID}`} strategy="afterInteractive" nonce={nonce} />
+            <Script id="google-analytics" strategy="afterInteractive" nonce={nonce}>
               {`
                 window.dataLayer = window.dataLayer || [];
                 function gtag(){dataLayer.push(arguments);}
@@ -137,7 +141,7 @@ export default function RootLayout({
             {children}
           </PlatformIdentityProvider>
         </ReactQueryProvider>
-        <ServiceWorkerRegistrar />
+        <ServiceWorkerRegistrar nonce={nonce} />
         <Toaster position="top-right" richColors />
       </body>
     </html>

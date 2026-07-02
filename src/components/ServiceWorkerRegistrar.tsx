@@ -6,7 +6,7 @@ import { useEffect } from "react";
  * ServiceWorkerRegistrar - registers the Valtriox PWA service worker
  * on mount. Must be a client component placed inside <body>.
  */
-export function ServiceWorkerRegistrar() {
+export function ServiceWorkerRegistrar({ nonce }: { nonce?: string }) {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (!("serviceWorker" in navigator)) return;
