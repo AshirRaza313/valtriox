@@ -176,7 +176,7 @@ export const GET = withRateLimit(withAuth(async (req, authCtx) => {
       notifications,
       unreadCount,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("Fetch notifications error", error, { orgId: authCtx?.organizationId });
     if (isDbUnavailable(error)) {
       return NextResponse.json({ notifications: [], unreadCount: 0, fallback: true });

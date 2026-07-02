@@ -16,7 +16,7 @@ import { withRateLimit } from "@/lib/rate-limit";
 //   ?mode=messages       → get messages for their own org's conversation
 // ============================================================================
 
-export const GET = withAuth(async (req, authCtx) => {
+export const GET = withRateLimit(withAuth(async (req, authCtx) => {
   try {
     const { searchParams } = new URL(req.url);
     const mode = searchParams.get("mode") || "messages";
@@ -141,7 +141,7 @@ export const GET = withAuth(async (req, authCtx) => {
     }
     return NextResponse.json({ error: "Failed to fetch support messages" }, { status: 500 });
   }
-});
+}), { maxRequests: 60, windowSeconds: 60 });
 
 // ============================================================================
 // POST /api/support-chat
@@ -202,6 +202,9 @@ export const POST = withRateLimit(withAuth(async (req, authCtx) => {
     }
 
     // ── Determine sender info ──
+    // Phase 7: Derive sender identity from auth context, not client body.
+    // Previously body.senderName/body.senderAvatar were trusted, allowing
+    // users to impersonate admins or other users in chat.
     let senderId: string;
     let senderName: string;
     let senderAvatar: string | undefined;
@@ -209,13 +212,13 @@ export const POST = withRateLimit(withAuth(async (req, authCtx) => {
 
     if (platformAdmin) {
       senderId = "admin-valtriox";
-      senderName = body.senderName || "Platform Admin";
+      senderName = "Platform Admin";
       senderAvatar = undefined;
       senderRole = "platform_admin";
     } else {
       senderId = authCtx.userId;
-      senderName = body.senderName || authCtx.email || "Client";
-      senderAvatar = body.senderAvatar;
+      senderName = authCtx.email || "Client";
+      senderAvatar = undefined; // Phase 7: Don't trust client-supplied avatar
       senderRole = authCtx.role || "brand_owner";
     }
 
@@ -284,7 +287,7 @@ export const POST = withRateLimit(withAuth(async (req, authCtx) => {
 // Delete a message and insert a system message in its place.
 // ============================================================================
 
-export const DELETE = withAuth(async (req, authCtx) => {
+export const DELETE = withRateLimit(withAuth(async (req, authCtx) => {
   try {
     const { searchParams } = new URL(req.url);
     const messageId = searchParams.get("messageId");
@@ -338,4 +341,4 @@ export const DELETE = withAuth(async (req, authCtx) => {
     }
     return NextResponse.json({ error: "Failed to delete message" }, { status: 500 });
   }
-});
+}), { maxRequests: 30, windowSeconds: 60 });

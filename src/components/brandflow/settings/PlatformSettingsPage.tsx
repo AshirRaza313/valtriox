@@ -409,7 +409,7 @@ export function PlatformSettingsPage() {
 
   const DEFAULT_SETTINGS_FALLBACK: PlatformSettingsData = {
     companyName: "Valtriox",
-    companyEmail: "ashir@valtriox.com",
+    companyEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@valtriox.com",
     companyPhone: "",
     companyWebsite: "",
     companyAddress: "",
@@ -1202,7 +1202,7 @@ export function PlatformSettingsPage() {
                     </Label>
                     <Input
                       type="email"
-                      placeholder="ashir@valtriox.com"
+                      placeholder="support@valtriox.com"
                       value={settings.companyEmail}
                       onChange={(e) => setSettings((p) => ({ ...p, companyEmail: e.target.value }))}
                       className={inputBg}

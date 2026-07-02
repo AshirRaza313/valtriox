@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { dbErrorResponse, db, isDbUnavailable, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
+import { withRateLimit } from "@/lib/rate-limit";
 import logger from "@/lib/logger";
 import { Prisma } from "@prisma/client";
 
 // GET /api/admin/clients/[id]/orders - Admin-only: paginated orders for an organization
-export const GET = withAuth(async (req: NextRequest, authCtx, context) => {
+export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx, context) => {
   const { id } = await context.params;
   logger.info("[Admin Client Orders] GET request", { userId: authCtx.userId, clientId: id });
   try {
@@ -118,11 +119,11 @@ export const GET = withAuth(async (req: NextRequest, authCtx, context) => {
         totalDiscount: parseFloat(revenue.discount) || 0,
       },
     });
-  } catch (error: any) {
-    console.error("Admin client orders API error:", error?.message || error);
+  } catch (error: unknown) {
+    logger.error("Admin client orders API error:", error);
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
-    return NextResponse.json({ error: "Failed to fetch client orders", details: process.env.NODE_ENV === "production" ? undefined : error?.message }, { status: 500 });
+    return NextResponse.json({ error: "Failed to fetch client orders", details: undefined }, { status: 500 });
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 30, windowSeconds: 60 });

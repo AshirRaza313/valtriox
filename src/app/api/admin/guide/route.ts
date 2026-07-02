@@ -28,14 +28,14 @@ export const GET = withRateLimit(withAuth(async (_req: NextRequest, authCtx) => 
           return NextResponse.json({ content: parsed, source: "db" });
         }
         // CORRUPT DATA: Delete it so client uses defaults
-        console.warn("[Guide API] Found corrupt guide data in DB, auto-deleting");
+        logger.warn("[Guide API] Found corrupt guide data in DB, auto-deleting");
         await withRetry(async () => {
           return await db.systemSetting.delete({ where: { key: GUIDE_KEY } }).catch(() => {})
         }, 2, 500);
         return NextResponse.json({ content: null, source: "defaults", corruptDeleted: true });
       } catch {
         // JSON parse failed - data is corrupted, delete it
-        console.warn("[Guide API] Guide data JSON parse failed, auto-deleting");
+        logger.warn("[Guide API] Guide data JSON parse failed, auto-deleting");
         await withRetry(async () => {
           return await db.systemSetting.delete({ where: { key: GUIDE_KEY } }).catch(() => {})
         }, 2, 500);
@@ -43,8 +43,8 @@ export const GET = withRateLimit(withAuth(async (_req: NextRequest, authCtx) => 
       }
     }
     return NextResponse.json({ content: null, source: "defaults" });
-  } catch (error: any) {
-    console.error("Fetch guide error:", error?.message || error);
+  } catch (error: unknown) {
+    logger.error("Fetch guide error:", error);
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
@@ -87,8 +87,8 @@ export const PUT = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
     }
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    console.error("Save guide error:", error?.message || error);
+  } catch (error: unknown) {
+    logger.error("Save guide error:", error);
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }

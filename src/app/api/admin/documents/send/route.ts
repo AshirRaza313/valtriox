@@ -16,10 +16,24 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db, withRetry, safeDbQuery } from "@/lib/db";
-import { sanitizeObject } from "@/lib/sanitize";
 import { sendEmail } from "@/lib/email";
 import { withAuth, AuthContext } from "@/lib/auth-middleware";
+import { withRateLimit } from "@/lib/rate-limit";
 import logger from "@/lib/logger";
+import { z } from "zod";
+import { validateBody } from "@/lib/validations";
+import { formatFileSize } from "@/lib/utils";
+
+// Inline schema for sending documents to clients
+const sendDocumentSchema = z.object({
+  documentKey: z.string().max(200).optional(),
+  fileId: z.string().max(100).optional(),
+  clientOrgId: z.string().min(1).max(50),
+  placeholders: z.record(z.string(), z.string().max(500)).optional(),
+  message: z.string().max(5000).optional(),
+}).refine(data => data.documentKey || data.fileId, {
+  message: "Either documentKey or fileId is required",
+});
 
 export const maxDuration = 30;
 
@@ -27,19 +41,11 @@ export const maxDuration = 30;
 // POST - Send document/file to a client via email
 // ═══════════════════════════════════════════════════════════════════════════
 
-export const POST = withAuth(async (req: NextRequest, authCtx: AuthContext) => {
+export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx: AuthContext) => {
   try {
-    const body = await req.json();
-    const sanitized = sanitizeObject(body);
-    const { documentKey, fileId, clientOrgId, placeholders, message } = sanitized;
-
-    if (!clientOrgId) {
-      return NextResponse.json({ error: "Client organization ID is required" }, { status: 400 });
-    }
-
-    if (!documentKey && !fileId) {
-      return NextResponse.json({ error: "Either documentKey or fileId is required" }, { status: 400 });
-    }
+    const bodyResult = await validateBody(req, sendDocumentSchema);
+    if (!bodyResult.success) return bodyResult.response;
+    const { documentKey, fileId, clientOrgId, placeholders, message } = bodyResult.data;
     // ─── Fetch Client Organization ─────────────────────────────────────────
     const { data: org, error: orgError } = await safeDbQuery(async () => {
       return await db.organization.findUnique({
@@ -95,7 +101,7 @@ export const POST = withAuth(async (req: NextRequest, authCtx: AuthContext) => {
           to: recipientEmail,
           subject: `${parsed.title || "Document"} from Valtriox`,
           html: buildTextDocumentEmail(parsed.title, processedContent, ph),
-          text: `Hello ${ph.client_name},\n\nHere is the document "${parsed.title}" for ${ph.company_name}.\n\n${processedContent}\n\nBest regards,\nValtriox Team\nashir@valtriox.com`,
+          text: `Hello ${ph.client_name},\n\nHere is the document "${parsed.title}" for ${ph.company_name}.\n\n${processedContent}\n\nBest regards,\nValtriox Team\n${process.env.SUPPORT_EMAIL || "support@valtriox.com"}`,
         });
 
         return {
@@ -158,7 +164,7 @@ export const POST = withAuth(async (req: NextRequest, authCtx: AuthContext) => {
           to: recipientEmail,
           subject: `${file.title} | Document from Valtriox`,
           html: buildFileDocumentEmail(file, customMessage, ph, fileSize, fileIcon),
-          text: `Hello ${ph.client_name},\n\n${customMessage}\n\nDocument: ${file.title}\nType: ${file.fileType.toUpperCase()}\nSize: ${fileSize}\nDownload: ${file.cloudinaryUrl}\n\nBest regards,\nValtriox Team\nashir@valtriox.com`,
+          text: `Hello ${ph.client_name},\n\n${customMessage}\n\nDocument: ${file.title}\nType: ${file.fileType.toUpperCase()}\nSize: ${fileSize}\nDownload: ${file.cloudinaryUrl}\n\nBest regards,\nValtriox Team\n${process.env.SUPPORT_EMAIL || "support@valtriox.com"}`,
         });
 
         return {
@@ -195,11 +201,11 @@ export const POST = withAuth(async (req: NextRequest, authCtx: AuthContext) => {
     }
 
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
-  } catch (error: any) {
-    logger.error("[Documents/Send] Error", error?.message || error);
+  } catch (error: unknown) {
+    logger.error("[Documents/Send] Error", error);
     return NextResponse.json({ error: "Failed to send document" }, { status: 500 });
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"] });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"] }), { maxRequests: 30, windowSeconds: 60 });
 
 // ─── Email Template Builders ──────────────────────────────────────────────
 
@@ -214,9 +220,9 @@ function buildTextDocumentEmail(title: string, content: string, ph: Record<strin
       <p style="color: #334155; font-size: 15px;">Hello <strong>${ph.client_name}</strong>,</p>
       <p style="color: #334155; font-size: 15px;">Please find below the document <strong>"${title}"</strong> prepared for <strong>${ph.company_name}</strong>.</p>
       <div style="background: #fafaf9; border: 1px solid #e8dcc8; border-radius: 10px; padding: 24px; margin: 20px 0; font-size: 14px; color: #1a1a2e; line-height: 1.7; white-space: pre-wrap;">${escapedContent}</div>
-      <p style="color: #64748b; font-size: 13px;">If you have any questions, reply to this email or contact <a href="mailto:ashir@valtriox.com" style="color: #D4A73A;">ashir@valtriox.com</a></p>
+      <p style="color: #64748b; font-size: 13px;">If you have any questions, reply to this email or contact <a href="mailto:${process.env.SUPPORT_EMAIL || 'support@valtriox.com'}" style="color: #D4A73A;">${process.env.SUPPORT_EMAIL || "support@valtriox.com"}</a></p>
       <div style="border-top: 1px solid #e8dcc8; padding-top: 16px; margin-top: 24px; text-align: center;">
-        <p style="color: #94a3b8; font-size: 11px; margin: 0;">Valtriox Platform &bull; ashir@valtriox.com &bull; valtriox.com</p>
+        <p style="color: #94a3b8; font-size: 11px; margin: 0;">Valtriox Platform &bull; ${process.env.SUPPORT_EMAIL || "support@valtriox.com"} &bull; valtriox.com</p>
       </div>
     </div>
   `;
@@ -247,9 +253,9 @@ function buildFileDocumentEmail(
           Download Document
         </a>
       </div>
-      <p style="color: #64748b; font-size: 13px;">If you have any questions, reply to this email or contact <a href="mailto:ashir@valtriox.com" style="color: #D4A73A;">ashir@valtriox.com</a></p>
+      <p style="color: #64748b; font-size: 13px;">If you have any questions, reply to this email or contact <a href="mailto:${process.env.SUPPORT_EMAIL || 'support@valtriox.com'}" style="color: #D4A73A;">${process.env.SUPPORT_EMAIL || "support@valtriox.com"}</a></p>
       <div style="border-top: 1px solid #e8dcc8; padding-top: 16px; margin-top: 24px; text-align: center;">
-        <p style="color: #94a3b8; font-size: 11px; margin: 0;">Valtriox Platform &bull; ashir@valtriox.com &bull; valtriox.com</p>
+        <p style="color: #94a3b8; font-size: 11px; margin: 0;">Valtriox Platform &bull; ${process.env.SUPPORT_EMAIL || "support@valtriox.com"} &bull; valtriox.com</p>
       </div>
     </div>
   `;
@@ -268,9 +274,4 @@ function getFileIconEmoji(fileType: string): string {
   return icons[fileType] || "&#128196;";
 }
 
-function formatFileSize(bytes: number): string {
-  if (bytes === 0) return "0 B";
-  const units = ["B", "KB", "MB", "GB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(1024));
-  return `${(bytes / Math.pow(1024, i)).toFixed(i > 0 ? 1 : 0)} ${units[i]}`;
-}
+// formatFileSize moved to src/lib/utils.ts (Phase 8)

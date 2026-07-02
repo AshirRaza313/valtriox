@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
+import { withRateLimit } from "@/lib/rate-limit";
 import logger from "@/lib/logger";
 import { getPlanLimits, getUsagePercent, getLimitLabel, PLAN_NAMES } from "@/lib/plan-limits";
 import { estimateStorageUsage } from "@/lib/storage-tracker";
@@ -14,7 +15,7 @@ import { estimateStorageUsage } from "@/lib/storage-tracker";
 // GET /api/admin/usage-stats?organizationId=...
 // ============================================================================
 
-export const GET = withAuth(async (req: NextRequest, authCtx) => {
+export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   try {
     const { searchParams } = new URL(req.url);
     const organizationId = searchParams.get("organizationId") || authCtx.organizationId;
@@ -129,8 +130,8 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
     let storageUsedMb = 0;
     try {
       storageUsedMb = await estimateStorageUsage(organizationId);
-    } catch (err: any) {
-      logger.warn("[Usage Stats] Storage estimate failed:", err?.message || err);
+    } catch (err: unknown) {
+      logger.warn("[Usage Stats] Storage estimate failed:", { error: err instanceof Error ? err.message : String(err) });
       storageUsedMb = 0;
     }
 
@@ -173,11 +174,11 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
       },
       lastReset: org.usageLastResetAt,
     });
-  } catch (error: any) {
-    logger.error("[Usage Stats] Error:", error?.message || error);
+  } catch (error: unknown) {
+    logger.error("[Usage Stats] Error:", error);
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
     return NextResponse.json({ error: "Failed to fetch usage stats" }, { status: 500 });
   }
-}, { requireOrg: true });
+}, { requireOrg: true }), { maxRequests: 30, windowSeconds: 60 });

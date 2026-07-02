@@ -57,10 +57,8 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
       if (isDbUnavailable(dbErr)) {
         return NextResponse.json({ error: "Database is currently unavailable. Please try again later.", fallback: true }, { status: 503 });
       }
-      // FIX: Never expose internal error details in production
-      const detail = process.env.NODE_ENV === 'production' ? undefined : dbErrMsg;
       return NextResponse.json(
-        { error: "Database error fetching organization", ...(detail ? { details: detail } : {}) },
+        { error: "Database error fetching organization" },
         { status: 500 }
       );
     }
@@ -125,10 +123,8 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
       if (isDbUnavailable(createErr)) {
         return NextResponse.json({ error: "Database is currently unavailable. Please try again later.", fallback: true }, { status: 503 });
       }
-      // FIX: Never expose internal error details in production
-      const createDetail = process.env.NODE_ENV === 'production' ? undefined : createErrMsg;
       return NextResponse.json(
-        { error: "Failed to create invoice in database", ...(createDetail ? { details: createDetail } : {}) },
+        { error: "Failed to create invoice in database" },
         { status: 500 }
       );
     }
@@ -140,8 +136,6 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
     if (isDbUnavailable(error)) {
       return NextResponse.json({ error: "Database is currently unavailable. Please try again later.", fallback: true }, { status: 503 });
     }
-    // FIX: Never expose internal error details in production
-    const unhandledDetail = process.env.NODE_ENV === 'production' ? undefined : message;
-    return NextResponse.json({ error: "Failed to create invoice", ...(unhandledDetail ? { details: unhandledDetail } : {}) }, { status: 500 });
+    return NextResponse.json({ error: "Failed to create invoice" }, { status: 500 });
   }
 }), { maxRequests: 10, windowSeconds: 60 });

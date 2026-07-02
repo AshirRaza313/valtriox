@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth-middleware";
+import { withRateLimit } from "@/lib/rate-limit";
 import { getPlanLimits, PLAN_FEATURE_MATRIX, FEATURE_MATRIX, PLAN_NAMES } from "@/lib/plan-limits";
 import { FEATURE_LOCKS, PLAN_LEVELS } from "@/lib/feature-lock";
 
 // GET /api/admin/plan-preview?planId=professional
-export const GET = withAuth(async (req: NextRequest) => {
+export const GET = withRateLimit(withAuth(async (req: NextRequest) => {
   const planId = req.nextUrl.searchParams.get("planId");
 
   if (!planId || !PLAN_NAMES[planId]) {
@@ -81,4 +82,4 @@ export const GET = withAuth(async (req: NextRequest) => {
     enabledCount,
     totalCount: allFeatures.length,
   });
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 30, windowSeconds: 60 });

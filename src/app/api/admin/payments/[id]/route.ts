@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
 import { withAuth, RouteContext } from "@/lib/auth-middleware";
+import { withRateLimit } from "@/lib/rate-limit";
 import logger from "@/lib/logger";
 
 // PUT /api/admin/payments/[id] - Approve or reject a payment proof
 // ALL operations wrapped in a Prisma transaction for atomicity.
 // If any step fails, everything rolls back - no partial state corruption.
-export const PUT = withAuth(async (
+export const PUT = withRateLimit(withAuth(async (
   req: NextRequest,
   authCtx,
   ctx: RouteContext
@@ -271,12 +272,12 @@ export const PUT = withAuth(async (
     }
 
     return NextResponse.json({ error: "Unexpected error" }, { status: 500 });
-  } catch (error: any) {
-    console.error("Admin payment review error:", {
-      message: error?.message,
-      code: error?.code,
-      meta: error?.meta,
-      stack: error?.stack,
+  } catch (error: unknown) {
+    logger.error("Admin payment review error:", {
+      message: "Internal server error",
+      code: typeof error === "object" && error !== null && "code" in error ? (error as { code: string }).code : undefined,
+      meta: typeof error === "object" && error !== null && "meta" in error ? (error as { meta: unknown }).meta : undefined,
+      stack: error instanceof Error ? error.stack : undefined,
     });
 
     if (isDbUnavailable(error)) {
@@ -284,15 +285,15 @@ export const PUT = withAuth(async (
     }
 
     // Specific error: plan not found - give actionable message
-    if (error?.message?.includes("TARGET_PLAN_NOT_FOUND")) {
+    if (error instanceof Error && error.message.includes("TARGET_PLAN_NOT_FOUND")) {
       return NextResponse.json({
         error: "Cannot approve payment: the selected plan no longer exists or has been renamed. Please contact support or ask the organization to select a different plan.",
-        details: process.env.NODE_ENV === "production" ? undefined : error.message,
+        details: undefined,
       }, { status: 400 });
     }
 
     // Return specific error message based on Prisma error code
-    const prismaError = error?.code;
+    const prismaError = typeof error === "object" && error !== null && "code" in error ? (error as { code: string }).code : undefined;
     if (prismaError === "P2025") {
       return NextResponse.json({ error: "Referenced record not found. The subscription, organization, or plan may have been deleted." }, { status: 404 });
     }
@@ -305,4 +306,4 @@ export const PUT = withAuth(async (
 
     return NextResponse.json({ error: "Failed to review payment. Please try again or contact support if the issue persists." }, { status: 500 });
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 30, windowSeconds: 60 });

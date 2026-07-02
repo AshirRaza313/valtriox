@@ -6,7 +6,7 @@ import { createIntegrationSchema } from "@/lib/validations/schemas";
 import logger from "@/lib/logger";
 
 // GET /api/integrations?orgId=... — List all integration connections for the org
-export const GET = withAuth(async (req: NextRequest, authCtx) => {
+export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   try {
     const { searchParams } = new URL(req.url);
     const orgId = searchParams.get("orgId") || authCtx.organizationId;
@@ -30,7 +30,7 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
     if (isDbUnavailable(error)) return dbErrorResponse(error);
     return NextResponse.json({ connections: [] });
   }
-}, { requireOrg: true });
+}, { requireOrg: true }), { maxRequests: 60, windowSeconds: 60 });
 
 // POST /api/integrations — Create or update (upsert) an integration connection
 export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {

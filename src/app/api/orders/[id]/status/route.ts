@@ -5,8 +5,9 @@ import { withAuth, RouteContext } from "@/lib/auth-middleware";
 import { validateBody } from "@/lib/validations/api";
 import { updateOrderStatusSchema } from "@/lib/validations/schemas";
 import logger from "@/lib/logger";
+import { withRateLimit } from "@/lib/rate-limit";
 
-export const PATCH = withAuth(async (
+export const PATCH = withRateLimit(withAuth(async (
   req: NextRequest,
   authCtx,
   ctx: RouteContext
@@ -38,11 +39,8 @@ export const PATCH = withAuth(async (
       });
     }, 2, 500);
     return NextResponse.json({ order });
-  } catch (error: any) {
-    console.error("Order status update error:", error?.message || error);
-    if (error?.message?.includes('DATABASE_URL') || error?.message?.includes('Database connection')) {
-      return dbErrorResponse(error);
-    }
+  } catch (error: unknown) {
+    logger.error("Order status update error:", error);
     return NextResponse.json({ error: "Failed to update status" }, { status: 500 });
   }
-});
+}), { maxRequests: 30, windowSeconds: 60 });

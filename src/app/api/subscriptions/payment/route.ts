@@ -3,26 +3,31 @@ import { db, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
 import { generateInvoiceNumber } from "@/lib/pdf-generator";
 import { getCurrencyForCountry } from "@/lib/currency";
 import { withAuth } from "@/lib/auth-middleware";
-import { sanitizeObject } from "@/lib/sanitize";
 import logger from "@/lib/logger";
 import { withRateLimit } from "@/lib/rate-limit";
+import { z } from "zod";
+import { validateBody } from "@/lib/validations";
+
+// Inline schema for payment proof submission
+const paymentProofSchema = z.object({
+  orgId: z.string().min(1).max(50),
+  userId: z.string().min(1).max(50),
+  planId: z.string().min(1).max(50),
+  amount: z.number().positive(),
+  transactionId: z.string().min(4).max(50).regex(/^[\w\-]{4,50}$/, "Invalid transaction ID format"),
+  paymentMethod: z.enum(["bank_transfer", "jazzcash", "easypaisa", "payoneer", "other"]),
+  screenshotUrl: z.string().max(100000).optional(),
+  billingCycle: z.enum(["monthly", "quarterly", "annually"]).default("monthly"),
+});
 
 // POST /api/subscriptions/payment - Submit payment proof
 // ALL operations wrapped in a Prisma transaction to prevent dual plan purchases
 export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   try {
     logger.info("[Subscriptions Payment] POST request", { userId: authCtx.userId });
-    const body = await req.json();
-    Object.assign(body, sanitizeObject(body));
-    const { orgId, userId, planId, amount, transactionId, paymentMethod, screenshotUrl, billingCycle } = body;
-
-    // ── INPUT VALIDATION ──
-    if (!orgId || !userId || !planId || !amount || !transactionId || !paymentMethod) {
-      return NextResponse.json(
-        { error: "orgId, userId, planId, amount, transactionId, and paymentMethod are required" },
-        { status: 400 }
-      );
-    }
+    const bodyResult = await validateBody(req, paymentProofSchema);
+    if (!bodyResult.success) return bodyResult.response;
+    const { orgId, userId, planId, amount, transactionId, paymentMethod, screenshotUrl, billingCycle } = bodyResult.data;
 
     // Security: verify orgId and userId match auth context
     if (orgId !== authCtx.organizationId) {
@@ -32,28 +37,9 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    // Validate amount is a positive number
-    const parsedAmount = parseFloat(amount);
-    if (isNaN(parsedAmount) || parsedAmount <= 0) {
-      return NextResponse.json({ error: "Amount must be a positive number" }, { status: 400 });
-    }
-
-    // Validate transaction ID (alphanumeric + dashes, min 4 chars)
-    if (!/^[\w\-]{4,50}$/.test(transactionId)) {
-      return NextResponse.json({ error: "Invalid transaction ID format" }, { status: 400 });
-    }
-
-    // Validate payment method
-    const validMethods = ["bank_transfer", "jazzcash", "easypaisa", "payoneer", "other"];
-    if (!validMethods.includes(paymentMethod)) {
-      return NextResponse.json({ error: "Invalid payment method" }, { status: 400 });
-    }
-
-    // Validate billing cycle
-    const cycle = billingCycle || "monthly";
-    if (!["monthly", "quarterly", "annually"].includes(cycle)) {
-      return NextResponse.json({ error: "Invalid billing cycle. Must be 'monthly', 'quarterly', or 'annually'" }, { status: 400 });
-    }
+    // Amount is already validated as positive number by Zod schema
+    const parsedAmount = amount;
+    const cycle = billingCycle;
 
     // ── PRE-TRANSACTION CHECKS (cheap reads) ──
     // These run BEFORE the transaction to avoid holding locks for validation
@@ -289,11 +275,11 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
       },
       message: `Payment proof submitted for ${plan.name} plan (${cycle} billing). Invoice ${result.invoiceNumber} generated. We will review it within 24 hours.`,
     });
-  } catch (error: any) {
-    console.error("Submit payment error:", {
-      message: error?.message,
-      code: error?.code,
-      meta: error?.meta,
+  } catch (error: unknown) {
+    logger.error("Submit payment error:", {
+      message: "Internal server error",
+      code: typeof error === "object" && error !== null && "code" in error ? (error as { code: string }).code : undefined,
+      meta: typeof error === "object" && error !== null && "meta" in error ? (error as { meta: unknown }).meta : undefined,
     });
 
     if (isDbUnavailable(error)) {
@@ -301,25 +287,24 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
     }
 
     // Handle transaction-thrown business logic errors
-    if (error?.message?.startsWith("ALREADY_ON_PLAN:")) {
+    if (error instanceof Error && error.message.startsWith("ALREADY_ON_PLAN:")) {
       return NextResponse.json({ error: error.message.split(": ")[1] }, { status: 400 });
     }
-    if (error?.message?.startsWith("PENDING_PAYMENT_EXISTS:")) {
+    if (error instanceof Error && error.message.startsWith("PENDING_PAYMENT_EXISTS:")) {
       return NextResponse.json({ error: error.message.split(": ")[1] }, { status: 400 });
     }
-    if (error?.message?.startsWith("SUBSCRIPTION_PENDING:")) {
+    if (error instanceof Error && error.message.startsWith("SUBSCRIPTION_PENDING:")) {
       return NextResponse.json({ error: error.message.split(": ")[1] }, { status: 400 });
     }
-    if (error?.message?.startsWith("DUPLICATE_TXN:")) {
+    if (error instanceof Error && error.message.startsWith("DUPLICATE_TXN:")) {
       return NextResponse.json({ error: error.message.split(": ")[1] }, { status: 409 });
     }
-    if (error?.message?.startsWith("RENEWAL_TOO_EARLY:")) {
+    if (error instanceof Error && error.message.startsWith("RENEWAL_TOO_EARLY:")) {
       return NextResponse.json({ error: error.message.split(": ")[1] }, { status: 400 });
     }
 
-
     // Prisma unique constraint violation (additional safety for transactionId)
-    if (error?.code === "P2002") {
+    if (typeof error === "object" && error !== null && "code" in error && (error as { code: string }).code === "P2002") {
       return NextResponse.json({ error: "Duplicate entry detected. This transaction ID may already exist." }, { status: 409 });
     }
 

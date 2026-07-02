@@ -1,8 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, safeDbQuery } from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
-import { sanitizeObject } from "@/lib/sanitize";
+import { withRateLimit } from "@/lib/rate-limit";
 import logger from "@/lib/logger";
+import { z } from "zod";
+import { validateBody } from "@/lib/validations";
+
+// Inline schemas for document CRUD
+const createDocumentSchema = z.object({
+  title: z.string().min(1).max(300),
+  type: z.string().max(50).optional(),
+  content: z.string().min(1).max(50000),
+});
+
+const updateDocumentSchema = z.object({
+  key: z.string().min(1).max(200),
+  title: z.string().max(300).optional(),
+  type: z.string().max(50).optional(),
+  content: z.string().min(1).max(50000),
+});
 
 // Allow up to 30 seconds for DB operations on Vercel serverless
 export const maxDuration = 30;
@@ -405,7 +421,7 @@ For privacy-related inquiries: privacy@valtriox.com
 {{client_email}}
 
 **From**: Valtriox Team
-ashir@valtriox.com
+${process.env.SUPPORT_EMAIL || "support@valtriox.com"}
 
 ---
 
@@ -438,7 +454,7 @@ We look forward to a successful partnership.
 Warm regards,
 
 The Valtriox Team
-ashir@valtriox.com
+${process.env.SUPPORT_EMAIL || "support@valtriox.com"}
 `,
   },
 ];
@@ -447,7 +463,7 @@ ashir@valtriox.com
 // GET - Fetch all documents, seeding defaults if empty
 // ============================================================================
 
-export const GET = withAuth(async (req: NextRequest, authCtx) => {
+export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   const { data: result, error } = await safeDbQuery(async () => {
     // Fetch all document settings
     const settings = await db.systemSetting.findMany({
@@ -506,21 +522,17 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
   }
 
   return NextResponse.json({ documents: result });
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 30, windowSeconds: 60 });
 
 // ============================================================================
 // POST - Create a new document
 // ============================================================================
 
-export const POST = withAuth(async (req: NextRequest, authCtx) => {
+export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   try {
-    const body = await req.json();
-    const sanitized = sanitizeObject(body);
-    const { title, type, content } = sanitized;
-
-    if (!title || !content) {
-      return NextResponse.json({ error: "Title and content are required" }, { status: 400 });
-    }
+    const bodyResult = await validateBody(req, createDocumentSchema);
+    if (!bodyResult.success) return bodyResult.response;
+    const { title, type, content } = bodyResult.data;
 
     const key = `document_${title.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "")}_${Date.now().toString(36)}`;
 
@@ -554,25 +566,21 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
 
     logger.info("[Documents] Created document", { key, title, userId: authCtx.userId });
     return NextResponse.json({ document: result });
-  } catch (error: any) {
-    logger.error("[Documents] POST parsing error", { error: error?.message });
+  } catch (error: unknown) {
+    logger.error("[Documents] POST parsing error", error);
     return NextResponse.json({ error: "Failed to create document" }, { status: 500 });
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 30, windowSeconds: 60 });
 
 // ============================================================================
 // PUT - Update an existing document
 // ============================================================================
 
-export const PUT = withAuth(async (req: NextRequest, authCtx) => {
+export const PUT = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   try {
-    const body = await req.json();
-    const sanitized = sanitizeObject(body);
-    const { key, title, type, content } = sanitized;
-
-    if (!key || !content) {
-      return NextResponse.json({ error: "Key and content are required" }, { status: 400 });
-    }
+    const bodyResult = await validateBody(req, updateDocumentSchema);
+    if (!bodyResult.success) return bodyResult.response;
+    const { key, title, type, content } = bodyResult.data;
 
     const { data: result, error } = await safeDbQuery(async () => {
       const existing = await db.systemSetting.findUnique({ where: { key } });
@@ -614,11 +622,11 @@ export const PUT = withAuth(async (req: NextRequest, authCtx) => {
 
     logger.info("[Documents] Updated document", { key, userId: authCtx.userId });
     return NextResponse.json({ document: result });
-  } catch (error: any) {
-    logger.error("[Documents] PUT parsing error", { error: error?.message });
-    if (error?.message === "Document not found") {
+  } catch (error: unknown) {
+    logger.error("[Documents] PUT parsing error", error);
+    if (error instanceof Error && error.message === "Document not found") {
       return NextResponse.json({ error: "Document not found" }, { status: 404 });
     }
     return NextResponse.json({ error: "Failed to update document" }, { status: 500 });
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 30, windowSeconds: 60 });

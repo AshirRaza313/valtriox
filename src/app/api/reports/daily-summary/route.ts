@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, safeDbQuery, dbErrorResponse, isDbUnavailable } from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
+import { withRateLimit } from "@/lib/rate-limit";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Daily Summary API
@@ -9,7 +10,7 @@ import logger from "@/lib/logger";
 // Includes comparison with yesterday's data
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const GET = withAuth(async (req: NextRequest, authCtx) => {
+export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   try {
     logger.info("[Reports Daily Summary] GET request", { userId: authCtx.userId });
     const { searchParams } = new URL(req.url);
@@ -189,11 +190,11 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
         price: p.price,
       })),
     });
-  } catch (error: any) {
-    console.error("Daily summary error:", error?.message || error);
+  } catch (error: unknown) {
+    logger.error("Daily summary error:", error);
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
     return NextResponse.json({ error: "Failed to fetch daily summary" }, { status: 500 });
   }
-});
+}), { maxRequests: 60, windowSeconds: 60 });

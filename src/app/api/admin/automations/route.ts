@@ -19,12 +19,12 @@ export const GET = withRateLimit(withAuth(async (req: NextRequest) => {
     }, 2, 500);
 
     return NextResponse.json({ automations });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("[Admin Automations] GET error", error);
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
-    return NextResponse.json({ error: "Failed to fetch automations", details: process.env.NODE_ENV === "production" ? undefined : error?.message }, { status: 500 });
+    return NextResponse.json({ error: "Failed to fetch automations", details: undefined }, { status: 500 });
   }
 }, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 20, windowSeconds: 60 });
 
@@ -63,12 +63,12 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest) => {
     }, 2, 500);
 
     return NextResponse.json({ success: true, automation });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("[Admin Automations] POST error", error);
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
-    return NextResponse.json({ error: "Failed to create automation", details: process.env.NODE_ENV === "production" ? undefined : error?.message }, { status: 500 });
+    return NextResponse.json({ error: "Failed to create automation", details: undefined }, { status: 500 });
   }
 }, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 20, windowSeconds: 60 });
 
@@ -136,15 +136,15 @@ export const PUT = withRateLimit(withAuth(async (req: NextRequest) => {
     }, 2, 500);
 
     return NextResponse.json({ success: true, automation });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("[Admin Automations] PUT error", error);
-    if (error?.code === "P2025") {
+    if (typeof error === "object" && error !== null && "code" in error && (error as { code: string }).code === "P2025") {
       return NextResponse.json({ error: "Automation not found" }, { status: 404 });
     }
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
-    return NextResponse.json({ error: "Failed to update automation", details: process.env.NODE_ENV === "production" ? undefined : error?.message }, { status: 500 });
+    return NextResponse.json({ error: "Failed to update automation", details: undefined }, { status: 500 });
   }
 }, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 20, windowSeconds: 60 });
 
@@ -161,11 +161,11 @@ export const DELETE = withRateLimit(withAuth(async (req: NextRequest) => {
     }, 2, 500);
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("[Admin Automations] DELETE error", error);
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
-    return NextResponse.json({ error: "Failed to delete automation", details: process.env.NODE_ENV === "production" ? undefined : error?.message }, { status: 500 });
+    return NextResponse.json({ error: "Failed to delete automation", details: undefined }, { status: 500 });
   }
 }, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 20, windowSeconds: 60 });

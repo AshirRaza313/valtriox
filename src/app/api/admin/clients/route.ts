@@ -89,13 +89,13 @@ export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
     return NextResponse.json(result);
   } catch (error: unknown) {
     const { message: errMsg } = getErrorInfo(error);
-    console.error("Admin clients API error:", errMsg || error);
+    logger.error("Admin clients API error:", errMsg || error);
     // Return empty data instead of 503 so the page still loads
     return NextResponse.json({
       clients: [],
       summary: { totalClients: 0, newThisMonth: 0, totalRevenue: 0, totalOrders: 0, planDistribution: {} },
       _dbError: true,
-      error: process.env.NODE_ENV === 'production' ? "Database temporarily unavailable" : (errMsg || "Database temporarily unavailable")
+      error: "Database temporarily unavailable"
     });
   }
 }, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 20, windowSeconds: 60 });
@@ -163,7 +163,7 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
       const { message: errMsg, code: errCode } = getErrorInfo(err);
       logger.error("[Register Brand] Step 1 failed (email check):", err, { errCode });
       return NextResponse.json(
-        { error: "Database error while checking email. Please try again.", _step: "email_check", _details: process.env.NODE_ENV === "production" ? undefined : errMsg },
+        { error: "Database error while checking email. Please try again.", _step: "email_check", _details: undefined },
         { status: 503 }
       );
     }
@@ -206,7 +206,7 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
         return NextResponse.json({ error: "Email already registered" }, { status: 409 });
       }
       return NextResponse.json(
-        { error: "Failed to create user account. Please try again.", _step: "create_user", _details: process.env.NODE_ENV === "production" ? undefined : errMsg, _code: process.env.NODE_ENV === "production" ? undefined : errCode },
+        { error: "Failed to create user account. Please try again.", _step: "create_user", _details: undefined, _code: undefined },
         { status: 500 }
       );
     }
@@ -250,7 +250,7 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
       // Cleanup: delete the user we just created
       await db.user.delete({ where: { id: user.id } }).catch(() => {});
       return NextResponse.json(
-        { error: "Failed to create organization. Please try again.", _step: "create_org", _details: process.env.NODE_ENV === "production" ? undefined : errMsg, _code: process.env.NODE_ENV === "production" ? undefined : errCode },
+        { error: "Failed to create organization. Please try again.", _step: "create_org", _details: undefined, _code: undefined },
         { status: 500 }
       );
     }
@@ -274,7 +274,7 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
       await db.organization.delete({ where: { id: org.id } }).catch(() => {});
       await db.user.delete({ where: { id: user.id } }).catch(() => {});
       return NextResponse.json(
-        { error: "Failed to create team membership. Please try again.", _step: "create_membership", _details: process.env.NODE_ENV === "production" ? undefined : errMsg, _code: process.env.NODE_ENV === "production" ? undefined : errCode },
+        { error: "Failed to create team membership. Please try again.", _step: "create_membership", _details: undefined, _code: undefined },
         { status: 500 }
       );
     }
@@ -339,7 +339,7 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
         `  3. Add your first products and start receiving orders`,
         `  4. Explore the user guide for tips and best practices`,
         ``,
-        `Need help? Contact our support team at ashir@valtriox.com`,
+        `Need help? Contact our support team at ${process.env.SUPPORT_EMAIL || "support@valtriox.com"}`,
       ].join('\n');
 
       await withRetry(
@@ -418,7 +418,7 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
     const { message: errMsg, code: errCode } = getErrorInfo(error);
     const errStack = error instanceof Error ? error.stack?.slice(0, 200) : undefined;
     const errMeta = error && typeof error === 'object' && 'meta' in error ? (error as Record<string, unknown>).meta : undefined;
-    console.error("[Register Brand] Unexpected error:", {
+    logger.error("[Register Brand] Unexpected error:", {
       message: errMsg,
       code: errCode,
       meta: errMeta,
@@ -441,7 +441,7 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
     if (isSchemaError(error)) {
       logger.error("[Register Brand] Schema mismatch:", error);
       return NextResponse.json(
-        { error: "Database schema mismatch. Contact support.", _details: process.env.NODE_ENV === "production" ? undefined : errMsg, _code: errCode },
+        { error: "Database schema mismatch. Contact support.", _details: undefined, _code: undefined },
         { status: 500 }
       );
     }
@@ -450,14 +450,14 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
     if (isDbUnavailable(error)) {
       logger.error("[Register Brand] DB unavailable:", error);
       return NextResponse.json(
-        { error: "Database connection timeout. Please try again in a moment.", _details: process.env.NODE_ENV === "production" ? undefined : errMsg, _code: errCode },
+        { error: "Database connection timeout. Please try again in a moment.", _details: undefined, _code: undefined },
         { status: 503 }
       );
     }
 
     // Unknown error - return with full details for debugging
     return NextResponse.json(
-      { error: "Failed to register brand", _details: process.env.NODE_ENV === "production" ? undefined : errMsg || String(error), _code: errCode },
+      { error: "Failed to register brand", _details: undefined, _code: undefined },
       { status: 500 }
     );
   }

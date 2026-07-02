@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import { NextResponse } from "next/server";
 import { db, withRetry} from "@/lib/db";
+import logger from "@/lib/logger";
 
 // GET /api/cron/subscriptions - Cron job for subscription management
 // Called by Vercel Cron daily
@@ -306,10 +307,10 @@ export async function GET(req: Request) {
       timestamp: now.toISOString(),
       results,
     });
-  } catch (error: any) {
-    console.error("Subscription cron error:", error?.message || error);
+  } catch (error: unknown) {
+    logger.error("Subscription cron error:", error);
     return NextResponse.json(
-      { error: "Cron job failed", details: process.env.NODE_ENV === "production" ? undefined : error?.message },
+      { error: "Cron job failed", details: undefined },
       { status: 500 }
     );
   }

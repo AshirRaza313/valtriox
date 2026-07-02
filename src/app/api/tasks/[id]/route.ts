@@ -5,8 +5,9 @@ import { withAuth, RouteContext } from "@/lib/auth-middleware";
 import { validateBody } from "@/lib/validations/api";
 import { updateTaskSchema } from "@/lib/validations/schemas";
 import logger from "@/lib/logger";
+import { withRateLimit } from "@/lib/rate-limit";
 
-export const PATCH = withAuth(async (
+export const PATCH = withRateLimit(withAuth(async (
   req: NextRequest,
   authCtx,
   ctx: RouteContext
@@ -30,16 +31,13 @@ export const PATCH = withAuth(async (
       return await db.teamTask.update({ where: { id }, data: body })
     }, 2, 500);
     return NextResponse.json({ task });
-  } catch (error: any) {
-    console.error("Tasks PATCH error:", error?.message || error);
-    if (error?.message?.includes('DATABASE_URL') || error?.message?.includes('Database connection')) {
-      return dbErrorResponse(error);
-    }
+  } catch (error: unknown) {
+    logger.error("Tasks PATCH error:", error);
     return NextResponse.json({ error: "Failed to update task" }, { status: 500 });
   }
-});
+}), { maxRequests: 30, windowSeconds: 60 });
 
-export const DELETE = withAuth(async (
+export const DELETE = withRateLimit(withAuth(async (
   req: NextRequest,
   authCtx,
   ctx: RouteContext
@@ -59,11 +57,8 @@ export const DELETE = withAuth(async (
       return await db.teamTask.delete({ where: { id } })
     }, 2, 500);
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    console.error("Tasks DELETE error:", error?.message || error);
-    if (error?.message?.includes('DATABASE_URL') || error?.message?.includes('Database connection')) {
-      return dbErrorResponse(error);
-    }
+  } catch (error: unknown) {
+    logger.error("Tasks DELETE error:", error);
     return NextResponse.json({ error: "Failed to delete task" }, { status: 500 });
   }
-});
+}), { maxRequests: 30, windowSeconds: 60 });

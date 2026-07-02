@@ -6,7 +6,7 @@ import logger from "@/lib/logger";
 import { withRateLimit } from "@/lib/rate-limit";
 import { createExpenseSchema } from "@/lib/validations/schemas";
 
-export const GET = withAuth(async (req, authCtx) => {
+export const GET = withRateLimit(withAuth(async (req, authCtx) => {
   try {
     const { searchParams } = new URL(req.url);
     const orgId = searchParams.get("orgId") || authCtx.organizationId;
@@ -21,7 +21,6 @@ export const GET = withAuth(async (req, authCtx) => {
     const where: any = { organizationId: orgId };
     const category = searchParams.get("category");
     if (category && category !== "all") where.category = category;
-
 
     // Phase 4: Pagination to prevent unbounded queries
     const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
@@ -44,7 +43,7 @@ expenses = await withRetry(async () => {
     }
     return NextResponse.json({ error: "Failed to fetch expenses" }, { status: 500 });
   }
-});
+}), { maxRequests: 60, windowSeconds: 60 });
 
 export const POST = withRateLimit(withAuth(async (req, authCtx) => {
   try {

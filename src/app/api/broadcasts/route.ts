@@ -45,7 +45,7 @@ async function saveBroadcasts(orgId: string, broadcasts: Broadcast[]) {
   }, 2, 500);
 }
 
-export const GET = withAuth(async (req, authCtx) => {
+export const GET = withRateLimit(withAuth(async (req, authCtx) => {
   try {
     const orgId = authCtx.organizationId;
     if (!orgId) return NextResponse.json({ error: "orgId required" }, { status: 400 });
@@ -60,7 +60,7 @@ export const GET = withAuth(async (req, authCtx) => {
     }
     return NextResponse.json({ error: "Failed to fetch broadcasts" }, { status: 500 });
   }
-});
+}), { maxRequests: 60, windowSeconds: 60 });
 
 export const POST = withRateLimit(withAuth(async (req, authCtx) => {
   try {
@@ -109,7 +109,7 @@ export const POST = withRateLimit(withAuth(async (req, authCtx) => {
   }
 }), { maxRequests: 5, windowSeconds: 60 });
 
-export const PUT = withAuth(async (req, authCtx) => {
+export const PUT = withRateLimit(withAuth(async (req, authCtx) => {
   try {
     const orgId = authCtx.organizationId;
     if (!orgId) return NextResponse.json({ error: "orgId required" }, { status: 400 });
@@ -136,9 +136,9 @@ export const PUT = withAuth(async (req, authCtx) => {
     }
     return NextResponse.json({ error: "Failed to update broadcast" }, { status: 500 });
   }
-});
+}), { maxRequests: 30, windowSeconds: 60 });
 
-export const DELETE = withAuth(async (req, authCtx) => {
+export const DELETE = withRateLimit(withAuth(async (req, authCtx) => {
   try {
     const orgId = authCtx.organizationId;
     if (!orgId) return NextResponse.json({ error: "orgId required" }, { status: 400 });
@@ -163,4 +163,4 @@ export const DELETE = withAuth(async (req, authCtx) => {
     }
     return NextResponse.json({ error: "Failed to delete broadcast" }, { status: 500 });
   }
-});
+}), { maxRequests: 30, windowSeconds: 60 });

@@ -151,7 +151,7 @@ export async function POST(req: NextRequest) {
       await prisma.platformSettings.create({
         data: {
           companyName: "Valtriox",
-          companyEmail: "ashir@valtriox.com",
+          companyEmail: process.env.SUPPORT_EMAIL || "support@valtriox.com",
           tagline: "COMMAND YOUR BRAND UNIVERSE",
           primaryBrandColor: "#D4A73A",
           secondaryBrandColor: "#B8942F",
@@ -177,7 +177,7 @@ export async function POST(req: NextRequest) {
       message: "Setup completed!",
       admin: { email: admin.email },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("[Setup] Error", error);
     return NextResponse.json(
       { error: "Setup failed", hint: "Make sure DATABASE_URL is set correctly." },

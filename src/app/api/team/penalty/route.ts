@@ -3,6 +3,7 @@ import { db, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import { sanitizeObject } from "@/lib/sanitize";
 import logger from "@/lib/logger";
+import { withRateLimit } from "@/lib/rate-limit";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Team Penalty API
@@ -24,7 +25,7 @@ interface Penalty {
 }
 
 // GET: Retrieve penalty records for an organization
-export const GET = withAuth(async (req: NextRequest, authCtx) => {
+export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   try {
     logger.info("[Penalties] GET request", { userId: authCtx.userId, orgId: authCtx.organizationId });
     const orgId = authCtx.organizationId!;
@@ -50,17 +51,17 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
     const history = penalties.filter((p) => !p.isActive);
 
     return NextResponse.json({ penalties, active, history, orgId });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("[Penalties] GET error", error, { orgId: authCtx?.organizationId });
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
     return NextResponse.json({ error: "Failed to fetch penalties" }, { status: 500 });
   }
-});
+}), { maxRequests: 60, windowSeconds: 60 });
 
 // POST: Create a new penalty for a team member
-export const POST = withAuth(async (req: NextRequest, authCtx) => {
+export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   try {
     logger.info("[Penalties] POST request", { userId: authCtx.userId, orgId: authCtx.organizationId });
     const body = await req.json();
@@ -114,17 +115,17 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
     }, 2, 500);
 
     return NextResponse.json({ penalty: newPenalty, penalties: existing }, { status: 201 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("[Penalties] POST error", error, { orgId: authCtx?.organizationId });
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
     return NextResponse.json({ error: "Failed to create penalty" }, { status: 500 });
   }
-});
+}), { maxRequests: 30, windowSeconds: 60 });
 
 // PUT: Update or lift a penalty
-export const PUT = withAuth(async (req: NextRequest, authCtx) => {
+export const PUT = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   try {
     logger.info("[Penalties] PUT request", { userId: authCtx.userId, orgId: authCtx.organizationId });
     const body = await req.json();
@@ -174,11 +175,11 @@ export const PUT = withAuth(async (req: NextRequest, authCtx) => {
     const history = penalties.filter((p) => !p.isActive);
 
     return NextResponse.json({ penalties, active, history });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("[Penalties] PUT error", error, { orgId: authCtx?.organizationId });
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
     return NextResponse.json({ error: "Failed to update penalty" }, { status: 500 });
   }
-});
+}), { maxRequests: 30, windowSeconds: 60 });

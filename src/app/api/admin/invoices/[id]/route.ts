@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth, RouteContext } from "@/lib/auth-middleware";
+import { withRateLimit } from "@/lib/rate-limit";
 import { db, safeDbQuery } from "@/lib/db";
 import logger from "@/lib/logger";
 
@@ -16,7 +17,7 @@ const VALID_TRANSITIONS: Record<string, string[]> = {
 };
 
 // ── GET /api/admin/invoices/:id ──
-export const GET = withAuth(async (req: NextRequest, authCtx, ctx: RouteContext) => {
+export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx, ctx: RouteContext) => {
     logger.info("[Admin Invoice Detail] GET request", {
       userId: authCtx.userId,
       invoiceId: (await ctx.params).id,
@@ -43,7 +44,7 @@ export const GET = withAuth(async (req: NextRequest, authCtx, ctx: RouteContext)
 
     if (error) {
       logger.error("[Admin Invoice Detail] GET failed", { error, userId: authCtx.userId });
-      return NextResponse.json({ error: "Failed to fetch invoice", detail: process.env.NODE_ENV === 'production' ? undefined : error?.substring(0, 200) }, { status: 503 });
+      return NextResponse.json({ error: "Failed to fetch invoice", detail: undefined }, { status: 503 });
     }
 
     if (!invoice) {
@@ -82,11 +83,11 @@ export const GET = withAuth(async (req: NextRequest, authCtx, ctx: RouteContext)
 }, {
   requireRole: ["platform_owner", "platform_admin"],
   requireOrg: false,
-});
+}), { maxRequests: 30, windowSeconds: 60 });
 
 // ── PUT /api/admin/invoices/:id ──
 // Body: { status, dueDate, notes, paidAt, paymentMethod, paymentReference }
-export const PUT = withAuth(async (req: NextRequest, authCtx, ctx: RouteContext) => {
+export const PUT = withRateLimit(withAuth(async (req: NextRequest, authCtx, ctx: RouteContext) => {
     logger.info("[Admin Invoice Update] PUT request", {
       userId: authCtx.userId,
       invoiceId: (await ctx.params).id,
@@ -119,7 +120,7 @@ export const PUT = withAuth(async (req: NextRequest, authCtx, ctx: RouteContext)
 
     if (fetchErr) {
       logger.error("[Admin Invoice Update] Fetch failed", { error: fetchErr, userId: authCtx.userId });
-      return NextResponse.json({ error: "Failed to fetch invoice", detail: process.env.NODE_ENV === 'production' ? undefined : fetchErr?.substring(0, 200) }, { status: 503 });
+      return NextResponse.json({ error: "Failed to fetch invoice", detail: undefined }, { status: 503 });
     }
 
     if (!existing) {
@@ -210,7 +211,7 @@ export const PUT = withAuth(async (req: NextRequest, authCtx, ctx: RouteContext)
 
     if (updateErr) {
       logger.error("[Admin Invoice Update] Update failed", { error: updateErr, userId: authCtx.userId });
-      return NextResponse.json({ error: "Failed to update invoice", detail: process.env.NODE_ENV === 'production' ? undefined : updateErr?.substring(0, 200) }, { status: 503 });
+      return NextResponse.json({ error: "Failed to update invoice", detail: undefined }, { status: 503 });
     }
 
     // Create notification on status change
@@ -250,4 +251,4 @@ export const PUT = withAuth(async (req: NextRequest, authCtx, ctx: RouteContext)
 }, {
   requireRole: ["platform_owner", "platform_admin"],
   requireOrg: false,
-});
+}), { maxRequests: 30, windowSeconds: 60 });

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
+import { withRateLimit } from "@/lib/rate-limit";
 
 /**
  * POST /api/fix-old-roles
@@ -20,7 +21,7 @@ import logger from "@/lib/logger";
  *
  * Admin user (identified by ADMIN_EMAIL or body param) → "platform_owner"
  */
-export const POST = withAuth(async (req: NextRequest, authCtx) => {
+export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   if (process.env.NODE_ENV === 'production') {
     return NextResponse.json({ error: 'Not available in production' }, { status: 404 });
   }
@@ -211,10 +212,10 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
     });
   } catch (error: unknown) {
     const errMsg = error instanceof Error ? error.message : String(error);
-    console.error("Role migration error:", errMsg);
+    logger.error("Role migration error:", errMsg);
     return NextResponse.json(
       { error: "Migration failed: " + errMsg },
       { status: 500 }
     );
   }
-}, { requireRole: ["platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 30, windowSeconds: 60 });

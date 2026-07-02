@@ -126,17 +126,17 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest) => {
       logger.error("[Admin Proposals] POST error", { error });
       return NextResponse.json({
         error: "Failed to create proposal",
-        detail: error?.substring(0, 200),
+        detail: undefined,
         code: "PROPOSALS_CREATE_ERROR",
       }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, proposal }, { status: 201 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("[Admin Proposals] POST validation/parsing error", error);
     return NextResponse.json({
       error: "Failed to create proposal",
-      detail: error?.message?.substring(0, 200),
+      detail: undefined,
       code: "PROPOSALS_CREATE_ERROR",
     }, { status: 500 });
   }
@@ -203,17 +203,17 @@ export const PUT = withRateLimit(withAuth(async (req: NextRequest) => {
       logger.error("[Admin Proposals] PUT error", { error });
       return NextResponse.json({
         error: "Failed to update proposal",
-        detail: error?.substring(0, 200),
+        detail: undefined,
         code: "PROPOSALS_UPDATE_ERROR",
       }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, proposal });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("[Admin Proposals] PUT validation/parsing error", error);
     return NextResponse.json({
       error: "Failed to update proposal",
-      detail: error?.message?.substring(0, 200),
+      detail: undefined,
       code: "PROPOSALS_UPDATE_ERROR",
     }, { status: 500 });
   }
@@ -236,7 +236,7 @@ export const DELETE = withRateLimit(withAuth(async (req: NextRequest) => {
     logger.error("[Admin Proposals] DELETE error", { error });
     return NextResponse.json({
       error: "Failed to delete proposal",
-      detail: error?.substring(0, 200),
+      detail: undefined,
       code: "PROPOSALS_DELETE_ERROR",
     }, { status: 500 });
   }

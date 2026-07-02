@@ -200,8 +200,8 @@ export async function POST(req: NextRequest) {
               },
             })
             }, 2, 500);
-          } catch (invoiceErr: any) {
-            logger.warn("[PayPro Sub Webhook] Invoice generation failed", { error: invoiceErr?.message });
+          } catch (invoiceErr: unknown) {
+            logger.warn("[PayPro Sub Webhook] Invoice generation failed", { error: invoiceErr instanceof Error ? invoiceErr.message : String(invoiceErr) });
           }
 
           logger.info("[PayPro Sub Webhook] Subscription activated", {
@@ -238,7 +238,7 @@ export async function POST(req: NextRequest) {
       paymentProofId: paymentProof.id,
       status: mappedStatus,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("[PayPro Sub Webhook] Error", error);
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);

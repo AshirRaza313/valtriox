@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { dbErrorResponse, db, isDbUnavailable, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
+import { withRateLimit } from "@/lib/rate-limit";
 import logger from "@/lib/logger";
 
 // GET /api/admin/clients/[id] - Admin-only: return full details for one organization
-export const GET = withAuth(async (req: NextRequest, authCtx, context) => {
+export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx, context) => {
   const { id } = await context.params;
   logger.info("[Admin Client Detail] GET request", { userId: authCtx.userId, clientId: id });
   try {
@@ -175,17 +176,17 @@ export const GET = withAuth(async (req: NextRequest, authCtx, context) => {
       recentOrders: recentOrdersMapped,
       subscription,
     });
-  } catch (error: any) {
-    console.error("Admin client detail API error:", error?.message || error);
+  } catch (error: unknown) {
+    logger.error("Admin client detail API error:", error);
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
-    return NextResponse.json({ error: "Failed to fetch client details", details: process.env.NODE_ENV === "production" ? undefined : error?.message }, { status: 500 });
+    return NextResponse.json({ error: "Failed to fetch client details", details: undefined }, { status: 500 });
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 30, windowSeconds: 60 });
 
 // PUT /api/admin/clients/[id] - Admin-only: manage client (suspend, ban, change plan, etc.)
-export const PUT = withAuth(async (req: NextRequest, authCtx, context) => {
+export const PUT = withRateLimit(withAuth(async (req: NextRequest, authCtx, context) => {
   const { id } = await context.params;
   logger.info("[Admin Client Manage] PUT request", { userId: authCtx.userId, clientId: id });
   try {
@@ -355,17 +356,17 @@ export const PUT = withAuth(async (req: NextRequest, authCtx, context) => {
     }
 
     return NextResponse.json({ success: true, message: `Action "${action}" completed` });
-  } catch (error: any) {
-    console.error("Admin client manage API error:", error?.message || error);
+  } catch (error: unknown) {
+    logger.error("Admin client manage API error:", error);
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
-    return NextResponse.json({ error: "Failed to manage client", details: process.env.NODE_ENV === "production" ? undefined : error?.message }, { status: 500 });
+    return NextResponse.json({ error: "Failed to manage client", details: undefined }, { status: 500 });
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 30, windowSeconds: 60 });
 
 // DELETE /api/admin/clients/[id] - Admin-only: permanently delete a client and all associated data
-export const DELETE = withAuth(async (req: NextRequest, authCtx, context) => {
+export const DELETE = withRateLimit(withAuth(async (req: NextRequest, authCtx, context) => {
   const { id } = await context.params;
   logger.info("[Admin Client Delete] DELETE request", { userId: authCtx.userId, clientId: id });
   try {
@@ -457,11 +458,11 @@ export const DELETE = withAuth(async (req: NextRequest, authCtx, context) => {
       success: true,
       message: `Client "${org.name}" and all associated data have been permanently deleted`,
     });
-  } catch (error: any) {
-    console.error("Admin client delete API error:", error?.message || error);
+  } catch (error: unknown) {
+    logger.error("Admin client delete API error:", error);
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
-    return NextResponse.json({ error: "Failed to delete client", details: process.env.NODE_ENV === "production" ? undefined : error?.message }, { status: 500 });
+    return NextResponse.json({ error: "Failed to delete client", details: undefined }, { status: 500 });
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 30, windowSeconds: 60 });

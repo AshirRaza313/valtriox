@@ -12,8 +12,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth-middleware";
 import { shouldSendStorageAlert, checkStorageLimit } from "@/lib/storage-tracker";
 import { db, withRetry} from "@/lib/db";
+import { withRateLimit } from "@/lib/rate-limit";
+import logger from "@/lib/logger";
 
-export const POST = withAuth(async (req: NextRequest, authCtx) => {
+export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   try {
     const { searchParams } = new URL(req.url);
     const orgId = searchParams.get("organizationId") || authCtx.organizationId;
@@ -88,11 +90,11 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
       alerted: true,
       message: `Storage alert sent: ${percentStr} of ${limitGb} used.`,
     });
-  } catch (error: any) {
-    console.error("[Storage Alert] Error:", error?.message || error);
+  } catch (error: unknown) {
+    logger.error("[Storage Alert] Error:", error);
     return NextResponse.json(
       { error: "Failed to check storage alert" },
       { status: 500 }
     );
   }
-}, { requireOrg: true });
+}, { requireOrg: true }), { maxRequests: 30, windowSeconds: 60 });

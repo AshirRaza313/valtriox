@@ -19,7 +19,7 @@ export const GET = withRateLimit(withAuth(async (req: NextRequest) => {
       : null;
 
     return NextResponse.json({ fields });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("[Admin Contact Form] GET error", error);
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);

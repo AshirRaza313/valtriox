@@ -13,7 +13,7 @@ import { withRateLimit } from "@/lib/rate-limit";
 const DEFAULT_SETTINGS = {
   id: "default",
   companyName: "Valtriox",
-  companyEmail: "ashir@valtriox.com",
+  companyEmail: process.env.SUPPORT_EMAIL || "support@valtriox.com",
   companyPhone: "",
   companyWebsite: "",
   companyAddress: "",
@@ -130,7 +130,7 @@ export const GET = withRateLimit(withAuth(async (_req: NextRequest, authCtx) => 
       const created = await db.platformSettings.create({
         data: {
           companyName: "Valtriox",
-          companyEmail: "ashir@valtriox.com",
+          companyEmail: process.env.SUPPORT_EMAIL || "support@valtriox.com",
           currency: "PKR",
         },
       });
@@ -138,14 +138,14 @@ export const GET = withRateLimit(withAuth(async (_req: NextRequest, authCtx) => 
       return { settings: formatRow(created) };
     }, 2, 500);
     return NextResponse.json(result);
-  } catch (error: any) {
-    const msg = error?.message || String(error);
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
     logger.error("[Admin Settings] GET error:", msg);
 
     return NextResponse.json({
       settings: DEFAULT_SETTINGS,
       fallback: true,
-      reason: process.env.NODE_ENV === 'production' ? undefined : msg,
+      reason: undefined,
     });
   }
 }, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 20, windowSeconds: 60 });
@@ -248,7 +248,7 @@ export const PUT = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
         row = await db.platformSettings.create({
           data: {
             companyName: data.companyName || "Valtriox",
-            companyEmail: data.companyEmail || "ashir@valtriox.com",
+            companyEmail: data.companyEmail || process.env.SUPPORT_EMAIL || "support@valtriox.com",
             currency: data.currency || "PKR",
             ...data,
           },
@@ -260,14 +260,14 @@ export const PUT = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
     }, 2, 500);
     return NextResponse.json(result);
 
-  } catch (error: any) {
-    const msg = error?.message || String(error);
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
     logger.error("[Admin Settings] PUT error:", msg);
 
     return NextResponse.json({
       success: false,
-      error: process.env.NODE_ENV === 'production' ? "Could not save settings" : `Could not save settings: ${msg}`,
-      details: process.env.NODE_ENV === "production" ? undefined : msg,
+      error: "Could not save settings",
+      details: undefined,
     }, { status: 500 });
   }
 }, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 20, windowSeconds: 60 });

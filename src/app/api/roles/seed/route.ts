@@ -3,8 +3,9 @@ import { db, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
 import { ROLES } from "@/lib/roles";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
+import { withRateLimit } from "@/lib/rate-limit";
 
-export const POST = withAuth(async (req: NextRequest, authCtx) => {
+export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   try {
     logger.info("[Roles Seed] POST request", { userId: authCtx.userId });
 
@@ -42,8 +43,8 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
         level: r.level,
       })),
     });
-  } catch (error: any) {
-    console.error("Roles seed error:", error?.message || error);
+  } catch (error: unknown) {
+    logger.error("Roles seed error:", error);
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
@@ -52,4 +53,4 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
       { status: 500 }
     );
   }
-}, { requireRole: ["platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 30, windowSeconds: 60 });

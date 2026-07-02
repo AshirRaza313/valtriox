@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import crypto from "crypto";
 import { db, safeDbQuery } from "@/lib/db";
 import logger from "@/lib/logger";
 
@@ -17,7 +18,15 @@ export async function GET(req: NextRequest) {
     if (!secret) {
       return NextResponse.json({ error: 'Health check not configured' }, { status: 503 });
     }
-    if (!authHeader || authHeader !== `Bearer ${secret}`) {
+    // Phase 7: Use timing-safe comparison to prevent timing attacks
+    if (!authHeader) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const expectedToken = `Bearer ${secret}`;
+    if (authHeader.length !== expectedToken.length || !crypto.timingSafeEqual(
+      Buffer.from(authHeader, 'utf8'),
+      Buffer.from(expectedToken, 'utf8')
+    )) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
   }
@@ -39,7 +48,7 @@ export async function GET(req: NextRequest) {
     health.status = "degraded";
     (health.checks as Record<string, unknown>).database = {
       status: "unhealthy",
-      error: process.env.NODE_ENV === 'production' ? "Database connection failed" : (error?.substring(0, 200) || "Unknown database error"),
+      error: "Database connection failed",
     };
     logger.error("[Health] Database check failed", { error });
   } else {

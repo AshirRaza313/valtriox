@@ -196,8 +196,8 @@ export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
     }
 
     return NextResponse.json(result);
-  } catch (error: any) {
-    console.error("Fetch current subscription error:", error?.message || error);
+  } catch (error: unknown) {
+    logger.error("Fetch current subscription error:", error);
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }

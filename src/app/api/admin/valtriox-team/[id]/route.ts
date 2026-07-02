@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
+import { withRateLimit } from "@/lib/rate-limit";
+import logger from "@/lib/logger";
 
 // PATCH: Update member role, department, status, visibleSections
-export const PATCH = withAuth(async (req, authCtx, context) => {
+export const PATCH = withRateLimit(withAuth(async (req, authCtx, context) => {
   try {
     const { id } = await context.params;
     const body = await req.json();
@@ -38,17 +40,17 @@ export const PATCH = withAuth(async (req, authCtx, context) => {
     }, 2, 500);
 
     return NextResponse.json({ success: true, member: updated });
-  } catch (error: any) {
-    console.error("[Valtriox Team] PATCH error:", error?.message);
+  } catch (error: unknown) {
+    logger.error("[Valtriox Team] PATCH error:", error);
     return NextResponse.json(
-      { error: "Failed to update member", details: process.env.NODE_ENV === "production" ? undefined : error?.message },
+      { error: "Failed to update member", details: undefined },
       { status: 500 }
     );
   }
-}, { requireRole: ["platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 30, windowSeconds: 60 });
 
 // DELETE: Remove team member
-export const DELETE = withAuth(async (req, authCtx, context) => {
+export const DELETE = withRateLimit(withAuth(async (req, authCtx, context) => {
   try {
     const { id } = await context.params;
 
@@ -69,11 +71,11 @@ export const DELETE = withAuth(async (req, authCtx, context) => {
     }, 2, 500);
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    console.error("[Valtriox Team] DELETE error:", error?.message);
+  } catch (error: unknown) {
+    logger.error("[Valtriox Team] DELETE error:", error);
     return NextResponse.json(
-      { error: "Failed to remove member", details: process.env.NODE_ENV === "production" ? undefined : error?.message },
+      { error: "Failed to remove member", details: undefined },
       { status: 500 }
     );
   }
-}, { requireRole: ["platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 30, windowSeconds: 60 });

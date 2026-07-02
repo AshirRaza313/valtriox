@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, dbErrorResponse, createAllTables, isDbUnavailable, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
+import { withRateLimit } from "@/lib/rate-limit";
 import logger from "@/lib/logger";
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -745,7 +746,7 @@ const SEED_AUTOMATIONS = [
 //  POST /api/admin/seed-data
 // ═══════════════════════════════════════════════════════════════════════════
 
-export const POST = withAuth(async (req: NextRequest) => {
+export const POST = withRateLimit(withAuth(async (req: NextRequest) => {
   try {
     await createAllTables();
 
@@ -841,11 +842,11 @@ export const POST = withAuth(async (req: NextRequest) => {
       message: "Seed completed successfully",
       ...results,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("[Seed Data] POST error", error);
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
-    return NextResponse.json({ error: "Failed to seed data", details: process.env.NODE_ENV === "production" ? undefined : error?.message }, { status: 500 });
+    return NextResponse.json({ error: "Failed to seed data", details: undefined }, { status: 500 });
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 30, windowSeconds: 60 });

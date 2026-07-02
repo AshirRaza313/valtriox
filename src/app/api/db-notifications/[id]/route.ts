@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
 import { withAuth, isPlatformRole, AuthContext } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
+import { withRateLimit } from "@/lib/rate-limit";
 
 // PUT /api/db-notifications/[id] - Mark notification as read
-export const PUT = withAuth(async (
+export const PUT = withRateLimit(withAuth(async (
   req: NextRequest,
   authCtx: AuthContext
 ) => {
@@ -50,11 +51,11 @@ export const PUT = withAuth(async (
     }, 2, 500);
 
     return NextResponse.json({ success: true, message: "Notification marked as read" });
-  } catch (error: any) {
-    console.error("Mark notification read error:", error?.message || error);
+  } catch (error: unknown) {
+    logger.error("Mark notification read error:", error);
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
     return NextResponse.json({ error: "Failed to mark notification as read" }, { status: 500 });
   }
-});
+}), { maxRequests: 30, windowSeconds: 60 });

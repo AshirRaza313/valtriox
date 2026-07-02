@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, dbErrorResponse, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
+import { withRateLimit } from "@/lib/rate-limit";
 import logger from "@/lib/logger";
 
 // ============================================================================
@@ -19,7 +20,7 @@ interface AuditEntry {
   details: string;
 }
 
-export const GET = withAuth(async (request: NextRequest, authCtx) => {
+export const GET = withRateLimit(withAuth(async (request: NextRequest, authCtx) => {
   logger.info("[Admin Audit Log] GET request", { userId: authCtx.userId });
   try {
     const { searchParams } = new URL(request.url);
@@ -312,14 +313,11 @@ export const GET = withAuth(async (request: NextRequest, authCtx) => {
       stats,
       pagination: { page, limit, total, totalPages },
     });
-  } catch (error: any) {
-    console.error("Audit log API error:", error?.message || error);
-    if (error?.message?.includes('DATABASE_URL') || error?.message?.includes('Database connection')) {
-      return dbErrorResponse(error);
-    }
+  } catch (error: unknown) {
+    logger.error("Audit log API error:", error);
     return NextResponse.json(
-      { error: process.env.NODE_ENV === 'production' ? "Failed to fetch audit log" : (error?.message || "Failed to fetch audit log") },
+      { error: "Failed to fetch audit log" },
       { status: 500 }
     );
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 30, windowSeconds: 60 });

@@ -13,7 +13,7 @@ const ordersQuerySchema = paginationQuerySchema.extend({
   status: z.string().max(50).optional(),
 });
 
-export const GET = withAuth(async (req, authCtx) => {
+export const GET = withRateLimit(withAuth(async (req, authCtx) => {
   try {
     // Phase 3: Validate query parameters with Zod
     const queryResult = validateQuery(req, ordersQuerySchema);
@@ -94,7 +94,7 @@ export const GET = withAuth(async (req, authCtx) => {
     }
     return NextResponse.json({ error: "Failed to fetch orders" }, { status: 500 });
   }
-});
+}), { maxRequests: 60, windowSeconds: 60 });
 
 export const POST = withRateLimit(withAuth(async (req, authCtx) => {
   try {

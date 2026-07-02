@@ -6,22 +6,17 @@ import { sanitizeEmail } from "@/lib/sanitize";
 import logger from "@/lib/logger";
 import { withRateLimit } from "@/lib/rate-limit";
 import { getPasswordResetOtpEmailHtml } from "@/lib/email-templates";
+import { validateBody, forgotPasswordSchema } from "@/lib/validations";
 
 const OTP_EXPIRY_MINUTES = 10;
 
 export const POST = withRateLimit(async (req: NextRequest) => {
   try {
-    const body = await req.json();
-    const rawEmail = body?.email;
-
-    if (!rawEmail || typeof rawEmail !== "string") {
-      return NextResponse.json({ error: "Email is required" }, { status: 400 });
-    }
+    const bodyResult = await validateBody(req, forgotPasswordSchema);
+    if (!bodyResult.success) return bodyResult.response;
+    const { email: rawEmail } = bodyResult.data;
 
     const email = sanitizeEmail(rawEmail);
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return NextResponse.json({ error: "Please enter a valid email address" }, { status: 400 });
-    }
 
     // Anti-enumeration: always return success regardless of whether user exists
     const user = await db.user.findUnique({
@@ -73,7 +68,7 @@ export const POST = withRateLimit(async (req: NextRequest) => {
         });
       } catch (emailErr: unknown) {
         const msg = emailErr instanceof Error ? emailErr.message : String(emailErr);
-        console.error("[ForgotPassword] Email send error:", msg);
+        logger.error("[ForgotPassword] Email send error:", msg);
       }
     }
 
@@ -92,7 +87,7 @@ export const POST = withRateLimit(async (req: NextRequest) => {
 
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error("[ForgotPassword] Error:", msg);
+    logger.error("[ForgotPassword] Error:", msg);
     // FIX: Never expose internal error details to client
     return NextResponse.json(
       { error: "Something went wrong. Please try again." },

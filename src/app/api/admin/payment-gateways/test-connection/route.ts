@@ -101,12 +101,13 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
           httpStatus: response.status,
         });
       }
-    } catch (fetchError: any) {
-      const msg = fetchError?.name === "AbortError"
+    } catch (fetchError: unknown) {
+      const isAbort = fetchError instanceof Error && fetchError.name === "AbortError";
+      const msg = isAbort
         ? "Connection timed out (10s)"
         : `Could not reach ${gateway === "paypro" ? "PayPro" : "Safepay"} servers. Check network.`;
 
-      logger.error(`[Gateway Test] ${gateway} connection failed`, { error: fetchError?.message });
+      logger.error(`[Gateway Test] ${gateway} connection failed`, { error: fetchError instanceof Error ? fetchError.message : String(fetchError) });
       return NextResponse.json({
         success: false,
         gateway,
@@ -115,7 +116,7 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
         status: "failed",
       });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("[Gateway Test] Error", error);
     return NextResponse.json({ error: "Test connection failed" }, { status: 500 });
   }

@@ -200,9 +200,12 @@ export function withAuth(
 
 /**
  * Utility to check if the user has a platform-level role
+ * Phase 7: Removed "owner" and "admin" — those are org-level roles, not platform.
+ * Including them was a privilege escalation: org owners could bypass requireOrg
+ * and access platform-only features (documents, storage-settings, support-chat admin).
  */
 export function isPlatformRole(role: string): boolean {
-  return ["platform_owner", "platform_admin", "owner", "admin"].includes(role);
+  return ["platform_owner", "platform_admin"].includes(role);
 }
 
 /**

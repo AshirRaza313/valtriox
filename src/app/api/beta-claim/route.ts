@@ -3,6 +3,29 @@ import { db, withRetry } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import { sanitizeEmail, sanitizeString, validatePassword } from "@/lib/sanitize";
 import { withRateLimit } from "@/lib/rate-limit";
+import { z } from "zod";
+import { validateBody } from "@/lib/validations";
+
+// ═══════════════════════════════════════════════════════════════
+//  Inline schemas for beta-claim actions
+// ═══════════════════════════════════════════════════════════════
+const betaVerifySchema = z.object({
+  action: z.literal("verify"),
+  email: z.string().email().max(254),
+  code: z.string().min(1).max(100),
+});
+
+const betaAcceptSchema = z.object({
+  action: z.literal("accept"),
+  email: z.string().email().max(254),
+  code: z.string().min(1).max(100),
+  name: z.string().min(1).max(200),
+  password: z.string().min(8).max(128),
+  brandName: z.string().min(1).max(200),
+});
+
+const betaClaimSchema = z.discriminatedUnion("action", [betaVerifySchema, betaAcceptSchema]);
+import logger from "@/lib/logger";
 
 // ═══════════════════════════════════════════════════════════════
 //  Public API: /api/beta-claim
@@ -21,14 +44,12 @@ async function findBetaInvite(email: string, token: string) {
 
 export const POST = withRateLimit(async (req: NextRequest) => {
   try {
-    const body = await req.json();
-    const { action, email, code, name, password, brandName } = body;
+    const bodyResult = await validateBody(req, betaClaimSchema);
+    if (!bodyResult.success) return bodyResult.response;
+    const { action, email, code } = bodyResult.data;
 
     // ── ACTION: VERIFY ──
     if (action === "verify") {
-      if (!email || !code) {
-        return NextResponse.json({ error: "Email and code are required" }, { status: 400 });
-      }
 
       const invite = await findBetaInvite(email, code);
 
@@ -72,15 +93,7 @@ export const POST = withRateLimit(async (req: NextRequest) => {
 
     // ── ACTION: ACCEPT ──
     if (action === "accept") {
-      if (!email || !code) {
-        return NextResponse.json({ error: "Email and code are required" }, { status: 400 });
-      }
-      if (!name || !password || !brandName) {
-        return NextResponse.json({ error: "Name, brand name, and password are required" }, { status: 400 });
-      }
-      if (password.length < 8 || password.length > 128) {
-        return NextResponse.json({ error: "Password must be between 8 and 128 characters" }, { status: 400 });
-      }
+      const { name, password, brandName } = bodyResult.data;
 
       const passwordCheck = validatePassword(password);
       if (!passwordCheck.valid) {
@@ -192,8 +205,8 @@ export const POST = withRateLimit(async (req: NextRequest) => {
     }
 
     return NextResponse.json({ error: "Invalid action. Use 'verify' or 'accept'." }, { status: 400 });
-  } catch (error: any) {
-    console.error("[BetaClaim] Error:", error?.code, error?.message);
+  } catch (error: unknown) {
+    logger.error("[BetaClaim] Error:", error);
     return NextResponse.json({ error: "Failed to process request" }, { status: 500 });
   }
 }, { maxRequests: 5, windowSeconds: 60 });

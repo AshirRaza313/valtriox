@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
+import { withRateLimit } from "@/lib/rate-limit";
 
-export const POST = withAuth(async (req: NextRequest, authCtx) => {
+export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   if (process.env.NODE_ENV === 'production') {
     return NextResponse.json({ error: 'Not available in production' }, { status: 404 });
   }
@@ -372,8 +373,8 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
     return NextResponse.json({
       message: "Demo data seeded successfully",
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("Seed error", error);
-    return NextResponse.json({ error: process.env.NODE_ENV === 'production' ? "Seed failed" : "Seed failed: " + error.message }, { status: 500 });
+    return NextResponse.json({ error: "Seed failed" }, { status: 500 });
   }
-}, { requireRole: ["platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 30, windowSeconds: 60 });

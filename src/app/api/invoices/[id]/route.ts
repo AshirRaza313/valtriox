@@ -4,9 +4,10 @@ import { generateInvoicePDF } from "@/lib/pdf-generator";
 import { withAuth, RouteContext, isPlatformRole } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
 import { safeDate } from "@/lib/utils-extended";
+import { withRateLimit } from "@/lib/rate-limit";
 
 // GET /api/invoices/[id] - Get single invoice data or PDF
-export const GET = withAuth(async (
+export const GET = withRateLimit(withAuth(async (
   req: NextRequest,
   authCtx,
   ctx: RouteContext
@@ -25,8 +26,8 @@ export const GET = withAuth(async (
       invoice = await withRetry(async () => {
         return db.invoice.findUnique({ where: { id } });
       }, 2, 500);
-    } catch (dbErr: any) {
-      console.error("[Invoice GET] DB error:", dbErr?.message);
+    } catch (dbErr: unknown) {
+      logger.error("[Invoice GET] DB error:", dbErr);
       return NextResponse.json({ error: "Database error" }, { status: 500 });
     }
 
@@ -46,8 +47,8 @@ export const GET = withAuth(async (
         platformSettings = await withRetry(async () => {
           return db.platformSettings.findFirst();
         }, 2, 500);
-      } catch (psErr: any) {
-        console.warn("[Invoice GET] platformSettings fetch failed, using defaults");
+      } catch (psErr: unknown) {
+        logger.warn("[Invoice GET] platformSettings fetch failed, using defaults");
       }
 
       const invoiceData = {
@@ -87,10 +88,10 @@ export const GET = withAuth(async (
       let pdfBuffer: Buffer;
       try {
         pdfBuffer = await generateInvoicePDF(invoiceData);
-      } catch (pdfErr: any) {
-        console.error("[Invoice GET] PDF generation error:", pdfErr?.message);
+      } catch (pdfErr: unknown) {
+        logger.error("[Invoice GET] PDF generation error:", pdfErr);
         return NextResponse.json(
-          { error: "PDF generation failed", details: pdfErr?.message },
+          { error: "PDF generation failed", details: pdfErr instanceof Error ? pdfErr.message : undefined },
           { status: 500 }
         );
       }
@@ -107,11 +108,11 @@ export const GET = withAuth(async (
 
     // Otherwise return JSON
     return NextResponse.json({ invoice });
-  } catch (error: any) {
-    console.error("[Invoice GET] Unhandled error:", error?.message);
+  } catch (error: unknown) {
+    logger.error("[Invoice GET] Unhandled error:", error);
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
-    return NextResponse.json({ error: "Failed to fetch invoice", details: process.env.NODE_ENV === "production" ? undefined : error?.message }, { status: 500 });
+    return NextResponse.json({ error: "Failed to fetch invoice", details: undefined }, { status: 500 });
   }
-});
+}), { maxRequests: 60, windowSeconds: 60 });

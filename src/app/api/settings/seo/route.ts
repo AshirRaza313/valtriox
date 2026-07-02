@@ -1,9 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth-middleware";
 import { isDbUnavailable, dbErrorResponse, withRetry } from "@/lib/db";
+import { withRateLimit } from "@/lib/rate-limit";
+import { z } from "zod";
+import { validateBody } from "@/lib/validations";
+
+// Inline schema matching the SEO route's actual body fields
+const seoSaveSchema = z.object({
+  url: z.string().max(2048).optional(),
+  title: z.string().max(300).optional(),
+  description: z.string().max(1000).optional(),
+  orgId: z.string().max(50).optional(),
+});
+import logger from "@/lib/logger";
 
 // GET /api/settings/seo?orgId=... — Retrieve stored SEO meta tags
-export const GET = withAuth(async (req: NextRequest, authCtx) => {
+export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   try {
     const { searchParams } = new URL(req.url);
     const orgId = searchParams.get("orgId") || authCtx.organizationId;
@@ -25,18 +37,19 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
     }
 
     return NextResponse.json({ seo: null });
-  } catch (error: any) {
-    console.error("[SEO GET] Error:", error?.message || error);
+  } catch (error: unknown) {
+    logger.error("[SEO GET] Error:", error);
     if (isDbUnavailable(error)) return dbErrorResponse(error);
     return NextResponse.json({ seo: null });
   }
-}, { requireOrg: true });
+}, { requireOrg: true }), { maxRequests: 60, windowSeconds: 60 });
 
 // POST /api/settings/seo — Save SEO meta tags
-export const POST = withAuth(async (req: NextRequest, authCtx) => {
+export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   try {
-    const body = await req.json();
-    const { url, title, description, orgId: bodyOrgId } = body;
+    const bodyResult = await validateBody(req, seoSaveSchema);
+    if (!bodyResult.success) return bodyResult.response;
+    const { url, title, description, orgId: bodyOrgId } = bodyResult.data;
     const orgId = bodyOrgId || authCtx.organizationId;
 
     if (!orgId) {
@@ -64,9 +77,9 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
     fs.writeFileSync(filePath, JSON.stringify(seoData, null, 2));
 
     return NextResponse.json({ seo: seoData, success: true });
-  } catch (error: any) {
-    console.error("[SEO POST] Error:", error?.message || error);
+  } catch (error: unknown) {
+    logger.error("[SEO POST] Error:", error);
     if (isDbUnavailable(error)) return dbErrorResponse(error);
     return NextResponse.json({ error: "Failed to save SEO settings" }, { status: 500 });
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"] });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"] }), { maxRequests: 30, windowSeconds: 60 });

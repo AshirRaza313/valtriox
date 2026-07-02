@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
+import logger from "@/lib/logger";
 
 export async function GET(req: NextRequest) {
   try {
@@ -27,8 +28,8 @@ export async function GET(req: NextRequest) {
     }, 2, 500);
 
     return NextResponse.json({ pages });
-  } catch (error: any) {
-    console.error("Fetch legal pages error:", error?.message || error);
+  } catch (error: unknown) {
+    logger.error("Fetch legal pages error:", error);
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }

@@ -38,7 +38,7 @@ export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
     };
 
     return NextResponse.json({ invoices, stats });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return dbErrorResponse(error);
   }
 }, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 20, windowSeconds: 60 });

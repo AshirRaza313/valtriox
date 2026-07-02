@@ -5,9 +5,10 @@ import { withAuth, RouteContext } from "@/lib/auth-middleware";
 import { validateBody } from "@/lib/validations/api";
 import { updateProductSchema } from "@/lib/validations/schemas";
 import logger from "@/lib/logger";
+import { withRateLimit } from "@/lib/rate-limit";
 
 // GET /api/products/[id] - Fetch a single product by ID
-export const GET = withAuth(async (
+export const GET = withRateLimit(withAuth(async (
   req: NextRequest,
   authCtx,
   ctx: RouteContext
@@ -28,17 +29,14 @@ export const GET = withAuth(async (
     }
 
     return NextResponse.json({ product });
-  } catch (error: any) {
-    console.error("[GET /api/products/[id]]", error?.message || error);
-    if (error?.message?.includes('DATABASE_URL') || error?.message?.includes('Database connection')) {
-      return dbErrorResponse(error);
-    }
+  } catch (error: unknown) {
+    logger.error("[GET /api/products/[id]]", error);
     return NextResponse.json({ error: "Failed to fetch product" }, { status: 500 });
   }
-});
+}), { maxRequests: 60, windowSeconds: 60 });
 
 // PATCH /api/products/[id] - Update an existing product
-export const PATCH = withAuth(async (
+export const PATCH = withRateLimit(withAuth(async (
   req: NextRequest,
   authCtx,
   ctx: RouteContext
@@ -80,17 +78,14 @@ export const PATCH = withAuth(async (
     }, 2, 500);
 
     return NextResponse.json({ product });
-  } catch (error: any) {
-    console.error("[PATCH /api/products/[id]]", error?.message || error);
-    if (error?.message?.includes('DATABASE_URL') || error?.message?.includes('Database connection')) {
-      return dbErrorResponse(error);
-    }
+  } catch (error: unknown) {
+    logger.error("[PATCH /api/products/[id]]", error);
     return NextResponse.json({ error: "Failed to update product" }, { status: 500 });
   }
-});
+}), { maxRequests: 30, windowSeconds: 60 });
 
 // DELETE /api/products/[id] - Delete a product and its related order items
-export const DELETE = withAuth(async (
+export const DELETE = withRateLimit(withAuth(async (
   req: NextRequest,
   authCtx,
   ctx: RouteContext
@@ -115,11 +110,8 @@ export const DELETE = withAuth(async (
     }, 2, 500);
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    console.error("[DELETE /api/products/[id]]", error?.message || error);
-    if (error?.message?.includes('DATABASE_URL') || error?.message?.includes('Database connection')) {
-      return dbErrorResponse(error);
-    }
+  } catch (error: unknown) {
+    logger.error("[DELETE /api/products/[id]]", error);
     return NextResponse.json({ error: "Failed to delete product" }, { status: 500 });
   }
-});
+}), { maxRequests: 30, windowSeconds: 60 });

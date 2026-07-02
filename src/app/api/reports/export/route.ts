@@ -5,6 +5,7 @@ import { getCurrencyForCountry } from "@/lib/currency";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
 import { safeDate } from "@/lib/utils-extended";
+import { withRateLimit } from "@/lib/rate-limit";
 
 // Extend Vercel serverless function timeout to 60s (PDF generation is heavy)
 export const maxDuration = 60;
@@ -42,7 +43,7 @@ function truncateLabel(str: string | null | undefined, maxLen: number = 18): str
 }
 
 // GET /api/reports/export?type=sales|customers|products&orgId=xxx&period=daily|weekly|monthly
-export const GET = withAuth(async (req: NextRequest, authCtx) => {
+export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   try {
     logger.info("[Reports Export] GET request", { userId: authCtx.userId });
     const type = req.nextUrl.searchParams.get("type") || "sales";
@@ -68,8 +69,8 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
     let platformSettings: any = null;
     try {
       platformSettings = await db.platformSettings.findFirst({ orderBy: { createdAt: "desc" } });
-    } catch (psErr: any) {
-      console.warn("[Report Export] platformSettings fetch failed:", psErr?.message);
+    } catch (psErr: unknown) {
+      logger.warn("[Report Export] platformSettings fetch failed:", { error: psErr instanceof Error ? psErr.message : String(psErr) });
     }
 
     const platformInfo = {
@@ -514,8 +515,8 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
           ]);
           thisMonthSold = thisMonthItems.reduce((s, item) => s + (Number(item.quantity) || 0), 0);
           prevMonthSold = prevMonthItems.reduce((s, item) => s + (Number(item.quantity) || 0), 0);
-        } catch (itemErr: any) {
-          console.warn("[Report Export] order item comparison fetch failed:", itemErr?.message);
+        } catch (itemErr: unknown) {
+          logger.warn("[Report Export] order item comparison fetch failed:", { error: itemErr instanceof Error ? itemErr.message : String(itemErr) });
         }
 
         // ── No Data Handling ──
@@ -637,20 +638,20 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
           setTimeout(() => reject(new Error("PDF generation timed out (30s)")), 30000)
         ),
       ]);
-    } catch (pdfErr: any) {
-      const errMsg = pdfErr?.message || String(pdfErr);
-      console.error("[Report Export] PDF generation error:", errMsg);
+    } catch (pdfErr: unknown) {
+      const errMsg = pdfErr instanceof Error ? pdfErr.message : String(pdfErr);
+      logger.error("[Report Export] PDF generation error:", errMsg);
       if (process.env.NODE_ENV === 'development') {
-        console.error("[Report Export] Stack trace:", pdfErr?.stack);
+        logger.error("[Report Export] Stack trace:", pdfErr instanceof Error ? pdfErr.stack : String(pdfErr));
       }
       return NextResponse.json(
-        { error: "Report PDF generation failed", details: process.env.NODE_ENV === 'development' ? errMsg : undefined },
+        { error: "Report PDF generation failed", details: undefined },
         { status: 500 },
       );
     }
 
     if (!pdfBuffer || pdfBuffer.length < 100) {
-      console.error("[Report Export] PDF buffer invalid, length:", pdfBuffer?.length);
+      logger.error("[Report Export] PDF buffer invalid, length:", pdfBuffer?.length);
       return NextResponse.json({ error: "Generated report PDF is invalid or empty" }, { status: 500 });
     }
 
@@ -662,15 +663,12 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
         "Cache-Control": "no-cache, no-store",
       },
     });
-  } catch (error: any) {
-    const errMsg = error?.message || String(error);
-    console.error("[Report Export] Unhandled error:", errMsg);
-    if (errMsg.includes("DATABASE_URL") || errMsg.includes("Database connection")) {
-      return dbErrorResponse(error);
-    }
+  } catch (error: unknown) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+    logger.error("[Report Export] Unhandled error:", errMsg);
     return NextResponse.json(
-      { error: "Failed to generate report", details: process.env.NODE_ENV === "production" ? undefined : errMsg },
+      { error: "Failed to generate report", details: undefined },
       { status: 500 },
     );
   }
-});
+}), { maxRequests: 60, windowSeconds: 60 });

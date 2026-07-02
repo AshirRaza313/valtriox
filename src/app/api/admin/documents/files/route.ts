@@ -14,8 +14,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, withRetry, safeDbQuery } from "@/lib/db";
 import { withAuth, isPlatformRole, AuthContext } from "@/lib/auth-middleware";
+import { withRateLimit } from "@/lib/rate-limit";
 import logger from "@/lib/logger";
 import { uploadFile, deleteFile, CLOUDINARY_BUCKETS } from "@/lib/cloudinary";
+import { formatFileSize } from "@/lib/utils";
 
 // Allow up to 60 seconds for large file uploads on Vercel
 export const maxDuration = 60;
@@ -80,7 +82,7 @@ const MAX_FILE_SIZE = 50 * 1024 * 1024;
 // GET - List all uploaded platform documents
 // ═══════════════════════════════════════════════════════════════════════════
 
-export const GET = withAuth(async (_req: NextRequest, authCtx: AuthContext) => {
+export const GET = withRateLimit(withAuth(async (_req: NextRequest, authCtx: AuthContext) => {
   try {
     const { data: files, error } = await safeDbQuery(async () => {
       // ── Scope to caller's org unless they are a platform admin ──
@@ -111,13 +113,13 @@ export const GET = withAuth(async (_req: NextRequest, authCtx: AuthContext) => {
     logger.error("[DocumentFiles] GET error:", message);
     return NextResponse.json({ files: [] });
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 30, windowSeconds: 60 });
 
 // ═══════════════════════════════════════════════════════════════════════════
 // POST - Upload a new file
 // ═══════════════════════════════════════════════════════════════════════════
 
-export const POST = withAuth(async (req: NextRequest, authCtx: AuthContext) => {
+export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx: AuthContext) => {
   try {
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
@@ -236,13 +238,13 @@ export const POST = withAuth(async (req: NextRequest, authCtx: AuthContext) => {
     logger.error("[DocumentFiles] POST error:", message);
     return NextResponse.json({ error: "Failed to upload file" }, { status: 500 });
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 30, windowSeconds: 60 });
 
 // ═══════════════════════════════════════════════════════════════════════════
 // PUT - Update file metadata
 // ═══════════════════════════════════════════════════════════════════════════
 
-export const PUT = withAuth(async (req: NextRequest, authCtx: AuthContext) => {
+export const PUT = withRateLimit(withAuth(async (req: NextRequest, authCtx: AuthContext) => {
   try {
     const body = await req.json();
     const { id, title, description, category } = body;
@@ -298,13 +300,13 @@ export const PUT = withAuth(async (req: NextRequest, authCtx: AuthContext) => {
     logger.error("[DocumentFiles] PUT error:", message);
     return NextResponse.json({ error: "Failed to update file" }, { status: 500 });
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 30, windowSeconds: 60 });
 
 // ═══════════════════════════════════════════════════════════════════════════
 // DELETE - Delete a file from Cloudinary + database
 // ═══════════════════════════════════════════════════════════════════════════
 
-export const DELETE = withAuth(async (req: NextRequest, authCtx: AuthContext) => {
+export const DELETE = withRateLimit(withAuth(async (req: NextRequest, authCtx: AuthContext) => {
   try {
     const { searchParams } = new URL(req.url);
     const fileId = searchParams.get("id");
@@ -361,13 +363,8 @@ export const DELETE = withAuth(async (req: NextRequest, authCtx: AuthContext) =>
     logger.error("[DocumentFiles] DELETE error:", message);
     return NextResponse.json({ error: "Failed to delete file" }, { status: 500 });
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 30, windowSeconds: 60 });
 
 // ─── Helper ────────────────────────────────────────────────────────────────
 
-function formatFileSize(bytes: number): string {
-  if (bytes === 0) return "0 B";
-  const units = ["B", "KB", "MB", "GB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(1024));
-  return `${(bytes / Math.pow(1024, i)).toFixed(i > 0 ? 1 : 0)} ${units[i]}`;
-}
+// formatFileSize moved to src/lib/utils.ts (Phase 8)

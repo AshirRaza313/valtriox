@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth-middleware";
+import { withRateLimit } from "@/lib/rate-limit";
 import { runComprehensiveRegressionChecks } from "@/lib/regression-guard";
 import logger from "@/lib/logger";
 
@@ -10,7 +11,7 @@ import logger from "@/lib/logger";
  * Tests module imports, configuration validity, DB connectivity, and memory usage.
  * Returns categorized results with actionable recommendations.
  */
-export const GET = withAuth(async (_req: NextRequest, _authCtx) => {
+export const GET = withRateLimit(withAuth(async (_req: NextRequest, _authCtx) => {
   try {
     const report = await runComprehensiveRegressionChecks();
 
@@ -38,11 +39,11 @@ export const GET = withAuth(async (_req: NextRequest, _authCtx) => {
         headers: { "Cache-Control": "no-store" },
       }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("[RegressionCheck:Comprehensive] Unexpected error", error);
     return NextResponse.json(
       { error: "Comprehensive regression check failed unexpectedly" },
       { status: 500 }
     );
   }
-}, { requireRole: ["platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 30, windowSeconds: 60 });

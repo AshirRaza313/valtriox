@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, safeDbQuery } from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
+import { withRateLimit } from "@/lib/rate-limit";
 import logger from "@/lib/logger";
 
 // POST /api/admin/email-templates/send - Send an email template to a recipient
-export const POST = withAuth(async (req: NextRequest) => {
+export const POST = withRateLimit(withAuth(async (req: NextRequest) => {
   try {
     const body = await req.json();
     const { templateId, recipientEmail, clientName } = body;
@@ -83,8 +84,8 @@ export const POST = withAuth(async (req: NextRequest) => {
       recipientEmail,
       clientName: clientName || null,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("[Send Email] POST error", error);
-    return NextResponse.json({ error: "Failed to send email", details: process.env.NODE_ENV === "production" ? undefined : error?.message }, { status: 500 });
+    return NextResponse.json({ error: "Failed to send email", details: undefined }, { status: 500 });
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 30, windowSeconds: 60 });

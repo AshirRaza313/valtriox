@@ -3,8 +3,9 @@ import { db, dbErrorResponse, withRetry} from "@/lib/db";
 import { notFoundOrUnauthorizedResponse } from "@/lib/api-utils";
 import { withAuth, RouteContext } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
+import { withRateLimit } from "@/lib/rate-limit";
 
-export const DELETE = withAuth(async (
+export const DELETE = withRateLimit(withAuth(async (
   req: NextRequest,
   authCtx,
   ctx: RouteContext
@@ -24,11 +25,8 @@ export const DELETE = withAuth(async (
       return await db.expense.delete({ where: { id } })
     }, 2, 500);
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    console.error("Expenses DELETE error:", error?.message || error);
-    if (error?.message?.includes('DATABASE_URL') || error?.message?.includes('Database connection')) {
-      return dbErrorResponse(error);
-    }
+  } catch (error: unknown) {
+    logger.error("Expenses DELETE error:", error);
     return NextResponse.json({ error: "Failed to delete expense" }, { status: 500 });
   }
-});
+}), { maxRequests: 30, windowSeconds: 60 });

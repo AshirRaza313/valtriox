@@ -836,7 +836,7 @@ export function WhiteLabelPage() {
                 )}
               >
                 <span>
-                  {settings.supportEmail || "ashir@valtriox.com"}
+                  {settings.supportEmail || process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@valtriox.com"}
                 </span>
                 {!settings.removePoweredByFooter && (
                   <span>Powered by Valtriox</span>

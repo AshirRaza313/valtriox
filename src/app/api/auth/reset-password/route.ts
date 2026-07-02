@@ -5,6 +5,7 @@ import { sanitizeEmail, validatePassword } from "@/lib/sanitize";
 import { withRateLimit } from "@/lib/rate-limit";
 import { validateBody, resetPasswordSchema } from "@/lib/validations";
 import { z } from "zod";
+import logger from "@/lib/logger";
 
 export const POST = withRateLimit(async (req: NextRequest) => {
   try {
@@ -51,14 +52,14 @@ export const POST = withRateLimit(async (req: NextRequest) => {
     // Also delete any remaining password-reset OTPs for this email (cleanup)
     await db.verificationToken.deleteMany({ where: { identifier: `password-reset:${email}` } });
 
-    console.log(`[ResetPassword] Password updated for ${email}`);
+    logger.info(`[ResetPassword] Password updated for ${email}`);
 
     return NextResponse.json({
       success: true,
       message: "Password has been reset successfully. You can now sign in with your new password.",
     });
-  } catch (err: any) {
-    console.error("[ResetPassword] Error:", err?.message || err);
+  } catch (err: unknown) {
+    logger.error("[ResetPassword] Error:", err);
     return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
   }
 }, { maxRequests: 3, windowSeconds: 60 });

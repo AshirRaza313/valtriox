@@ -6,7 +6,7 @@ import logger from "@/lib/logger";
 import { withRateLimit } from "@/lib/rate-limit";
 import { createCouponSchema, updateCouponSchema } from "@/lib/validations/schemas";
 
-export const GET = withAuth(async (req, authCtx) => {
+export const GET = withRateLimit(withAuth(async (req, authCtx) => {
   try {
     const { searchParams } = new URL(req.url);
     const orgId = searchParams.get("orgId") || authCtx.organizationId;
@@ -30,7 +30,7 @@ export const GET = withAuth(async (req, authCtx) => {
     }
     return NextResponse.json({ error: "Failed to fetch coupons" }, { status: 500 });
   }
-});
+}), { maxRequests: 60, windowSeconds: 60 });
 
 export const POST = withRateLimit(withAuth(async (req, authCtx) => {
   try {

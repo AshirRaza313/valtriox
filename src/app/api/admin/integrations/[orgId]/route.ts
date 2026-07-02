@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
+import { withRateLimit } from "@/lib/rate-limit";
+import logger from "@/lib/logger";
 
 // PUT /api/admin/integrations/[orgId] - Admin-only: manage integration for an org
-export const PUT = withAuth(async (req: NextRequest, authCtx, context) => {
+export const PUT = withRateLimit(withAuth(async (req: NextRequest, authCtx, context) => {
   const { orgId } = await context.params;
   try {
     const body = await req.json();
@@ -112,8 +114,8 @@ export const PUT = withAuth(async (req: NextRequest, authCtx, context) => {
         performedAt: new Date().toISOString(),
       },
     });
-  } catch (error: any) {
-    console.error("Admin integrations PUT API error:", error?.message || error);
+  } catch (error: unknown) {
+    logger.error("Admin integrations PUT API error:", error);
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
@@ -122,4 +124,4 @@ export const PUT = withAuth(async (req: NextRequest, authCtx, context) => {
       { status: 500 }
     );
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 30, windowSeconds: 60 });

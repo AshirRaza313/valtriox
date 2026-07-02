@@ -5,9 +5,10 @@ import { sanitizeObject } from "@/lib/sanitize";
 import logger from "@/lib/logger";
 import { getEventsForRegion } from "@/lib/events-library";
 import type { RegionEvent } from "@/lib/events-library";
+import { withRateLimit } from "@/lib/rate-limit";
 
 // GET - Returns events for org's country + religion (with optional preview params)
-export const GET = withAuth(async (req, authCtx) => {
+export const GET = withRateLimit(withAuth(async (req, authCtx) => {
   try {
     const { searchParams } = new URL(req.url);
 
@@ -66,17 +67,17 @@ export const GET = withAuth(async (req, authCtx) => {
       customCount: customEvents.length,
       regionCount: regionEvents.length,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("Events region GET error", error, { orgId: authCtx?.organizationId });
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
     return NextResponse.json({ error: "Failed to fetch events" }, { status: 500 });
   }
-});
+}), { maxRequests: 60, windowSeconds: 60 });
 
 // POST - Create a custom event for the org
-export const POST = withAuth(async (req, authCtx) => {
+export const POST = withRateLimit(withAuth(async (req, authCtx) => {
   try {
     const orgId = authCtx.organizationId;
     if (!orgId) {
@@ -147,17 +148,17 @@ export const POST = withAuth(async (req, authCtx) => {
     }, 2, 500);
 
     return NextResponse.json({ event: newEvent, customCount: customEvents.length });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("Events region POST error", error, { orgId: authCtx?.organizationId });
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
     return NextResponse.json({ error: "Failed to create custom event" }, { status: 500 });
   }
-});
+}), { maxRequests: 30, windowSeconds: 60 });
 
 // DELETE - Delete a custom event by ID
-export const DELETE = withAuth(async (req, authCtx) => {
+export const DELETE = withRateLimit(withAuth(async (req, authCtx) => {
   try {
     const orgId = authCtx.organizationId;
     if (!orgId) {
@@ -199,11 +200,11 @@ export const DELETE = withAuth(async (req, authCtx) => {
     }, 2, 500);
 
     return NextResponse.json({ customCount: customEvents.length });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("Events region DELETE error", error, { orgId: authCtx?.organizationId });
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
     return NextResponse.json({ error: "Failed to delete custom event" }, { status: 500 });
   }
-});
+}), { maxRequests: 30, windowSeconds: 60 });

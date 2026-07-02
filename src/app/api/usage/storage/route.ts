@@ -11,8 +11,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth-middleware";
 import { db, isDbUnavailable, dbErrorResponse, withRetry } from "@/lib/db";
 import { checkStorageLimit } from "@/lib/storage-tracker";
+import { withRateLimit } from "@/lib/rate-limit";
+import logger from "@/lib/logger";
 
-export const GET = withAuth(async (req: NextRequest, authCtx) => {
+export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   try {
     const { searchParams } = new URL(req.url);
     const orgId = searchParams.get("organizationId") || authCtx.organizationId;
@@ -57,8 +59,8 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
       percent: result.percent,
       status,
     });
-  } catch (error: any) {
-    console.error("[Storage Usage] Error:", error?.message || error);
+  } catch (error: unknown) {
+    logger.error("[Storage Usage] Error:", error);
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
@@ -67,4 +69,4 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
       { status: 500 }
     );
   }
-}, { requireOrg: true });
+}, { requireOrg: true }), { maxRequests: 60, windowSeconds: 60 });

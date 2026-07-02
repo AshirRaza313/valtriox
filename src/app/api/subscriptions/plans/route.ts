@@ -83,16 +83,16 @@ export const GET = withRateLimit(withAuth(async () => {
       if (staleCount.count > 0) {
         logger.warn(`[Plans] Auto-cleaned ${staleCount.count} stale plans`);
       }
-    } catch (cleanupErr: any) {
+    } catch (cleanupErr: unknown) {
       // Non-critical, don't block the response
-      console.error("[Plans] Cleanup failed (non-critical):", cleanupErr?.message);
+      logger.error("[Plans] Cleanup failed (non-critical):", cleanupErr);
     }
 
     // Auto-sync: ensure DB plans match landing page pricing (run once)
     try {
       await syncPlansToLandingPage();
-    } catch (syncErr: any) {
-      console.error("[Plans] Auto-sync failed (non-critical):", syncErr?.message);
+    } catch (syncErr: unknown) {
+      logger.error("[Plans] Auto-sync failed (non-critical):", syncErr);
     }
 
     const plans = await withRetry(async () => {
@@ -125,8 +125,8 @@ export const GET = withRateLimit(withAuth(async () => {
     }));
 
     return NextResponse.json({ plans: formatted });
-  } catch (error: any) {
-    console.error("Fetch plans error:", error?.message || error);
+  } catch (error: unknown) {
+    logger.error("Fetch plans error:", error);
     if (isDbUnavailable(error)) {
       // Return default plans when DB is unavailable (Revised Pricing Strategy 2026)
       const defaultPlans = [

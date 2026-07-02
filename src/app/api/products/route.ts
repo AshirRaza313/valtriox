@@ -12,7 +12,7 @@ const productsQuerySchema = paginationQuerySchema.extend({
   category: z.string().max(100).optional(),
 });
 
-export const GET = withAuth(async (req, authCtx) => {
+export const GET = withRateLimit(withAuth(async (req, authCtx) => {
   try {
     const queryResult = validateQuery(req, productsQuerySchema);
     if (!queryResult.success) return queryResult.response;
@@ -84,7 +84,7 @@ export const GET = withAuth(async (req, authCtx) => {
     }
     return NextResponse.json({ error: "Failed to fetch products" }, { status: 500 });
   }
-});
+}), { maxRequests: 60, windowSeconds: 60 });
 
 export const POST = withRateLimit(withAuth(async (req, authCtx) => {
   try {

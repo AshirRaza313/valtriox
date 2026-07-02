@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { withRateLimit } from "@/lib/rate-limit";
 import { sanitizeObject, sanitizeEmail } from "@/lib/sanitize";
 import { z } from "zod";
+import logger from "@/lib/logger";
 
 // ── Input validation schemas ──
 const verifySchema = z.object({
@@ -195,8 +196,8 @@ export const POST = withRateLimit(async (req: NextRequest) => {
           data: { role: invitation.role },
         })
         }, 2, 500);
-      } catch (err: any) {
-        console.warn("[Valtriox Join] Could not update User role:", err?.message);
+      } catch (err: unknown) {
+        logger.warn("[Valtriox Join] Could not update User role:", err);
       }
 
       return NextResponse.json({
@@ -217,8 +218,8 @@ export const POST = withRateLimit(async (req: NextRequest) => {
       { error: "Invalid action. Use 'verify' or 'accept'." },
       { status: 400 }
     );
-  } catch (error: any) {
-    console.error("[Valtriox Join] POST error:", error?.message);
+  } catch (error: unknown) {
+    logger.error("[Valtriox Join] POST error:", error);
     return NextResponse.json(
       { error: "Failed to process invitation" },
       { status: 500 }

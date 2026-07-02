@@ -3,6 +3,13 @@ import { db, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
 import { withRateLimit } from "@/lib/rate-limit";
+import { validateBody, payproCreateOrderSchema } from "@/lib/validations";
+import { z } from "zod";
+
+// Extended schema for paypro subscription order creation
+const payproOrderSchema = payproCreateOrderSchema.extend({
+  billingCycle: z.enum(["monthly", "quarterly", "annually"]).default("monthly"),
+});
 
 // ============================================================================
 // PayPro Subscription Billing - Create Payment Order
@@ -20,17 +27,9 @@ const PAYPRO_BASES: Record<string, string> = {
 export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   try {
     logger.info("[PayPro SubBilling] POST request", { userId: authCtx.userId });
-    const body = await req.json();
-    const { planId, billingCycle } = body;
-
-    if (!planId) {
-      return NextResponse.json({ error: "planId is required" }, { status: 400 });
-    }
-
-    const cycle = billingCycle || "monthly";
-    if (!["monthly", "quarterly", "annually"].includes(cycle)) {
-      return NextResponse.json({ error: "Invalid billing cycle" }, { status: 400 });
-    }
+    const bodyResult = await validateBody(req, payproOrderSchema);
+    if (!bodyResult.success) return bodyResult.response;
+    const { planId, billingCycle: cycle } = bodyResult.data;
 
     const orgId = authCtx.organizationId;
 
@@ -197,11 +196,11 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
         billingCycle: cycle,
         message: "Redirecting to PayPro...",
       });
-    } catch (fetchError: any) {
-      logger.error("[PayPro SubBilling] Network error", { error: fetchError?.message });
+    } catch (fetchError: unknown) {
+      logger.error("[PayPro SubBilling] Network error", { error: fetchError instanceof Error ? fetchError.message : String(fetchError) });
       return NextResponse.json({ error: "Failed to connect to PayPro" }, { status: 502 });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("[PayPro SubBilling] Error", error);
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);

@@ -26,6 +26,7 @@ model Account {
   user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
+  @@index([userId])
 }
 
 model Session {
@@ -34,6 +35,8 @@ model Session {
   userId       String
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model VerificationToken {
@@ -70,19 +73,19 @@ model User {
 }
 
 model Organization {
-  id                    String               @id @default(cuid())
+  id                    String                  @id @default(cuid())
   name                  String
-  slug                  String               @unique
+  slug                  String                  @unique
   logo                  String? // Base64 or URL
   website               String?
   phone                 String?
   email                 String?
-  currency              String               @default("USD")
-  timezone              String               @default("UTC")
-  plan                  String               @default("starter")
-  workingHoursStart     String               @default("09:00") // e.g. "09:00"
-  workingHoursEnd       String               @default("18:00") // e.g. "18:00"
-  isActive              Boolean              @default(true)
+  currency              String                  @default("USD")
+  timezone              String                  @default("UTC")
+  plan                  String                  @default("starter")
+  workingHoursStart     String                  @default("09:00") // e.g. "09:00"
+  workingHoursEnd       String                  @default("18:00") // e.g. "18:00"
+  isActive              Boolean                 @default(true)
   // ── Brand Settings (persisted to DB) ──
   country               String?
   religion              String?
@@ -94,8 +97,8 @@ model Organization {
   address               String?
   taxId                 String?
   favicon               String? // Base64 or URL
-  createdAt             DateTime             @default(now())
-  updatedAt             DateTime             @updatedAt
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
   members               OrganizationMember[]
   invitations           TeamInvitation[]
   products              Product[]
@@ -110,25 +113,25 @@ model Organization {
   invoices              Invoice[]
   attendance            Attendance[]
   integrations          IntegrationConnection[]
-  feedbacks            Feedback[]
-  platformDocuments    PlatformDocument[]
+  feedbacks             Feedback[]
+  platformDocuments     PlatformDocument[]
   // ── Atomic Counters (race-safe via increment) ──
-  orderCounter           Int                  @default(0) // Monotonic counter for VTX-XXXX order numbers
+  orderCounter          Int                     @default(0) // Monotonic counter for VTX-XXXX order numbers
   // ── Billing Security ──
-  paymentRejectionCount Int                  @default(0) // Track fake payment rejections
-  isBanned              Boolean              @default(false)
+  paymentRejectionCount Int                     @default(0) // Track fake payment rejections
+  isBanned              Boolean                 @default(false)
   banReason             String?
   bannedAt              DateTime?
   // ── Usage Tracking (for plan limits) ──
-  usageOrdersCount      Int                  @default(0)
-  usageProductsCount    Int                  @default(0)
-  usageCustomersCount   Int                  @default(0)
-  usageStorageMb        Int                  @default(0)
-  usageInvoicesCount    Int                  @default(0)
-  usageCouponsCount     Int                  @default(0)
-  usageTasksCount       Int                  @default(0)
-  usageTeamChatsCount   Int                  @default(0)
-  usageBroadcastsCount  Int                  @default(0)
+  usageOrdersCount      Int                     @default(0)
+  usageProductsCount    Int                     @default(0)
+  usageCustomersCount   Int                     @default(0)
+  usageStorageMb        Int                     @default(0)
+  usageInvoicesCount    Int                     @default(0)
+  usageCouponsCount     Int                     @default(0)
+  usageTasksCount       Int                     @default(0)
+  usageTeamChatsCount   Int                     @default(0)
+  usageBroadcastsCount  Int                     @default(0)
   usageLastResetAt      DateTime?
 
   @@index([plan])
@@ -197,6 +200,7 @@ model Customer {
   @@index([organizationId, loyaltyTier])
   @@index([organizationId, totalSpent])
   @@index([organizationId, createdAt])
+  @@index([organizationId, email])
 }
 
 model Order {
@@ -228,15 +232,15 @@ model Order {
 }
 
 model OrderItem {
-  id          String  @id @default(cuid())
+  id          String   @id @default(cuid())
   orderId     String
-  productId   String
+  productId   String? // Nullable for onDelete: SetNull
   productName String
   quantity    Int
-  price       Decimal @db.Decimal(10, 2)
-  total       Decimal @db.Decimal(10, 2)
-  order       Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product     Product @relation(fields: [productId], references: [id])
+  price       Decimal  @db.Decimal(10, 2)
+  total       Decimal  @db.Decimal(10, 2)
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product     Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
 
   @@index([orderId])
   @@index([productId])
@@ -362,6 +366,7 @@ model Subscription {
   invoices         Invoice[]
 
   @@index([status])
+  @@index([organizationId, status])
 }
 
 // ── Invoices (PDF trackable records) ──
@@ -397,7 +402,7 @@ model Invoice {
 
   @@index([organizationId])
   @@index([status])
-  @@index([invoiceNumber])
+  @@index([organizationId, status])
 }
 
 // ── Payment Proofs ──
@@ -425,6 +430,7 @@ model PaymentProof {
 
   @@index([organizationId])
   @@index([status])
+  @@index([subscriptionId])
 }
 
 // ── Notification (Push + In-App) ──
@@ -448,6 +454,8 @@ model Notification {
   @@index([read])
   @@index([type])
   @@index([createdAt])
+  @@index([userId, read])
+  @@index([orgId, read])
 }
 
 // ── Lead Capture (Contact Form Submissions) ──
@@ -483,6 +491,7 @@ model Lead {
   @@index([status])
   @@index([email])
   @@index([createdAt])
+  @@index([status, createdAt])
 }
 
 // ── Proposals (Post-Consultation Client Deliverables) ──
@@ -599,6 +608,8 @@ model TeamInvitation {
   @@index([organizationId])
   @@index([inviteeEmail])
   @@index([status])
+  @@index([organizationId, status])
+  @@index([expiresAt])
 }
 
 // ── System Settings (Key-Value Store) ──
@@ -627,21 +638,21 @@ model LegalPage {
 // Text-based documents are stored in SystemSetting (category: "documents").
 // This model is for binary/file uploads that go to Cloudinary storage.
 model PlatformDocument {
-  id                String   @id @default(cuid())
-  title             String
-  description       String?  @db.Text
-  fileName          String
-  fileSize          Int      // bytes
-  mimeType          String
-  fileType          String   @default("document") // pdf, image, spreadsheet, document, archive
-  cloudinaryUrl     String?  // Full CDN URL
+  id                 String   @id @default(cuid())
+  title              String
+  description        String?  @db.Text
+  fileName           String
+  fileSize           Int // bytes
+  mimeType           String
+  fileType           String   @default("document") // pdf, image, spreadsheet, document, archive
+  cloudinaryUrl      String? // Full CDN URL
   cloudinaryPublicId String? // For deletion
-  category          String   @default("uploaded") // uploaded, lead-magnet, proposal-export, invoice-template
-  isActive          Boolean  @default(true)
-  uploadedBy        String?  // userId
-  organizationId    String?  // org that owns this file — prevents cross-org access
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  category           String   @default("uploaded") // uploaded, lead-magnet, proposal-export, invoice-template
+  isActive           Boolean  @default(true)
+  uploadedBy         String? // userId
+  organizationId     String? // org that owns this file — prevents cross-org access
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
@@ -653,36 +664,36 @@ model PlatformDocument {
 
 // ── Valtriox Team (Platform-level team, separate from brand teams) ──
 model ValtrioxTeamMember {
-  id              String                   @id @default(cuid())
-  userId          String                   @unique
+  id              String    @id @default(cuid())
+  userId          String    @unique
   email           String
   name            String
-  role            String                   @default("platform_admin")
+  role            String    @default("platform_admin")
   department      String?
-  status          String                   @default("active")
+  status          String    @default("active")
   invitedBy       String?
-  joinedAt        DateTime                 @default(now())
+  joinedAt        DateTime  @default(now())
   lastActive      DateTime?
-  visibleSections String                   @default("[]")
-  createdAt       DateTime                 @default(now())
-  updatedAt       DateTime                 @updatedAt
-  user            User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  visibleSections String    @default("[]")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([status])
   @@index([department])
 }
 
 model ValtrioxTeamInvitation {
-  id         String              @id @default(cuid())
+  id         String    @id @default(cuid())
   email      String
   name       String
-  role       String              @default("platform_admin")
+  role       String    @default("platform_admin")
   department String?
   invitedBy  String?
-  token      String              @unique
-  status     String              @default("pending")
+  token      String    @unique
+  status     String    @default("pending")
   expiresAt  DateTime
-  createdAt  DateTime            @default(now())
+  createdAt  DateTime  @default(now())
   acceptedAt DateTime?
   // invitedBy stores User IDs (not TeamMember IDs), so no FK relation
   // was causing FK violation during prisma db push
@@ -773,9 +784,9 @@ model Automation {
 model IntegrationConnection {
   id             String    @id @default(cuid())
   organizationId String
-  type           String    // e.g., "mailchimp", "shopify", "stripe", "whatsapp-api"
-  provider       String    // e.g., "email_marketing", "ecommerce", "payments", "communication"
-  name           String    // Human-readable: "Shopify Store", "Stripe Payments"
+  type           String // e.g., "mailchimp", "shopify", "stripe", "whatsapp-api"
+  provider       String // e.g., "email_marketing", "ecommerce", "payments", "communication"
+  name           String // Human-readable: "Shopify Store", "Stripe Payments"
   status         String    @default("disconnected") // connected, disconnected, error, pending
   config         String?   @db.Text // JSON string: API keys, webhook URLs, tokens (encrypted at rest via DB SSL)
   metadata       String?   @db.Text // JSON string: extra data (webhook id, sync cursor, etc.)
@@ -784,7 +795,7 @@ model IntegrationConnection {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@unique([organizationId, type])
   @@index([organizationId])
@@ -794,18 +805,18 @@ model IntegrationConnection {
 
 // ── Feedback & Testimonials Collection ──
 model Feedback {
-  id             String   @id @default(cuid())
+  id             String       @id @default(cuid())
   organizationId String
-  type           String   // "feedback" | "testimonial" | "review" | "video"
-  rating         Int?     // 1-5 for reviews/testimonials
-  content        String   // The feedback/review text
-  authorName     String?  // Name of the person giving feedback
-  authorCompany  String?  // Their company/brand name
-  videoUrl       String?  // URL for video testimonials
-  isFeatured     Boolean  @default(false) // For landing page display
-  status         String   @default("pending") // pending | approved | rejected
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  type           String // "feedback" | "testimonial" | "review" | "video"
+  rating         Int? // 1-5 for reviews/testimonials
+  content        String // The feedback/review text
+  authorName     String? // Name of the person giving feedback
+  authorCompany  String? // Their company/brand name
+  videoUrl       String? // URL for video testimonials
+  isFeatured     Boolean      @default(false) // For landing page display
+  status         String       @default("pending") // pending | approved | rejected
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([organizationId, type])
@@ -814,18 +825,33 @@ model Feedback {
 
 // ── Beta Invites (Platform Admin) ──
 model BetaInvite {
-  id             String   @id @default(cuid())
-  email          String   @unique
-  token          String   @unique // 8-char alphanumeric code for secure claim URL
-  plan           String   @default("enterprise") // "enterprise" | "professional" | "growth" | "starter"
-  invitedBy      String   // platform_owner user id
-  status         String   @default("sent") // sent | accepted | expired | revoked
-  trialDays      Int      @default(14)
-  expiresAt      DateTime?
-  acceptedAt     DateTime?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id         String    @id @default(cuid())
+  email      String    @unique
+  token      String    @unique // 8-char alphanumeric code for secure claim URL
+  plan       String    @default("enterprise") // "enterprise" | "professional" | "growth" | "starter"
+  invitedBy  String // platform_owner user id
+  status     String    @default("sent") // sent | accepted | expired | revoked
+  trialDays  Int       @default(14)
+  expiresAt  DateTime?
+  acceptedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
   @@index([status])
   @@index([invitedBy])
+}
+
+// ── Push Subscriptions (Web Push) ──
+model PushSubscription {
+  id         String   @id @default(cuid())
+  userId     String
+  orgId      String?
+  endpoint   String   @unique
+  keysAuth   String
+  keysP256dh String
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([orgId])
 }

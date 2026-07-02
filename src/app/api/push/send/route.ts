@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import webpush from "web-push";
 import { db, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
-import { withAuth } from "@/lib/auth-middleware";
+import { withAuth, isPlatformRole } from "@/lib/auth-middleware";
 import { sanitizeObject } from "@/lib/sanitize";
 import logger from "@/lib/logger";
 import { withRateLimit } from "@/lib/rate-limit";
@@ -23,9 +23,6 @@ function configureVapid(): boolean {
   return true;
 }
 
-// Instead of raw SQL DDL, just let Prisma handle schema.
-// If the table doesn't exist, the Prisma query will fail and we return a 503.
-
 // ── POST /api/push/send - Send a push notification ──
 
 export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
@@ -36,50 +33,56 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
       return NextResponse.json({ error: "Push notifications not configured. Set VAPID keys in environment variables." }, { status: 503 });
     }
 
-    const body = await req.json();
-    Object.assign(body, sanitizeObject(body));
-    // Phase 6: Zod validation
+    const rawBody = await req.json();
+    const body = sanitizeObject(rawBody);
+    // Phase 7: Use validated data from parseResult, not raw body
     const parseResult = pushSendSchema.safeParse(body);
     if (!parseResult.success) {
       const errors = parseResult.error.issues.map(i => `${i.path.join(".")}: ${i.message}`).join(", ");
       return NextResponse.json({ error: `Validation failed: ${errors}` }, { status: 422 });
     }
-    const {
-      userId,       // Send to a specific user
-      orgId,        // Or send to all users in an org
-      title = "Valtriox",
-      message = "You have a new notification",
-      url = "/",
-      icon = "/valtriox-icon-32.png",
-    } = body;
+    const validated = parseResult.data;
 
-    if (!userId && !orgId) {
+    // Allow sending to own user or own org. Platform admins can send to any.
+    const targetUserId = (body as Record<string, unknown>)?.userId as string | undefined;
+    const targetOrgId = (body as Record<string, unknown>)?.orgId as string | undefined;
+    const title = validated.title;
+    const bodyText = validated.body;
+    const url = validated.url || "/";
+    const icon = validated.icon || "/valtriox-icon-32.png";
+
+    if (!targetUserId && !targetOrgId) {
       return NextResponse.json(
         { error: "userId or orgId is required" },
         { status: 400 }
       );
     }
 
-    // Security: verify orgId matches auth context
-    if (orgId && orgId !== authCtx.organizationId) {
+    // Phase 7: Security — verify orgId matches auth context (unless platform admin)
+    if (targetOrgId && targetOrgId !== authCtx.organizationId && !isPlatformRole(authCtx.role)) {
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    }
+
+    // Phase 7: Security — non-admin users can only send to themselves
+    if (targetUserId && targetUserId !== authCtx.userId && !isPlatformRole(authCtx.role)) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
     // Fetch subscriptions
-    let subscriptions: any[];
+    let subscriptions: { endpoint: string; keysP256dh: string; keysAuth: string }[];
 
-    if (userId) {
+    if (targetUserId) {
       const result = await db.$queryRawUnsafe(
         `SELECT endpoint, "keysAuth", "keysP256dh" FROM push_subscriptions WHERE "userId" = $1`,
-        userId
+        targetUserId
       );
-      subscriptions = result as any[];
+      subscriptions = result as { endpoint: string; keysP256dh: string; keysAuth: string }[];
     } else {
       const result = await db.$queryRawUnsafe(
         `SELECT endpoint, "keysAuth", "keysP256dh" FROM push_subscriptions WHERE "orgId" = $1`,
-        orgId
+        targetOrgId
       );
-      subscriptions = result as any[];
+      subscriptions = result as { endpoint: string; keysP256dh: string; keysAuth: string }[];
     }
 
     if (!subscriptions || subscriptions.length === 0) {
@@ -92,12 +95,12 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
     }
 
     // Send push notifications to all matched subscriptions
-    const payload = JSON.stringify({ title, body: message, icon, url });
+    const payload = JSON.stringify({ title, body: bodyText, icon, url });
     let sent = 0;
     let failed = 0;
 
     const results = await Promise.allSettled(
-      subscriptions.map(async (sub: any) => {
+      subscriptions.map(async (sub) => {
         const pushSubscription: webpush.PushSubscription = {
           endpoint: sub.endpoint,
           keys: {
@@ -111,22 +114,28 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
       })
     );
 
-    // Clean up failed subscriptions (likely expired/invalid)
+    // Phase 7: Batch cleanup of expired subscriptions instead of one-by-one
+    const failedEndpoints: string[] = [];
     for (let i = 0; i < results.length; i++) {
       if (results[i].status === "rejected") {
         failed++;
-        const err = results[i].reason as any;
-        // Clean up expired subscriptions (410 or 404)
+        const err = results[i].reason as { statusCode?: number } | undefined;
         if (err?.statusCode === 410 || err?.statusCode === 404) {
-          try {
-            await db.$executeRawUnsafe(
-              `DELETE FROM push_subscriptions WHERE endpoint = $1`,
-              subscriptions[i].endpoint
-            );
-          } catch {
-            // Ignore cleanup errors
-          }
+          failedEndpoints.push(subscriptions[i].endpoint);
         }
+      }
+    }
+
+    if (failedEndpoints.length > 0) {
+      try {
+        // Batch delete all expired subscriptions
+        const placeholders = failedEndpoints.map((_, i) => `$${i + 1}`).join(', ');
+        await db.$executeRawUnsafe(
+          `DELETE FROM push_subscriptions WHERE endpoint IN (${placeholders})`,
+          ...failedEndpoints
+        );
+      } catch {
+        // Ignore cleanup errors
       }
     }
 

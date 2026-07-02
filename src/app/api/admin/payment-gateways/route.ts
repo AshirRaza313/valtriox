@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
+import { withRateLimit } from "@/lib/rate-limit";
 import logger from "@/lib/logger";
 import { isPlatformRole } from "@/lib/roles";
 
@@ -30,7 +31,7 @@ interface GatewayConfig {
 }
 
 // GET /api/admin/payment-gateways - Returns all gateway configs
-export const GET = withAuth(async (req: NextRequest, authCtx) => {
+export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   try {
     if (!isPlatformRole(authCtx.role)) {
       return NextResponse.json({ error: "Admin access required" }, { status: 403 });
@@ -74,17 +75,17 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
       paypro: safePaypro,
       safepay: safeSafepay,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("[PaymentGateways] GET error", error);
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
     return NextResponse.json({ error: "Failed to fetch gateway configurations" }, { status: 500 });
   }
-}, { requireRole: ["platform_owner", "platform_admin", "owner"], requireOrg: false });
+}, { requireRole: ["platform_owner", "platform_admin", "owner"], requireOrg: false }), { maxRequests: 30, windowSeconds: 60 });
 
 // PUT /api/admin/payment-gateways - Updates gateway config
-export const PUT = withAuth(async (req: NextRequest, authCtx) => {
+export const PUT = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   try {
     if (!isPlatformRole(authCtx.role)) {
       return NextResponse.json({ error: "Admin access required" }, { status: 403 });
@@ -164,11 +165,11 @@ export const PUT = withAuth(async (req: NextRequest, authCtx) => {
       success: true,
       message: `${gateway === "paypro" ? "PayPro" : "Safepay"} configuration saved`,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("[PaymentGateways] PUT error", error);
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
     return NextResponse.json({ error: "Failed to save gateway configuration" }, { status: 500 });
   }
-}, { requireRole: ["platform_owner", "platform_admin", "owner"], requireOrg: false });
+}, { requireRole: ["platform_owner", "platform_admin", "owner"], requireOrg: false }), { maxRequests: 30, windowSeconds: 60 });

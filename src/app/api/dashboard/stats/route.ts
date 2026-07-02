@@ -212,7 +212,7 @@ export const GET = withRateLimit(withAuth(async (req, authCtx) => {
       revenueChartData,
       orderStatusData,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("Dashboard stats error", error, { orgId: authCtx?.organizationId });
     if (isDbUnavailable(error)) {
       // Return zero/placeholder stats when DB is unavailable

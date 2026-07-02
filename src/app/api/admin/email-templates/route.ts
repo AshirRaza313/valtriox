@@ -21,12 +21,12 @@ export const GET = withRateLimit(withAuth(async (req: NextRequest) => {
     ]);
 
     return NextResponse.json({ templates, total, page, totalPages: Math.ceil(total / limit) });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("[Admin Email Templates] GET error", error);
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
-    return NextResponse.json({ error: "Failed to fetch email templates", details: process.env.NODE_ENV === "production" ? undefined : error?.message }, { status: 500 });
+    return NextResponse.json({ error: "Failed to fetch email templates", details: undefined }, { status: 500 });
   }
 }, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 20, windowSeconds: 60 });
 
@@ -54,15 +54,15 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest) => {
     }, 2, 500);
 
     return NextResponse.json({ success: true, template });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("[Admin Email Templates] POST error", error);
-    if (error?.code === "P2002") {
+    if (typeof error === "object" && error !== null && "code" in error && (error as { code: string }).code === "P2002") {
       return NextResponse.json({ error: "A template with this type already exists" }, { status: 409 });
     }
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
-    return NextResponse.json({ error: "Failed to create email template", details: process.env.NODE_ENV === "production" ? undefined : error?.message }, { status: 500 });
+    return NextResponse.json({ error: "Failed to create email template", details: undefined }, { status: 500 });
   }
 }, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 20, windowSeconds: 60 });
 
@@ -87,18 +87,18 @@ export const PUT = withRateLimit(withAuth(async (req: NextRequest) => {
     }, 2, 500);
 
     return NextResponse.json({ success: true, template });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("[Admin Email Templates] PUT error", error);
-    if (error?.code === "P2025") {
+    if (typeof error === "object" && error !== null && "code" in error && (error as { code: string }).code === "P2025") {
       return NextResponse.json({ error: "Template not found" }, { status: 404 });
     }
-    if (error?.code === "P2002") {
+    if (typeof error === "object" && error !== null && "code" in error && (error as { code: string }).code === "P2002") {
       return NextResponse.json({ error: "A template with this type already exists" }, { status: 409 });
     }
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
-    return NextResponse.json({ error: "Failed to update email template", details: process.env.NODE_ENV === "production" ? undefined : error?.message }, { status: 500 });
+    return NextResponse.json({ error: "Failed to update email template", details: undefined }, { status: 500 });
   }
 }, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 20, windowSeconds: 60 });
 
@@ -115,11 +115,11 @@ export const DELETE = withRateLimit(withAuth(async (req: NextRequest) => {
     }, 2, 500);
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("[Admin Email Templates] DELETE error", error);
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
-    return NextResponse.json({ error: "Failed to delete email template", details: process.env.NODE_ENV === "production" ? undefined : error?.message }, { status: 500 });
+    return NextResponse.json({ error: "Failed to delete email template", details: undefined }, { status: 500 });
   }
 }, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 20, windowSeconds: 60 });

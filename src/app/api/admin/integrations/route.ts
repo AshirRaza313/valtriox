@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, dbErrorResponse, isDbUnavailable, withRetry } from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
+import { withRateLimit } from "@/lib/rate-limit";
+import logger from "@/lib/logger";
 
 // GET /api/admin/integrations - Admin-only: return all integration data across orgs
-export const GET = withAuth(async (req: NextRequest, authCtx) => {
+export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   try {
     // Fetch all organizations with safer retry (3 retries, 600ms base) and a limit
     // Wrapped individually to handle missing tables/columns gracefully
@@ -33,8 +35,8 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
           take: 200,
         });
       }, 3, 600);
-    } catch (orgErr: any) {
-      console.warn("[AdminIntegrations] Organization query failed:", orgErr?.message?.substring(0, 120) || orgErr);
+    } catch (orgErr: unknown) {
+      logger.warn("[AdminIntegrations] Organization query failed:", { error: orgErr instanceof Error ? orgErr.message.substring(0, 120) : String(orgErr) });
       // Fall through with empty organizations — return empty integrations instead of 500
     }
 
@@ -155,19 +157,19 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
         mostPopular,
       },
     });
-  } catch (error: any) {
-    const errMsg = error?.message || String(error);
-    console.error("Admin integrations API error:", errMsg);
+  } catch (error: unknown) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+    logger.error("Admin integrations API error:", errMsg);
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
     const detail = errMsg.length > 120 ? errMsg.substring(0, 120) + "..." : errMsg;
     return NextResponse.json(
-      { error: "Failed to fetch integration data", detail: process.env.NODE_ENV === 'production' ? undefined : detail },
+      { error: "Failed to fetch integration data", detail: undefined },
       { status: 500 }
     );
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 30, windowSeconds: 60 });
 
 // Simple hash function for deterministic random-ish behavior
 function hashCode(str: string): number {

@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { db, isDbUnavailable } from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
+import { withRateLimit } from "@/lib/rate-limit";
 import logger from "@/lib/logger";
 
 // POST /api/admin/sync-plans - Update DB plans to match landing page pricing
-export const POST = withAuth(async () => {
+export const POST = withRateLimit(withAuth(async () => {
   try {
     logger.info("[Sync Plans] Starting plan sync to match landing page");
     const plans = [
@@ -106,11 +107,11 @@ export const POST = withAuth(async () => {
       message: "Plans synced successfully",
       results,
     });
-  } catch (error: any) {
-    console.error("Sync plans error:", error?.message || error);
+  } catch (error: unknown) {
+    logger.error("Sync plans error:", error);
     if (isDbUnavailable(error)) {
       return NextResponse.json({ error: "Database unavailable" }, { status: 503 });
     }
     return NextResponse.json({ error: "Failed to sync plans" }, { status: 500 });
   }
-}, { requireRole: ["platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 30, windowSeconds: 60 });

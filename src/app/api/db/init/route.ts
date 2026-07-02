@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAllTables, getCreateError, getLastCreateDetail, resetSchemaFlag, CREATE_ALL_TABLES_SQL, db, withRetry, getDirectPool } from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
+import { withRateLimit } from "@/lib/rate-limit";
 
 /**
  * PATCH /api/db/init - Repair missing columns in existing tables.
  * Runs only ALTER TABLE ADD COLUMN IF NOT EXISTS statements (no CREATE TABLE).
  * Safe to call multiple times - all statements are idempotent.
  */
-export const PATCH = withAuth(async (req: NextRequest, authCtx) => {
+export const PATCH = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   const repairSql = `
 -- ── IntegrationConnection table (real integration configs per org) ──
 CREATE TABLE IF NOT EXISTS "IntegrationConnection" (
@@ -115,8 +116,8 @@ CREATE INDEX IF NOT EXISTS "BetaInvite_invitedBy_idx" ON "BetaInvite"("invitedBy
       await pool.query('SELECT 1 as ok');
       await pool.query(repairSql);
       poolOk = true;
-    } catch (directErr: any) {
-      poolError = directErr?.message || String(directErr);
+    } catch (directErr: unknown) {
+      poolError = directErr instanceof Error ? directErr.message : String(directErr);
       logger.warn('[DB Repair] Direct pool failed, trying PgBouncer Prisma raw query', { error: poolError?.substring(0, 100) });
     }
     
@@ -138,21 +139,21 @@ CREATE INDEX IF NOT EXISTS "BetaInvite_invitedBy_idx" ON "BetaInvite"("invitedBy
       for (const stmt of combined) {
         try {
           await db.$executeRawUnsafe(stmt);
-        } catch (stmtErr: any) {
+        } catch (stmtErr: unknown) {
           // Ignore - IF NOT EXISTS makes it safe
-          logger.warn('[DB Repair] Statement error (ignored)', { error: stmtErr?.message?.substring(0, 80) });
+          logger.warn('[DB Repair] Statement error (ignored)', { error: stmtErr instanceof Error ? stmtErr.message.substring(0, 80) : String(stmtErr) });
         }
       }
     }
     
     return NextResponse.json({ success: true, message: "Schema repair completed - all missing columns added" });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return NextResponse.json({
       success: false,
       error: "Schema repair failed",
     }, { status: 500 });
   }
-}, { requireRole: ["platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 30, windowSeconds: 60 });
 
 /**
  * POST /api/db/init
@@ -161,7 +162,7 @@ CREATE INDEX IF NOT EXISTS "BetaInvite_invitedBy_idx" ON "BetaInvite"("invitedBy
  * Call this endpoint ONCE after setting DATABASE_URL on Vercel.
  * Returns detailed success/error info for debugging.
  */
-export const POST = withAuth(async (req: NextRequest, authCtx) => {
+export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   try {
     // Reset flag to force re-creation
     resetSchemaFlag();
@@ -183,19 +184,19 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
         manualFix: "You can also run the SQL manually in Supabase Dashboard > SQL Editor. Visit /api/db/sql to get the full SQL.",
       }, { status: 500 });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     return NextResponse.json({
       success: false,
       error: "Unexpected error",
     }, { status: 500 });
   }
-}, { requireRole: ["platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 30, windowSeconds: 60 });
 
 /**
  * GET /api/db/init - Check database status and table existence
  * Returns only non-sensitive summary information.
  */
-export const GET = withAuth(async (req: NextRequest, authCtx) => {
+export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   const databaseUrl = process.env.DATABASE_URL || '';
 
   // Check Prisma connection
@@ -230,4 +231,4 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
     tableCount: tables.length,
     allTablesExist: tables.length >= 25,
   });
-}, { requireRole: ["platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 60, windowSeconds: 60 });

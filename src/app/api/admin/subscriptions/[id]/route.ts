@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
 import { withAuth, RouteContext } from "@/lib/auth-middleware";
+import { withRateLimit } from "@/lib/rate-limit";
 import { generateInvoiceNumber } from "@/lib/pdf-generator";
 import { getCurrencyForCountry } from "@/lib/currency";
 import logger from "@/lib/logger";
 
 // PUT /api/admin/subscriptions/[id] - Admin manage subscription (reset, downgrade, extend, ban/unban)
-export const PUT = withAuth(async (
+export const PUT = withRateLimit(withAuth(async (
   req: NextRequest,
   authCtx,
   ctx: RouteContext
@@ -126,8 +127,8 @@ export const PUT = withAuth(async (
             },
           })
           }, 2, 500);
-        } catch (invErr: any) {
-          console.warn("[Admin change_plan] Auto-invoice generation failed:", invErr?.message);
+        } catch (invErr: unknown) {
+          logger.warn("[Admin change_plan] Auto-invoice generation failed:", { error: invErr instanceof Error ? invErr.message : String(invErr) });
         }
       }
 
@@ -393,10 +394,10 @@ export const PUT = withAuth(async (
       { error: "Invalid action. Supported: change_plan, extend, reset, cancel, ban, unban, reset_rejections, change_billing_cycle" },
       { status: 400 }
     );
-  } catch (error: any) {
-    console.error("Admin subscription management error:", {
-      message: error?.message,
-      code: error?.code,
+  } catch (error: unknown) {
+    logger.error("Admin subscription management error:", {
+      message: "Internal server error",
+      code: typeof error === "object" && error !== null && "code" in error ? (error as { code: string }).code : undefined,
     });
 
     if (isDbUnavailable(error)) {
@@ -405,4 +406,4 @@ export const PUT = withAuth(async (
 
     return NextResponse.json({ error: "Failed to manage subscription" }, { status: 500 });
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 30, windowSeconds: 60 });

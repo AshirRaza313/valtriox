@@ -32,8 +32,8 @@ export const GET = withRateLimit(withAuth(async (_req: NextRequest, authCtx) => 
     const settings = setting?.value ? JSON.parse(setting.value as string) : DEFAULT_CALENDLY_SETTINGS;
 
     return NextResponse.json(settings);
-  } catch (error: any) {
-    console.error("Calendly settings GET error:", error?.message);
+  } catch (error: unknown) {
+    logger.error("Calendly settings GET error:", error);
     return NextResponse.json(DEFAULT_CALENDLY_SETTINGS);
   }
 }, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 20, windowSeconds: 60 });
@@ -64,8 +64,8 @@ export const PUT = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
     }, 2, 500);
 
     return NextResponse.json({ success: true, ...settings });
-  } catch (error: any) {
-    console.error("Calendly settings PUT error:", error?.message);
+  } catch (error: unknown) {
+    logger.error("Calendly settings PUT error:", error);
     return NextResponse.json({ error: "Failed to save Calendly settings" }, { status: 500 });
   }
 }, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 20, windowSeconds: 60 });

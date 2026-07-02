@@ -3,33 +3,31 @@ import { db, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import { sanitizeObject } from "@/lib/sanitize";
 import logger from "@/lib/logger";
+import { withRateLimit } from "@/lib/rate-limit";
 import { pushSubscribeSchema } from "@/lib/validations/schemas";
-
-// Instead of raw SQL DDL, just let Prisma handle schema.
-// If the table doesn't exist, the Prisma query will fail and we return a 503.
 
 // ── POST /api/push/subscribe - Save a push subscription ──
 
-export const POST = withAuth(async (req: NextRequest, authCtx) => {
+export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   try {
     logger.info("[Push Subscribe] POST request", { userId: authCtx.userId });
 
-    const body = await req.json();
-    Object.assign(body, sanitizeObject(body));
-    // Phase 6: Zod validation
+    const rawBody = await req.json();
+    const body = sanitizeObject(rawBody);
+    // Phase 7: Zod validation — use parseResult.data, NOT raw body
     const parseResult = pushSubscribeSchema.safeParse(body);
     if (!parseResult.success) {
       const errors = parseResult.error.issues.map(i => `${i.path.join(".")}: ${i.message}`).join(", ");
       return NextResponse.json({ error: `Validation failed: ${errors}` }, { status: 422 });
     }
-    const { userId, orgId, endpoint, keysAuth, keysP256dh, userAgent } = body;
+    const validated = parseResult.data;
+    const { endpoint, keys } = validated;
 
-    if (!userId || !endpoint || !keysAuth || !keysP256dh) {
-      return NextResponse.json(
-        { error: "userId, endpoint, keysAuth, and keysP256dh are required" },
-        { status: 400 }
-      );
-    }
+    // Phase 7: CRITICAL FIX — Use authCtx.userId instead of body.userId
+    // Previously, body.userId was used directly in SQL, allowing any user to
+    // subscribe push notifications as another user (IDOR vulnerability).
+    const userId = authCtx.userId;
+    const orgId = authCtx.organizationId || null;
 
     // Upsert: delete any existing subscription for the same endpoint, then insert
     await db.$executeRawUnsafe(
@@ -41,11 +39,11 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
       `INSERT INTO push_subscriptions ("userId", "orgId", endpoint, "keysAuth", "keysP256dh", "userAgent")
        VALUES ($1, $2, $3, $4, $5, $6)`,
       userId,
-      orgId || null,
+      orgId,
       endpoint,
-      keysAuth,
-      keysP256dh,
-      userAgent || null
+      keys.auth,
+      keys.p256dh,
+      (rawBody as Record<string, unknown>)?.userAgent ? String((rawBody as Record<string, unknown>).userAgent) : null
     );
 
     return NextResponse.json({ success: true, message: "Push subscription saved" });
@@ -57,11 +55,11 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
     }
     return NextResponse.json({ error: "Failed to save push subscription" }, { status: 500 });
   }
-});
+}), { maxRequests: 20, windowSeconds: 60 });
 
 // ── DELETE /api/push/subscribe - Remove a push subscription ──
 
-export const DELETE = withAuth(async (req: NextRequest, authCtx) => {
+export const DELETE = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   try {
     logger.info("[Push Subscribe] DELETE request", { userId: authCtx.userId });
 
@@ -73,8 +71,9 @@ export const DELETE = withAuth(async (req: NextRequest, authCtx) => {
     }
 
     await db.$executeRawUnsafe(
-      `DELETE FROM push_subscriptions WHERE endpoint = $1`,
-      endpoint
+      `DELETE FROM push_subscriptions WHERE endpoint = $1 AND "userId" = $2`,
+      endpoint,
+      authCtx.userId
     );
 
     return NextResponse.json({ success: true, message: "Push subscription removed" });
@@ -86,4 +85,4 @@ export const DELETE = withAuth(async (req: NextRequest, authCtx) => {
     }
     return NextResponse.json({ error: "Failed to remove push subscription" }, { status: 500 });
   }
-});
+}), { maxRequests: 20, windowSeconds: 60 });

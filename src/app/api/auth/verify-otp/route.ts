@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { sanitizeEmail } from "@/lib/sanitize";
 import { withRateLimit } from "@/lib/rate-limit";
 import { validateBody, verifyOtpSchema } from "@/lib/validations";
+import logger from "@/lib/logger";
 
 export const POST = withRateLimit(async (req: NextRequest) => {
   try {
@@ -55,8 +56,8 @@ export const POST = withRateLimit(async (req: NextRequest) => {
       resetToken,
       message: "OTP verified successfully.",
     });
-  } catch (err: any) {
-    console.error("[VerifyOTP] Error:", err?.message || err);
+  } catch (err: unknown) {
+    logger.error("[VerifyOTP] Error:", err);
     return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
   }
 }, { maxRequests: 10, windowSeconds: 60 });

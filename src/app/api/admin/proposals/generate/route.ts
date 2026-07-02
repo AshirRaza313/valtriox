@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
+import { withRateLimit } from "@/lib/rate-limit";
 import logger from "@/lib/logger";
 import { generateProposalPDF, type ProposalSettings } from "@/lib/proposal-generator";
 
 // POST /api/admin/proposals/generate - Generate PDF for a proposal
-export const POST = withAuth(async (req: NextRequest, authCtx) => {
+export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   try {
     const body = await req.json();
     const { proposalId, template, type: bodyType, clientName: bodyClientName, clientEmail: bodyClientEmail, title: bodyTitle } = body;
@@ -112,11 +113,11 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
         "Content-Length": String(pdfBuffer.length),
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("[Admin Proposals Generate] POST error", error);
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
     return NextResponse.json({ error: "Failed to generate proposal PDF" }, { status: 500 });
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 30, windowSeconds: 60 });

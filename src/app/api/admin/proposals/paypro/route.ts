@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
+import { withRateLimit } from "@/lib/rate-limit";
 import logger from "@/lib/logger";
 
 // ============================================================================
@@ -18,7 +19,7 @@ const PAYPRO_BASE = process.env.NODE_ENV === "production"
   : "https://sandbox.paypro.com.pk";
 
 // POST /api/admin/proposals/paypro - Create a PayPro order for a proposal
-export const POST = withAuth(async (req: NextRequest, authCtx) => {
+export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   try {
     logger.info("[PayPro] POST request - creating payment order", { userId: authCtx.userId });
     const body = await req.json();
@@ -152,18 +153,18 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
         currency: proposal.currency,
         message: "Payment order created. Redirect the client to the payment URL.",
       });
-    } catch (fetchError: any) {
-      logger.error("[PayPro] Network/API call failed", { error: fetchError?.message });
+    } catch (fetchError: unknown) {
+      logger.error("[PayPro] Network/API call failed", { error: fetchError instanceof Error ? fetchError.message : String(fetchError) });
       return NextResponse.json(
         { error: "Failed to connect to PayPro payment gateway. Please try again later." },
         { status: 502 }
       );
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("[PayPro] POST error", error);
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
     return NextResponse.json({ error: "Failed to create payment order" }, { status: 500 });
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 10, windowSeconds: 60 });

@@ -7,7 +7,7 @@ import logger from "@/lib/logger";
 import { withRateLimit } from "@/lib/rate-limit";
 
 // GET - Fetch organization settings from DB
-export const GET = withAuth(async (req, authCtx) => {
+export const GET = withRateLimit(withAuth(async (req, authCtx) => {
   try {
     const { searchParams } = new URL(req.url);
     const orgId = searchParams.get("orgId") || authCtx.organizationId;
@@ -50,7 +50,7 @@ export const GET = withAuth(async (req, authCtx) => {
       return NextResponse.json({ error: "Organization not found" }, { status: 404 });
     }
     return NextResponse.json(result);
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("Settings GET error", error, { orgId: authCtx?.organizationId });
     if (isDbUnavailable(error)) {
       return NextResponse.json({
@@ -78,7 +78,7 @@ export const GET = withAuth(async (req, authCtx) => {
     }
     return NextResponse.json({ error: "Failed to fetch settings" }, { status: 500 });
   }
-});
+}), { maxRequests: 60, windowSeconds: 60 });
 
 // PUT - Update organization settings in DB
 export const PUT = withRateLimit(withAuth(async (req, authCtx) => {
@@ -160,7 +160,7 @@ export const PUT = withRateLimit(withAuth(async (req, authCtx) => {
       return { organization: org };
     }, 2, 500);
     return NextResponse.json(result);
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("Settings PUT error", error, { orgId: authCtx?.organizationId });
     if (isDbUnavailable(error)) {
       return NextResponse.json({ error: "Database is currently unavailable. Please try again later.", fallback: true }, { status: 503 });

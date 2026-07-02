@@ -3,6 +3,7 @@ import { db, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import { sanitizeObject } from "@/lib/sanitize";
 import logger from "@/lib/logger";
+import { withRateLimit } from "@/lib/rate-limit";
 
 // ── Types ──
 
@@ -62,7 +63,7 @@ const DEFAULT_RULES: SLARule[] = [
 
 // ── GET: Fetch SLA rules for the organization ──
 
-export const GET = withAuth(async (req, authCtx) => {
+export const GET = withRateLimit(withAuth(async (req, authCtx) => {
   try {
     const { searchParams } = new URL(req.url);
     const orgId = searchParams.get("orgId") || authCtx.organizationId;
@@ -92,18 +93,18 @@ export const GET = withAuth(async (req, authCtx) => {
     }
 
     return NextResponse.json({ rules, total: rules.length, active: rules.filter((r) => r.enabled).length });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("SLA rules GET error", error, { orgId: authCtx?.organizationId });
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
     return NextResponse.json({ error: "Failed to fetch SLA rules" }, { status: 500 });
   }
-});
+}), { maxRequests: 60, windowSeconds: 60 });
 
 // ── POST: Create a new SLA rule ──
 
-export const POST = withAuth(async (req, authCtx) => {
+export const POST = withRateLimit(withAuth(async (req, authCtx) => {
   try {
     const body = await req.json();
     Object.assign(body, sanitizeObject(body));
@@ -165,18 +166,18 @@ export const POST = withAuth(async (req, authCtx) => {
     }, 2, 500);
 
     return NextResponse.json({ rule: newRule, rules }, { status: 201 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("SLA rules POST error", error, { orgId: authCtx?.organizationId });
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
     return NextResponse.json({ error: "Failed to create SLA rule" }, { status: 500 });
   }
-});
+}), { maxRequests: 30, windowSeconds: 60 });
 
 // ── PUT: Update existing SLA rules (batch update) ──
 
-export const PUT = withAuth(async (req, authCtx) => {
+export const PUT = withRateLimit(withAuth(async (req, authCtx) => {
   try {
     const body = await req.json();
     Object.assign(body, sanitizeObject(body));
@@ -219,11 +220,11 @@ export const PUT = withAuth(async (req, authCtx) => {
     }, 2, 500);
 
     return NextResponse.json({ rules: sanitizedRules, total: sanitizedRules.length });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("SLA rules PUT error", error, { orgId: authCtx?.organizationId });
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
     return NextResponse.json({ error: "Failed to update SLA rules" }, { status: 500 });
   }
-});
+}), { maxRequests: 30, windowSeconds: 60 });

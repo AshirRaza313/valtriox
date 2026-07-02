@@ -19,8 +19,8 @@ export const GET = withRateLimit(withAuth(async (_req: NextRequest, authCtx) => 
     };
 
     return NextResponse.json(toggles);
-  } catch (error: any) {
-    console.error("Feature toggles GET error:", error?.message);
+  } catch (error: unknown) {
+    logger.error("Feature toggles GET error:", error);
     return NextResponse.json({ lockedGrowth: [], lockedEnterprise: [] });
   }
 }, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 20, windowSeconds: 60 });
@@ -45,8 +45,8 @@ export const PUT = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
     }, 2, 500);
 
     return NextResponse.json({ success: true, lockedGrowth, lockedEnterprise });
-  } catch (error: any) {
-    console.error("Feature toggles PUT error:", error?.message);
+  } catch (error: unknown) {
+    logger.error("Feature toggles PUT error:", error);
     return NextResponse.json({ error: "Failed to save feature toggles" }, { status: 500 });
   }
 }, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 20, windowSeconds: 60 });

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, safeDbQuery } from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
+import { withRateLimit } from "@/lib/rate-limit";
 import logger from "@/lib/logger";
 
 // ── Version metadata stored inside the Proposal.content JSON ──
@@ -9,7 +10,7 @@ import logger from "@/lib/logger";
 
 // GET /api/admin/proposals/versions?proposalId=xxx
 // Returns all versions of a proposal, ordered by versionNumber desc
-export const GET = withAuth(async (req: NextRequest) => {
+export const GET = withRateLimit(withAuth(async (req: NextRequest) => {
   const { searchParams } = new URL(req.url);
   const proposalId = searchParams.get("proposalId");
 
@@ -81,14 +82,14 @@ export const GET = withAuth(async (req: NextRequest) => {
     totalVersions: versions.length,
     versions,
   });
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 30, windowSeconds: 60 });
 
 // POST /api/admin/proposals/versions
 // Creates a new version with auto-incrementing versionNumber
 // Body: { proposalId, content, title, totalCost, currency, saveAsNewVersion }
 // If saveAsNewVersion is false/undefined, overwrites current version (existing behavior)
 // If saveAsNewVersion is true, appends a new version and updates parent proposal
-export const POST = withAuth(async (req: NextRequest, authCtx) => {
+export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   try {
     const body = await req.json();
     const {
@@ -392,4 +393,4 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
     logger.error("[Admin Proposals Versions] POST error", error);
     return NextResponse.json({ error: "Failed to process proposal version" }, { status: 500 });
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 30, windowSeconds: 60 });

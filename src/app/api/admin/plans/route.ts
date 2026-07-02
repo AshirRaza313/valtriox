@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, dbErrorResponse, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
+import { withRateLimit } from "@/lib/rate-limit";
 import logger from "@/lib/logger";
 
 // ── Plan Seed Data (Valtriox Pricing 2026) ──
@@ -28,7 +29,7 @@ const PLAN_SEEDS = [
 ];
 
 // POST /api/admin/plans - Re-sync all plans to latest pricing (platform owner only)
-export const POST = withAuth(async (_request: NextRequest, authCtx) => {
+export const POST = withRateLimit(withAuth(async (_request: NextRequest, authCtx) => {
   logger.info("[Admin Plans] POST re-sync request", { userId: authCtx.userId });
   try {
     const results: any[] = [];
@@ -60,13 +61,13 @@ export const POST = withAuth(async (_request: NextRequest, authCtx) => {
       plans: results,
     });
   } catch (error) {
-    console.error("Re-sync plans error:", error);
+    logger.error("Re-sync plans error:", error);
     return NextResponse.json({ error: "Failed to re-sync plans" }, { status: 500 });
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 30, windowSeconds: 60 });
 
 // GET /api/admin/plans - List all plans with their pricing (platform owner only)
-export const GET = withAuth(async (_request: NextRequest, authCtx) => {
+export const GET = withRateLimit(withAuth(async (_request: NextRequest, authCtx) => {
   logger.info("[Admin Plans] GET request", { userId: authCtx.userId });
   try {
     const plans = await withRetry(async () => {
@@ -78,13 +79,13 @@ export const GET = withAuth(async (_request: NextRequest, authCtx) => {
 
     return NextResponse.json({ plans });
   } catch (error) {
-    console.error("Fetch plans error:", error);
+    logger.error("Fetch plans error:", error);
     return NextResponse.json({ error: "Failed to fetch plans" }, { status: 500 });
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 30, windowSeconds: 60 });
 
 // PUT /api/admin/plans - Update plan pricing (platform owner only)
-export const PUT = withAuth(async (request: NextRequest, authCtx) => {
+export const PUT = withRateLimit(withAuth(async (request: NextRequest, authCtx) => {
   logger.info("[Admin Plans] PUT request", { userId: authCtx.userId });
   try {
     const body = await request.json();
@@ -112,7 +113,7 @@ export const PUT = withAuth(async (request: NextRequest, authCtx) => {
 
     return NextResponse.json({ plan: updated, message: "Plan updated successfully" });
   } catch (error) {
-    console.error("Update plan error:", error);
+    logger.error("Update plan error:", error);
     return NextResponse.json({ error: "Failed to update plan" }, { status: 500 });
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 30, windowSeconds: 60 });

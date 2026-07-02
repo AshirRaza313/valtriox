@@ -101,8 +101,8 @@ export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
       stats,
       pagination: { page, limit, total, pages: Math.ceil(total / limit) },
     });
-  } catch (error: any) {
-    console.error("Admin subscriptions list error:", error?.message || error);
+  } catch (error: unknown) {
+    logger.error("Admin subscriptions list error:", error);
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }

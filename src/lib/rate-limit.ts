@@ -6,6 +6,7 @@
 // ============================================================================
 
 import { NextRequest, NextResponse } from "next/server";
+import logger from "@/lib/logger";
 
 export interface RateLimitOptions {
   /** Maximum number of requests in the window */
@@ -151,7 +152,7 @@ export async function rateLimit(
 
   // In-memory fallback — warn loudly in production
   if (process.env.NODE_ENV === 'production') {
-    console.error("[RateLimit] WARNING: Using in-memory fallback in production! Rate limiting will NOT work across serverless instances. Configure UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN.");
+    logger.error("[RateLimit] WARNING: Using in-memory fallback in production! Rate limiting will NOT work across serverless instances. Configure UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN.");
   }
   return memoryRateLimit(key, maxRequests, windowSeconds);
 }

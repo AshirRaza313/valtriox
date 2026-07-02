@@ -3,6 +3,7 @@ import { db, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import { sanitizeObject } from "@/lib/sanitize";
 import logger from "@/lib/logger";
+import { withRateLimit } from "@/lib/rate-limit";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Influencers API
@@ -30,7 +31,7 @@ interface Influencer {
 }
 
 // GET: Retrieve influencers for an organization
-export const GET = withAuth(async (req: NextRequest, authCtx) => {
+export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   try {
     logger.info("[Influencers] GET request", { userId: authCtx.userId, orgId: authCtx.organizationId });
     const orgId = authCtx.organizationId!;
@@ -44,17 +45,17 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
     const influencers: Influencer[] = setting ? JSON.parse(setting.value) : [];
 
     return NextResponse.json({ influencers, orgId });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("[Influencers] GET error", error, { orgId: authCtx?.organizationId });
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
     return NextResponse.json({ error: "Failed to fetch influencers" }, { status: 500 });
   }
-});
+}), { maxRequests: 60, windowSeconds: 60 });
 
 // POST: Create a new influencer
-export const POST = withAuth(async (req: NextRequest, authCtx) => {
+export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   try {
     logger.info("[Influencers] POST request", { userId: authCtx.userId, orgId: authCtx.organizationId });
     const body = await req.json();
@@ -112,17 +113,17 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
     }, 2, 500);
 
     return NextResponse.json({ influencer: newInfluencer, influencers: existing }, { status: 201 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("[Influencers] POST error", error, { orgId: authCtx?.organizationId });
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
     return NextResponse.json({ error: "Failed to create influencer" }, { status: 500 });
   }
-});
+}), { maxRequests: 30, windowSeconds: 60 });
 
 // PUT: Update an influencer or delete by id
-export const PUT = withAuth(async (req: NextRequest, authCtx) => {
+export const PUT = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   try {
     logger.info("[Influencers] PUT request", { userId: authCtx.userId, orgId: authCtx.organizationId });
     const body = await req.json();
@@ -178,14 +179,14 @@ export const PUT = withAuth(async (req: NextRequest, authCtx) => {
     }, 2, 500);
 
     return NextResponse.json({ influencers });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("[Influencers] PUT error", error, { orgId: authCtx?.organizationId });
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
     return NextResponse.json({ error: "Failed to update influencer" }, { status: 500 });
   }
-});
+}), { maxRequests: 30, windowSeconds: 60 });
 
 function getTierFromFollowers(followers: number): "nano" | "micro" | "mid" | "macro" | "mega" {
   if (followers >= 1000000) return "mega";

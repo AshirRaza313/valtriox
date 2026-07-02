@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { db, ensurePlatformSettingsColumns, withRetry} from "@/lib/db";
+import logger from "@/lib/logger";
 
 const DEFAULT_SETTINGS = {
   companyName: "Valtriox",
   tagline: "COMMAND YOUR BRAND UNIVERSE",
-  companyEmail: "ashir@valtriox.com",
+  companyEmail: process.env.SUPPORT_EMAIL || "support@valtriox.com",
   companyPhone: null,
   companyWebsite: null,
   companyAddress: null,
@@ -109,8 +110,8 @@ export async function GET() {
     }
 
     return NextResponse.json(result);
-  } catch (error: any) {
-    console.error("[Public Settings] Error:", error?.message || error);
+  } catch (error: unknown) {
+    logger.error("[Public Settings] Error:", error);
     // Always return defaults - landing page should never break
     return NextResponse.json({ ...DEFAULT_SETTINGS, fallback: true });
   }

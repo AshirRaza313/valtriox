@@ -27,7 +27,7 @@ function generateToken(): string {
 async function getPlatformSettings() {
   let platformName = "Valtriox",
     platformWebsite = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_BASE_URL || "https://valtriox.com",
-    companyEmail = "ashir@valtriox.com",
+    companyEmail = process.env.SUPPORT_EMAIL || "support@valtriox.com",
     companyPhone: string | null = null,
     companyAddress: string | null = null;
   try {
@@ -108,10 +108,10 @@ export const GET = withRateLimit(withAuth(async (req, _ctx) => {
     );
 
     return NextResponse.json({ invites });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("[BetaInvite GET]", error);
     return NextResponse.json(
-      { error: "Failed to fetch invites", detail: process.env.NODE_ENV === 'production' ? undefined : error?.message },
+      { error: "Failed to fetch invites", detail: undefined },
       { status: 500 }
     );
   }
@@ -191,7 +191,7 @@ export const POST = withRateLimit(withAuth(async (req, ctx) => {
           html,
           text: textPlain,
         });
-      } catch (e: any) {
+      } catch (e: unknown) {
         logger.error("[BetaInvite] Email send failed", e);
         sendResults.email = false;
       }
@@ -217,11 +217,11 @@ export const POST = withRateLimit(withAuth(async (req, ctx) => {
       },
       { status: 201 }
     );
-  } catch (error: any) {
-    logger.error("[BetaInvite POST]", error, { code: error?.code });
+  } catch (error: unknown) {
+    logger.error("[BetaInvite POST]", error, { code: typeof error === "object" && error !== null && "code" in error ? (error as { code: string }).code : undefined });
 
     // Unique constraint — invite already exists
-    if (error?.code === "P2002") {
+    if (typeof error === "object" && error !== null && "code" in error && (error as { code: string }).code === "P2002") {
       return NextResponse.json(
         { error: "An invite for this email already exists" },
         { status: 409 }
@@ -229,10 +229,10 @@ export const POST = withRateLimit(withAuth(async (req, ctx) => {
     }
 
     // Table doesn't exist — Prisma returns P2021
-    const msg = (error?.message || "").toLowerCase();
+    const msg = (error instanceof Error ? error.message : "").toLowerCase();
     if (
       msg.includes("does not exist") ||
-      error?.code === "P2021"
+      (typeof error === "object" && error !== null && "code" in error && (error as { code: string }).code === "P2021")
     ) {
       return NextResponse.json(
         {
@@ -244,7 +244,7 @@ export const POST = withRateLimit(withAuth(async (req, ctx) => {
     }
 
     return NextResponse.json(
-      { error: "Failed to create invite", detail: process.env.NODE_ENV === 'production' ? undefined : error?.message },
+      { error: "Failed to create invite", detail: undefined },
       { status: 500 }
     );
   }
@@ -265,7 +265,7 @@ export const DELETE = withRateLimit(withAuth(async (req, _ctx) => {
     }
     await withRetry(() => db.betaInvite.delete({ where: { id } }));
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("[BetaInvite DELETE]", error);
     return NextResponse.json(
       { error: "Failed to delete invite" },
@@ -299,7 +299,7 @@ export const PATCH = withRateLimit(withAuth(async (req, _ctx) => {
     );
 
     return NextResponse.json({ invite });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("[BetaInvite PATCH]", error);
     return NextResponse.json(
       { error: "Failed to update invite" },

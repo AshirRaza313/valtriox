@@ -17,8 +17,8 @@ export const GET = withRateLimit(withAuth(async () => {
       })),
       total: ROLES.length,
     });
-  } catch (error: any) {
-    console.error("Roles API error:", error?.message || error);
+  } catch (error: unknown) {
+    logger.error("Roles API error:", error);
     return NextResponse.json(
       { error: "Failed to fetch roles" },
       { status: 500 }

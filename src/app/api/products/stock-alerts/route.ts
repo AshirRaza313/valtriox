@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, dbErrorResponse, isDbUnavailable, withRetry } from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
+import { withRateLimit } from "@/lib/rate-limit";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Smart Stock Alerts API
@@ -23,7 +24,7 @@ interface StockAlert {
   imageUrl: string | null;
 }
 
-export const GET = withAuth(async (req: NextRequest, authCtx) => {
+export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   try {
     logger.info("[Products] Stock Alerts GET request", { userId: authCtx.userId, orgId: authCtx.organizationId });
     const { searchParams } = new URL(req.url);
@@ -152,11 +153,11 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
     };
 
     return NextResponse.json({ alerts: filtered, summary });
-  } catch (error: any) {
-    console.error("Stock alerts error:", error?.message || error);
+  } catch (error: unknown) {
+    logger.error("Stock alerts error:", error);
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
     return NextResponse.json({ error: "Failed to fetch stock alerts" }, { status: 500 });
   }
-});
+}), { maxRequests: 60, windowSeconds: 60 });

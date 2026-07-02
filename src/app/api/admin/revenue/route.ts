@@ -204,27 +204,44 @@ export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
     revenueByService.sort((a, b) => b.revenue - a.revenue);
 
     // ── 9. Top Clients (by subscription revenue) ──
-    const topClients = await Promise.all(
-      activeSubscriptions.map(async (sub) => {
-        // Get total payments for this org
-        const orgPayments = await db.paymentProof.findMany({
-          where: { organizationId: sub.organization.id, status: "approved" },
-          select: { amount: true, createdAt: true, paymentMethod: true },
-        });
+    // Batch query instead of N+1
+    const orgIds = activeSubscriptions.map(sub => sub.organization.id);
 
-        const totalPaid = orgPayments.reduce((s, p) => s + Number(p.amount), 0);
-        const orderCount = await db.order.count({
-          where: { organizationId: sub.organization.id },
-        });
+    const [allPayments, allOrderCounts] = await Promise.all([
+      db.paymentProof.findMany({
+        where: { organizationId: { in: orgIds }, status: "approved" },
+        select: { organizationId: true, amount: true, createdAt: true, paymentMethod: true },
+      }),
+      db.order.groupBy({
+        by: ["organizationId"],
+        where: { organizationId: { in: orgIds } },
+        _count: true,
+      }),
+    ]);
 
-        return {
-          name: sub.organization.name,
-          revenue: Math.round(totalPaid + (sub.billingCycle === "annually" && Number(sub.plan.annualPrice) > 0 ? Number(sub.plan.annualPrice) / 12 : Number(sub.plan.price))),
-          orders: orderCount,
-          plan: sub.plan.name,
-        };
-      })
-    );
+    // Build lookup maps
+    const paymentsByOrg = new Map<string, typeof allPayments>();
+    for (const p of allPayments) {
+      const arr = paymentsByOrg.get(p.organizationId) || [];
+      arr.push(p);
+      paymentsByOrg.set(p.organizationId, arr);
+    }
+    const orderCountByOrg = new Map<string, number>();
+    for (const oc of allOrderCounts) {
+      orderCountByOrg.set(oc.organizationId, oc._count);
+    }
+
+    const topClients = activeSubscriptions.map(sub => {
+      const orgPayments = paymentsByOrg.get(sub.organization.id) || [];
+      const totalPaid = orgPayments.reduce((s, p) => s + Number(p.amount), 0);
+      const orderCount = orderCountByOrg.get(sub.organization.id) || 0;
+      return {
+        name: sub.organization.name,
+        revenue: Math.round(totalPaid + (sub.billingCycle === "annually" && Number(sub.plan.annualPrice) > 0 ? Number(sub.plan.annualPrice) / 12 : Number(sub.plan.price))),
+        orders: orderCount,
+        plan: sub.plan.name,
+      };
+    });
 
     topClients.sort((a, b) => b.revenue - a.revenue);
 
@@ -296,8 +313,8 @@ export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
     };
     }, 2, 500);
     return NextResponse.json(result);
-  } catch (error: any) {
-    console.error("Admin revenue error:", error?.message || error);
+  } catch (error: unknown) {
+    logger.error("Admin revenue error:", error);
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }

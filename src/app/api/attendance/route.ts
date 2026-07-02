@@ -1,22 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, dbErrorResponse, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
-import { sanitizeObject } from "@/lib/sanitize";
 import logger from "@/lib/logger";
 import { withRateLimit } from "@/lib/rate-limit";
-import { markAttendanceSchema } from "@/lib/validations/schemas";
+import { z } from "zod";
+import { validateBody } from "@/lib/validations";
+
+// Inline schema matching the attendance route's actual body fields
+const markAttendanceApiSchema = z.object({
+  userId: z.string().min(1).max(50),
+  organizationId: z.string().max(50).optional(),
+  status: z.enum(["present", "late", "leave", "absent", "half-day"]),
+  clockIn: z.string().datetime().optional(),
+  clockOut: z.string().datetime().optional(),
+  lateReason: z.string().max(500).optional(),
+  leaveReason: z.string().max(500).optional(),
+});
 
 export const POST = withRateLimit(withAuth(async (req, authCtx) => {
   try {
-    const body = await req.json();
-    Object.assign(body, sanitizeObject(body));
-    // Phase 6: Zod validation
-    const parseResult = markAttendanceSchema.safeParse(body);
-    if (!parseResult.success) {
-      const errors = parseResult.error.issues.map(i => `${i.path.join(".")}: ${i.message}`).join(", ");
-      return NextResponse.json({ error: `Validation failed: ${errors}` }, { status: 422 });
-    }
-    const { userId, organizationId, status, clockIn, clockOut, lateReason, leaveReason } = body;
+    const bodyResult = await validateBody(req, markAttendanceApiSchema);
+    if (!bodyResult.success) return bodyResult.response;
+    const { userId, organizationId, status, clockIn, clockOut, lateReason, leaveReason } = bodyResult.data;
     const orgId = organizationId || authCtx.organizationId;
 
     if (!userId || !orgId || !status) {
@@ -26,11 +31,6 @@ export const POST = withRateLimit(withAuth(async (req, authCtx) => {
     // Security: Ensure user can only mark attendance in their own org
     if (orgId !== authCtx.organizationId) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
-    }
-
-    const validStatuses = ["present", "late", "leave", "absent", "half-day"];
-    if (!validStatuses.includes(status)) {
-      return NextResponse.json({ error: `Invalid status. Must be one of: ${validStatuses.join(", ")}` }, { status: 400 });
     }
 
     // Get org for working hours
@@ -141,7 +141,7 @@ export const POST = withRateLimit(withAuth(async (req, authCtx) => {
       absenceCount: newAbsenceCount,
       penaltyApplied,
     }, { status: 201 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("Attendance POST error", error, { orgId: authCtx?.organizationId });
     return NextResponse.json({ error: "Failed to mark attendance" }, { status: 500 });
   }
@@ -192,11 +192,8 @@ export const GET = withRateLimit(withAuth(async (req, authCtx) => {
     const totalHours = records.reduce((sum: number, r: any) => sum + (r.totalHours || 0), 0);
 
     return NextResponse.json({ records, totalHours: Math.round(totalHours * 10) / 10 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("Attendance GET error", error, { orgId: authCtx?.organizationId });
-    if (error?.message?.includes('DATABASE_URL') || error?.message?.includes('Database connection')) {
-      return dbErrorResponse(error);
-    }
     return NextResponse.json({ error: "Failed to fetch attendance" }, { status: 500 });
   }
 }), { maxRequests: 20, windowSeconds: 60 });

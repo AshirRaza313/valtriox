@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { validateBody, createFeedbackSchema } from "@/lib/validations";
 import { z } from "zod";
 import { withRateLimit } from "@/lib/rate-limit";
+import logger from "@/lib/logger";
 
 // Phase 3: Zod schemas for feedback
 const feedbackPatchSchema = z.object({
@@ -12,7 +13,7 @@ const feedbackPatchSchema = z.object({
   isFeatured: z.boolean().optional(),
 });
 
-export const GET = withAuth(async (req, ctx) => {
+export const GET = withRateLimit(withAuth(async (req, ctx) => {
   try {
     const url = new URL(req.url);
     const type = url.searchParams.get("type");
@@ -41,10 +42,10 @@ export const GET = withAuth(async (req, ctx) => {
     return NextResponse.json({ feedbacks });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error);
-    console.error("[Feedback GET] Error:", msg);
+    logger.error("[Feedback GET] Error:", msg);
     return NextResponse.json({ error: "Failed to fetch feedback" }, { status: 500 });
   }
-});
+}), { maxRequests: 60, windowSeconds: 60 });
 
 export const POST = withRateLimit(withAuth(async (req, ctx) => {
   try {
@@ -86,12 +87,12 @@ export const POST = withRateLimit(withAuth(async (req, ctx) => {
     return NextResponse.json({ feedback }, { status: 201 });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error);
-    console.error("[Feedback POST] Error:", msg);
+    logger.error("[Feedback POST] Error:", msg);
     return NextResponse.json({ error: "Failed to create feedback" }, { status: 500 });
   }
 }), { maxRequests: 15, windowSeconds: 60 });
 
-export const PATCH = withAuth(async (req, ctx) => {
+export const PATCH = withRateLimit(withAuth(async (req, ctx) => {
   try {
     const bodyResult = await validateBody(req, feedbackPatchSchema);
     if (!bodyResult.success) return bodyResult.response;
@@ -124,12 +125,12 @@ export const PATCH = withAuth(async (req, ctx) => {
     return NextResponse.json({ feedback });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error);
-    console.error("[Feedback PATCH] Error:", msg);
+    logger.error("[Feedback PATCH] Error:", msg);
     return NextResponse.json({ error: "Failed to update feedback" }, { status: 500 });
   }
-});
+}), { maxRequests: 30, windowSeconds: 60 });
 
-export const DELETE = withAuth(async (req, ctx) => {
+export const DELETE = withRateLimit(withAuth(async (req, ctx) => {
   try {
     const url = new URL(req.url);
     const id = url.searchParams.get("id");
@@ -157,7 +158,7 @@ export const DELETE = withAuth(async (req, ctx) => {
     return NextResponse.json({ success: true });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error);
-    console.error("[Feedback DELETE] Error:", msg);
+    logger.error("[Feedback DELETE] Error:", msg);
     return NextResponse.json({ error: "Failed to delete feedback" }, { status: 500 });
   }
-});
+}), { maxRequests: 30, windowSeconds: 60 });

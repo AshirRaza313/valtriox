@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, withRetry } from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
+import { withRateLimit } from "@/lib/rate-limit";
 
 /**
  * GET /api/admin/settings/debug
@@ -9,7 +10,7 @@ import { withAuth } from "@/lib/auth-middleware";
  * Only returns non-sensitive summary information.
  * Requires platform_owner or platform_admin authentication.
  */
-export const GET = withAuth(async (req: NextRequest, authCtx) => {
+export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   if (process.env.NODE_ENV === 'production') {
     return NextResponse.json({ error: 'Not available in production' }, { status: 404 });
   }
@@ -68,4 +69,4 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
   }, {
     headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
   });
-}, { requireRole: ["platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 30, windowSeconds: 60 });

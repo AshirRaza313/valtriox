@@ -5,8 +5,9 @@ import { withAuth, RouteContext } from "@/lib/auth-middleware";
 import { validateBody } from "@/lib/validations/api";
 import { updateCouponApiSchema } from "@/lib/validations/schemas";
 import logger from "@/lib/logger";
+import { withRateLimit } from "@/lib/rate-limit";
 
-export const PATCH = withAuth(async (
+export const PATCH = withRateLimit(withAuth(async (
   req: NextRequest,
   authCtx,
   ctx: RouteContext
@@ -33,16 +34,13 @@ export const PATCH = withAuth(async (
     })
     }, 2, 500);
     return NextResponse.json({ coupon });
-  } catch (error: any) {
-    console.error("Coupons PATCH error:", error?.message || error);
-    if (error?.message?.includes('DATABASE_URL') || error?.message?.includes('Database connection')) {
-      return dbErrorResponse(error);
-    }
+  } catch (error: unknown) {
+    logger.error("Coupons PATCH error:", error);
     return NextResponse.json({ error: "Failed to update coupon" }, { status: 500 });
   }
-});
+}), { maxRequests: 30, windowSeconds: 60 });
 
-export const DELETE = withAuth(async (
+export const DELETE = withRateLimit(withAuth(async (
   req: NextRequest,
   authCtx,
   ctx: RouteContext
@@ -62,11 +60,8 @@ export const DELETE = withAuth(async (
       return await db.coupon.delete({ where: { id } })
     }, 2, 500);
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    console.error("Coupons DELETE error:", error?.message || error);
-    if (error?.message?.includes('DATABASE_URL') || error?.message?.includes('Database connection')) {
-      return dbErrorResponse(error);
-    }
+  } catch (error: unknown) {
+    logger.error("Coupons DELETE error:", error);
     return NextResponse.json({ error: "Failed to delete coupon" }, { status: 500 });
   }
-});
+}), { maxRequests: 30, windowSeconds: 60 });

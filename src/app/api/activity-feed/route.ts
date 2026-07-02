@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, isDbUnavailable, withRetry } from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
+import { withRateLimit } from "@/lib/rate-limit";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Activity Feed API
@@ -24,13 +25,13 @@ interface ActivityItem {
 async function safeQuery<T>(fn: () => Promise<T>): Promise<T | null> {
   try {
     return await fn();
-  } catch (err: any) {
-    console.warn("[ActivityFeed] Query failed (non-fatal):", err?.message?.substring(0, 120) || err);
+  } catch (err: unknown) {
+    logger.warn("[ActivityFeed] Query failed (non-fatal):", { error: err instanceof Error ? err.message : String(err) });
     return null;
   }
 }
 
-export const GET = withAuth(async (req: NextRequest, authCtx) => {
+export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   try {
     logger.info("[Activity Feed] GET request", { userId: authCtx.userId });
     const { searchParams } = new URL(req.url);
@@ -209,11 +210,11 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
     const limited = activities.slice(0, limit);
 
     return NextResponse.json({ activities: limited, total: activities.length });
-  } catch (error: any) {
-    console.error("Activity feed error:", error?.message || error);
+  } catch (error: unknown) {
+    logger.error("Activity feed error:", error);
     if (isDbUnavailable(error)) {
       return NextResponse.json({ activities: [], total: 0, fallback: true });
     }
     return NextResponse.json({ error: "Failed to fetch activity feed" }, { status: 500 });
   }
-});
+}), { maxRequests: 60, windowSeconds: 60 });

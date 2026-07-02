@@ -62,7 +62,7 @@ const PLATFORM_ONLY_ROLES = ["platform_owner", "platform_admin", "owner"];
 const BRAND_OWNER_MAX_LEVEL = 80;
 const BRAND_ADMIN_MAX_LEVEL = 60;
 
-export const GET = withAuth(async (req: NextRequest, authCtx) => {
+export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   try {
     logger.info("[Team] GET request", { userId: authCtx.userId });
     const { searchParams } = new URL(req.url);
@@ -89,7 +89,7 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
         });
       }, 2, 500);
     } catch (e: unknown) {
-      logger.warn("[Team] Failed to fetch members:", getErrorInfo(e).message);
+      logger.warn("[Team] Failed to fetch members:", { error: getErrorInfo(e).message });
     }
 
     try {
@@ -101,7 +101,7 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
         });
       }, 2, 500);
     } catch (e: unknown) {
-      logger.warn("[Team] Failed to fetch invitations:", getErrorInfo(e).message);
+      logger.warn("[Team] Failed to fetch invitations:", { error: getErrorInfo(e).message });
     }
 
     try {
@@ -115,16 +115,16 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
         teamLimit = org.subscription.plan.teamLimit;
       }
     } catch (e: unknown) {
-      logger.warn("[Team] Failed to fetch org plan:", getErrorInfo(e).message);
+      logger.warn("[Team] Failed to fetch org plan:", { error: getErrorInfo(e).message });
     }
 
     return NextResponse.json({ members, pendingInvitations, teamLimit, currentCount: members.length });
   } catch (error: unknown) {
-    console.error("Team API error:", getErrorInfo(error).message || error);
+    logger.error("Team API error:", error);
     // Always return 200 with empty data — never crash the UserManagement page
     return NextResponse.json({ members: [], pendingInvitations: [], teamLimit: 3, currentCount: 0, fallback: true });
   }
-});
+}), { maxRequests: 60, windowSeconds: 60 });
 
 export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   try {
@@ -148,7 +148,7 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
       const platformSettings = await db.platformSettings.findFirst();
       platformName = platformSettings?.companyName || "Valtriox";
     } catch (e: unknown) {
-      logger.warn("[Team] platformSettings fetch failed, using default:", getErrorInfo(e).message);
+      logger.warn("[Team] platformSettings fetch failed, using default:", { error: getErrorInfo(e).message });
     }
 
     if (!organizationId || !email || !role) {
@@ -172,8 +172,8 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
       });
     } catch (e: unknown) {
       const { message: errMsg } = getErrorInfo(e);
-      logger.error("[Team] Failed to fetch organization:", errMsg);
-      return NextResponse.json({ error: "Failed to fetch organization details. Please try again.", _step: "fetch_org", _details: process.env.NODE_ENV === "production" ? undefined : errMsg }, { status: 500 });
+      logger.error("[Team] Failed to fetch organization:", { error: errMsg });
+      return NextResponse.json({ error: "Failed to fetch organization details. Please try again.", _step: "fetch_org", _details: undefined }, { status: 500 });
     }
 
     if (!org) {
@@ -278,8 +278,8 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
       });
     } catch (e: unknown) {
       const { message: errMsg } = getErrorInfo(e);
-      logger.error("[Team] Failed to check existing user:", errMsg);
-      return NextResponse.json({ error: "Database error while checking user. Please try again.", _step: "check_user", _details: process.env.NODE_ENV === "production" ? undefined : errMsg }, { status: 500 });
+      logger.error("[Team] Failed to check existing user:", { error: errMsg });
+      return NextResponse.json({ error: "Database error while checking user. Please try again.", _step: "check_user", _details: undefined }, { status: 500 });
     }
 
     if (existingUser) {
@@ -293,8 +293,8 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
         }
       } catch (e: unknown) {
         const { message: errMsg } = getErrorInfo(e);
-        logger.error("[Team] Failed to check membership:", errMsg);
-        return NextResponse.json({ error: "Database error while checking membership. Please try again.", _step: "check_membership", _details: process.env.NODE_ENV === "production" ? undefined : errMsg }, { status: 500 });
+        logger.error("[Team] Failed to check membership:", { error: errMsg });
+        return NextResponse.json({ error: "Database error while checking membership. Please try again.", _step: "check_membership", _details: undefined }, { status: 500 });
       }
     }
 
@@ -308,8 +308,8 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
       }
     } catch (e: unknown) {
       const { message: errMsg } = getErrorInfo(e);
-      logger.error("[Team] Failed to check invitation:", errMsg);
-      return NextResponse.json({ error: "Database error while checking invitations. Please try again.", _step: "check_invitation", _details: process.env.NODE_ENV === "production" ? undefined : errMsg }, { status: 500 });
+      logger.error("[Team] Failed to check invitation:", { error: errMsg });
+      return NextResponse.json({ error: "Database error while checking invitations. Please try again.", _step: "check_invitation", _details: undefined }, { status: 500 });
     }
 
     // ── Create User (if doesn't exist) + OrganizationMember + Invitation ──
@@ -318,7 +318,7 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
     try {
       inviter = invitedBy ? await db.user.findUnique({ where: { id: invitedBy } }) : null;
     } catch (e: unknown) {
-      logger.warn("[Team] Failed to fetch inviter (non-critical):", getErrorInfo(e).message);
+      logger.warn("[Team] Failed to fetch inviter (non-critical):", { error: getErrorInfo(e).message });
       inviter = null;
     }
     const expiresAt = new Date();
@@ -339,8 +339,8 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
         logger.info("New user created for team invitation", { userId: user.id, email: sanitizeEmail(email), role: targetRole });
       } catch (e: unknown) {
         const { message: errMsg, code: errCode } = getErrorInfo(e);
-        logger.error("[Team] Failed to create user:", errMsg);
-        return NextResponse.json({ error: "Failed to create user account. Please try again.", _step: "create_user", _details: process.env.NODE_ENV === "production" ? undefined : errMsg, _code: process.env.NODE_ENV === "production" ? undefined : errCode }, { status: 500 });
+        logger.error("[Team] Failed to create user:", { error: errMsg });
+        return NextResponse.json({ error: "Failed to create user account. Please try again.", _step: "create_user", _details: undefined, _code: undefined }, { status: 500 });
       }
     }
 
@@ -364,8 +364,8 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
       });
     } catch (e: unknown) {
       const { message: errMsg, code: errCode } = getErrorInfo(e);
-      logger.error("[Team] Failed to create organization member:", errMsg, errCode);
-      return NextResponse.json({ error: "Failed to add team member. Please try again.", _step: "create_member", _details: process.env.NODE_ENV === "production" ? undefined : errMsg, _code: process.env.NODE_ENV === "production" ? undefined : errCode }, { status: 500 });
+      logger.error("[Team] Failed to create organization member:", { error: errMsg, code: errCode });
+      return NextResponse.json({ error: "Failed to add team member. Please try again.", _step: "create_member", _details: undefined, _code: undefined }, { status: 500 });
     }
 
     // Create invitation record — mark as "accepted" immediately since the member
@@ -386,7 +386,7 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
       });
     } catch (e: unknown) {
       const { message: errMsg, code: errCode } = getErrorInfo(e);
-      logger.error("[Team] Failed to create invitation record:", errMsg, errCode);
+      logger.error("[Team] Failed to create invitation record:", { error: errMsg, code: errCode });
       // Member was already created — keep it, invitation record is non-critical
       invitation = { id: "temp", pin: hashedPin };
     }
@@ -398,7 +398,7 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
       const roleDef = getRoleByName(targetRole);
       roleLabel = roleDef?.label || targetRole;
     } catch (e: unknown) {
-      logger.warn("[Team] Failed to get role label (non-critical):", getErrorInfo(e).message);
+      logger.warn("[Team] Failed to get role label (non-critical):", { error: getErrorInfo(e).message });
     }
     const orgName = org.name || platformName;
     const inviterName = inviter?.name || "Admin";
@@ -440,7 +440,7 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
 }), { maxRequests: 10, windowSeconds: 60 });
 
 // DELETE - Remove a team member OR revoke a pending invitation
-export const DELETE = withAuth(async (req: NextRequest, authCtx) => {
+export const DELETE = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   try {
     logger.info("[Team] DELETE request", { userId: authCtx.userId });
     const { searchParams } = new URL(req.url);
@@ -496,10 +496,10 @@ export const DELETE = withAuth(async (req: NextRequest, authCtx) => {
 
     return NextResponse.json({ success: true, message: "Member removed successfully" });
   } catch (error: unknown) {
-    logger.error("Team DELETE error", error, { memberId });
+    logger.error("Team DELETE error", error);
     if (isDbUnavailable(error)) {
       return NextResponse.json({ error: "Database is currently unavailable. Please try again later.", fallback: true }, { status: 503 });
     }
     return NextResponse.json({ error: "Failed to remove member" }, { status: 500 });
   }
-});
+}), { maxRequests: 30, windowSeconds: 60 });

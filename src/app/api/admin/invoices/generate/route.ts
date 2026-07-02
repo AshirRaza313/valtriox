@@ -3,10 +3,11 @@ import { db, safeDbQuery } from "@/lib/db";
 import { generateInvoiceNumber, generateInvoicePDF, type InvoiceData } from "@/lib/pdf-generator";
 import { getCurrencyForCountry } from "@/lib/currency";
 import { withAuth, isPlatformRole } from "@/lib/auth-middleware";
+import { withRateLimit } from "@/lib/rate-limit";
 import logger from "@/lib/logger";
 
 // POST /api/admin/invoices/generate - Generate a branded PDF invoice from payment data
-export const POST = withAuth(async (req: NextRequest, authCtx) => {
+export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   try {
     logger.info("[Admin Invoice Generate] POST request", { userId: authCtx.userId });
 
@@ -46,7 +47,7 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
     if (orgErr) {
       logger.error("[Invoice Generate] DB error fetching organization", { error: orgErr });
       return NextResponse.json(
-        { error: "Database error fetching organization", details: process.env.NODE_ENV === "production" ? undefined : orgErr?.substring(0, 200) },
+        { error: "Database error fetching organization", details: undefined },
         { status: 503 }
       );
     }
@@ -104,7 +105,7 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
         return NextResponse.json({ error: "Invoice number conflict. Please retry." }, { status: 409 });
       }
       return NextResponse.json(
-        { error: "Failed to create invoice record", details: process.env.NODE_ENV === "production" ? undefined : createErr?.substring(0, 200) },
+        { error: "Failed to create invoice record", details: undefined },
         { status: 503 }
       );
     }
@@ -166,18 +167,18 @@ export const POST = withAuth(async (req: NextRequest, authCtx) => {
           "Content-Disposition": `attachment; filename="${invoiceNumber}.pdf"`,
         },
       });
-    } catch (pdfErr: any) {
-      logger.error("[Invoice Generate] PDF generation error", { error: pdfErr?.message });
+    } catch (pdfErr: unknown) {
+      logger.error("[Invoice Generate] PDF generation error", { error: "Internal server error" });
       // PDF generation failed but invoice record was created
       // Return the invoice data so admin knows it was saved
       return NextResponse.json({
         invoice,
         warning: "Invoice record saved but PDF generation failed. You can download it from Invoice Management.",
-        error: pdfErr?.message,
+        error: pdfErr instanceof Error ? pdfErr.message : "PDF generation failed",
       }, { status: 201 });
     }
-  } catch (error: any) {
-    logger.error("[Invoice Generate] Unhandled error", { error: error?.message });
-    return NextResponse.json({ error: "Failed to generate invoice", details: process.env.NODE_ENV === "production" ? undefined : error?.message }, { status: 500 });
+  } catch (error: unknown) {
+    logger.error("[Invoice Generate] Unhandled error", error);
+    return NextResponse.json({ error: "Failed to generate invoice", details: undefined }, { status: 500 });
   }
-}, { requireRole: ["platform_owner", "platform_admin", "owner", "admin"], requireOrg: false });
+}, { requireRole: ["platform_owner", "platform_admin", "owner", "admin"], requireOrg: false }), { maxRequests: 30, windowSeconds: 60 });

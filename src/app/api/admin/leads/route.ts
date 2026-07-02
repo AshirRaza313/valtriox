@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
+import { withRateLimit } from "@/lib/rate-limit";
 import logger from "@/lib/logger";
 
 // GET /api/admin/leads - List all leads (admin only)
-export const GET = withAuth(async (req: NextRequest) => {
+export const GET = withRateLimit(withAuth(async (req: NextRequest) => {
   try {
     const { searchParams } = new URL(req.url);
     const status = searchParams.get("status");
@@ -33,17 +34,17 @@ export const GET = withAuth(async (req: NextRequest) => {
     ]);
 
     return NextResponse.json({ leads, total, page, totalPages: Math.ceil(total / limit) });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("[Admin Leads] GET error", error);
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
-    return NextResponse.json({ error: "Failed to fetch leads", details: process.env.NODE_ENV === "production" ? undefined : error?.message }, { status: 500 });
+    return NextResponse.json({ error: "Failed to fetch leads", details: undefined }, { status: 500 });
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 30, windowSeconds: 60 });
 
 // PUT /api/admin/leads - Update lead status/fields (admin only)
-export const PUT = withAuth(async (req: NextRequest) => {
+export const PUT = withRateLimit(withAuth(async (req: NextRequest) => {
   try {
     const body = await req.json();
     const { id, status, notes, consultationType, preferredDate, preferredTime, timezone, availabilityNote } = body;
@@ -70,17 +71,17 @@ export const PUT = withAuth(async (req: NextRequest) => {
     }, 2, 500);
 
     return NextResponse.json({ success: true, lead });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("[Admin Leads] PUT error", error);
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
-    return NextResponse.json({ error: "Failed to update lead", details: process.env.NODE_ENV === "production" ? undefined : error?.message }, { status: 500 });
+    return NextResponse.json({ error: "Failed to update lead", details: undefined }, { status: 500 });
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 30, windowSeconds: 60 });
 
 // DELETE /api/admin/leads - Delete a lead (admin only)
-export const DELETE = withAuth(async (req: NextRequest) => {
+export const DELETE = withRateLimit(withAuth(async (req: NextRequest) => {
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
@@ -92,11 +93,11 @@ export const DELETE = withAuth(async (req: NextRequest) => {
     }, 2, 500);
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("[Admin Leads] DELETE error", error);
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
-    return NextResponse.json({ error: "Failed to delete lead", details: process.env.NODE_ENV === "production" ? undefined : error?.message }, { status: 500 });
+    return NextResponse.json({ error: "Failed to delete lead", details: undefined }, { status: 500 });
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 30, windowSeconds: 60 });

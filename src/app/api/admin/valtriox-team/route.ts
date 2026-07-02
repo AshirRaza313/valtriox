@@ -4,6 +4,7 @@ import { withAuth } from "@/lib/auth-middleware";
 import { sendEmail, isEmailConfigured } from "@/lib/email";
 import { getValtrioxInvitationHtml, generateWhatsAppInviteLink, generateInvitationPlainText } from "@/lib/email-templates";
 import { withRateLimit } from "@/lib/rate-limit";
+import logger from "@/lib/logger";
 
 const DEPARTMENTS = ["Engineering", "Sales", "Marketing", "Support", "Operations", "Finance", "Design", "Management"];
 
@@ -37,10 +38,10 @@ export const GET = withRateLimit(withAuth(async (req, authCtx) => {
     const pendingInvitations = invitations.filter(inv => new Date(inv.expiresAt) > now);
 
     return NextResponse.json({ members, invitations: pendingInvitations, departments: DEPARTMENTS, roles: VALTROIX_ROLES });
-  } catch (error: any) {
-    console.error("[Valtriox Team] GET error:", error?.message);
+  } catch (error: unknown) {
+    logger.error("[Valtriox Team] GET error:", error);
     return NextResponse.json(
-      { error: "Failed to fetch team data", details: process.env.NODE_ENV === "production" ? undefined : error?.message },
+      { error: "Failed to fetch team data", details: undefined },
       { status: 500 }
     );
   }
@@ -127,7 +128,7 @@ export const POST = withRateLimit(withAuth(async (req, authCtx) => {
         inviterName,
         platformName: "Valtriox",
         platformWebsite: process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_BASE_URL || "https://valtriox.com",
-        supportEmail: "ashir@valtriox.com",
+        supportEmail: process.env.SUPPORT_EMAIL || "support@valtriox.com",
       });
 
       emailSent = await sendEmail({
@@ -135,8 +136,8 @@ export const POST = withRateLimit(withAuth(async (req, authCtx) => {
         subject: `You're Invited to Join Valtriox - ${roleLabel}`,
         html,
       });
-    } catch (emailErr: any) {
-      console.warn("[Valtriox Team] Email send failed:", emailErr?.message);
+    } catch (emailErr: unknown) {
+      logger.warn("[Valtriox Team] Email send failed:", { error: emailErr instanceof Error ? emailErr.message : String(emailErr) });
     }
 
     // ── Generate WhatsApp link (if phone provided) ──
@@ -163,7 +164,7 @@ export const POST = withRateLimit(withAuth(async (req, authCtx) => {
       expiresAt: expiresAt.toISOString(),
       inviterName,
       platformName: "Valtriox",
-      supportEmail: "ashir@valtriox.com",
+      supportEmail: process.env.SUPPORT_EMAIL || "support@valtriox.com",
     });
 
     return NextResponse.json({
@@ -183,10 +184,10 @@ export const POST = withRateLimit(withAuth(async (req, authCtx) => {
       whatsappLink,
       plainTextInvite,
     }, { status: 201 });
-  } catch (error: any) {
-    console.error("[Valtriox Team] POST error:", error?.message);
+  } catch (error: unknown) {
+    logger.error("[Valtriox Team] POST error:", error);
     return NextResponse.json(
-      { error: "Failed to create invitation", details: process.env.NODE_ENV === "production" ? undefined : error?.message },
+      { error: "Failed to create invitation", details: undefined },
       { status: 500 }
     );
   }
@@ -210,10 +211,10 @@ export const DELETE = withRateLimit(withAuth(async (req, authCtx) => {
     }, 2, 500);
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    console.error("[Valtriox Team] DELETE error:", error?.message);
+  } catch (error: unknown) {
+    logger.error("[Valtriox Team] DELETE error:", error);
     return NextResponse.json(
-      { error: "Failed to revoke invitation", details: process.env.NODE_ENV === "production" ? undefined : error?.message },
+      { error: "Failed to revoke invitation", details: undefined },
       { status: 500 }
     );
   }

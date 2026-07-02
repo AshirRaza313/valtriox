@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, safeDbQuery } from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
+import { withRateLimit } from "@/lib/rate-limit";
 import logger from "@/lib/logger";
 
 // GET /api/admin/payments - List all payment proofs (for admin dashboard)
-export const GET = withAuth(async (req: NextRequest, authCtx) => {
+export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   logger.info("[Admin Payments] GET request", { userId: authCtx.userId });
 
   const { searchParams } = new URL(req.url);
@@ -93,4 +94,4 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
   }));
 
   return NextResponse.json({ payments: formatted, stats });
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 30, windowSeconds: 60 });

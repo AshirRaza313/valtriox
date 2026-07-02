@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, safeDbQuery } from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
+import { withRateLimit } from "@/lib/rate-limit";
 import logger from "@/lib/logger";
 
 // Allow up to 30 seconds for DB operations on Vercel serverless
@@ -44,7 +45,7 @@ interface ReminderItem extends ReminderLead {
 // Returns leads categorized by: upcoming, overdue, followUpDue
 // ============================================================================
 
-export const GET = withAuth(async (req: NextRequest) => {
+export const GET = withRateLimit(withAuth(async (req: NextRequest) => {
   logger.info("[Consultation Reminders] GET request");
 
   const { data: result, error } = await safeDbQuery(async () => {
@@ -144,7 +145,7 @@ export const GET = withAuth(async (req: NextRequest) => {
   }
 
   return NextResponse.json(result);
-}, { requireRole: ["platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 30, windowSeconds: 60 });
 
 // ============================================================================
 // POST /api/admin/consultation-reminders/send
@@ -152,7 +153,7 @@ export const GET = withAuth(async (req: NextRequest) => {
 // Sends reminder/follow-up/reschedule email to a lead
 // ============================================================================
 
-export const POST = withAuth(async (req: NextRequest) => {
+export const POST = withRateLimit(withAuth(async (req: NextRequest) => {
   logger.info("[Consultation Reminders] POST request");
 
   try {
@@ -205,7 +206,7 @@ export const POST = withAuth(async (req: NextRequest) => {
       message: lead.message,
       platformName: platformSettings?.companyName || "Valtriox",
       platformWebsite: platformSettings?.companyWebsite || process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_BASE_URL || "https://valtriox.com",
-      companyEmail: platformSettings?.companyEmail || "ashir@valtriox.com",
+      companyEmail: platformSettings?.companyEmail || process.env.SUPPORT_EMAIL || "support@valtriox.com",
       companyPhone: platformSettings?.companyPhone || null,
     };
 
@@ -273,11 +274,11 @@ export const POST = withAuth(async (req: NextRequest) => {
       leadId,
       templateType,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("[Consultation Reminders] POST error", error);
     return NextResponse.json(
-      { error: "Failed to send reminder", details: process.env.NODE_ENV === "production" ? undefined : error?.message },
+      { error: "Failed to send reminder", details: undefined },
       { status: 500 }
     );
   }
-}, { requireRole: ["platform_owner", "platform_admin"], requireOrg: false });
+}, { requireRole: ["platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 30, windowSeconds: 60 });

@@ -3,9 +3,10 @@ import { db, isDbUnavailable, withRetry} from "@/lib/db";
 import { getCurrencyForCountry } from "@/lib/currency";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
+import { withRateLimit } from "@/lib/rate-limit";
 
 // GET /api/reports/sales?orgId=xxx&period=daily|weekly|monthly
-export const GET = withAuth(async (req: NextRequest, authCtx) => {
+export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   try {
     logger.info("[Reports Sales] GET request", { userId: authCtx.userId });
     const orgId = req.nextUrl.searchParams.get("orgId") || authCtx.organizationId!;
@@ -104,7 +105,7 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
       channelBreakdown,
       currency: { code: currency.code, symbol: currency.symbol },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (isDbUnavailable(error)) {
       return NextResponse.json({
         period: "monthly",
@@ -118,4 +119,4 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
     }
     return NextResponse.json({ error: "Failed to fetch sales report" }, { status: 500 });
   }
-});
+}), { maxRequests: 60, windowSeconds: 60 });

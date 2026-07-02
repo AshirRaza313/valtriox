@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
+import { withRateLimit } from "@/lib/rate-limit";
 
 // ── Types ──
 
@@ -37,7 +38,7 @@ function formatDuration(ms: number): string {
 
 // ── GET: Scan all active orders for SLA compliance ──
 
-export const GET = withAuth(async (req, authCtx) => {
+export const GET = withRateLimit(withAuth(async (req, authCtx) => {
   try {
     const { searchParams } = new URL(req.url);
     const orgId = searchParams.get("orgId") || authCtx.organizationId;
@@ -226,11 +227,11 @@ export const GET = withAuth(async (req, authCtx) => {
       avgTimesPerStatus,
       teamPerformance,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("SLA check error", error, { orgId: authCtx?.organizationId });
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
     return NextResponse.json({ error: "Failed to check SLA compliance" }, { status: 500 });
   }
-});
+}), { maxRequests: 60, windowSeconds: 60 });

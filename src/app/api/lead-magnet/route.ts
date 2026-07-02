@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, ensurePlatformSettingsColumns, withRetry} from "@/lib/db";
 import { generateLeadMagnetPDF } from "@/lib/lead-magnet-generator";
 import { withAuth } from "@/lib/auth-middleware";
+import { withRateLimit } from "@/lib/rate-limit";
+import logger from "@/lib/logger";
 
 // Simple in-memory cache: generated PDFs are valid for 10 minutes
 let cachedPdf: { buffer: Buffer; timestamp: number } | null = null;
@@ -12,9 +14,10 @@ const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
  * Uses PlatformSettings from DB for logo, contact info, social links.
  * NO AUTH required - public endpoint for lead downloads.
  * 
+ * Phase 7: Added rate limiting to prevent PDF generation DoS.
  * Cache: PDF is cached in memory for 10 minutes to avoid regenerating on every request.
  */
-export async function GET() {
+export const GET = withRateLimit(async () => {
   try {
     // Check cache first
     if (cachedPdf && Date.now() - cachedPdf.timestamp < CACHE_TTL) {
@@ -45,7 +48,7 @@ export async function GET() {
       companyName,
       tagline: settings?.tagline || "COMMAND YOUR BRAND UNIVERSE",
       logoUrl: settings?.logoUrl || null,
-      companyEmail: settings?.companyEmail || "ashir@valtriox.com",
+      companyEmail: settings?.companyEmail || process.env.SUPPORT_EMAIL || "support@valtriox.com",
       companyPhone: settings?.companyPhone || null,
       companyWebsite: settings?.companyWebsite || null,
       companyAddress: settings?.companyAddress || null,
@@ -73,8 +76,9 @@ export async function GET() {
         "Cache-Control": "public, max-age=600",
       },
     });
-  } catch (error: any) {
-    console.error("[Lead Magnet] PDF generation error:", error?.message || error);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    logger.error("[Lead Magnet] PDF generation error:", message);
 
     // If dynamic generation fails, fall back to static file
     try {
@@ -99,14 +103,14 @@ export async function GET() {
       { status: 500 }
     );
   }
-}
+}, { maxRequests: 20, windowSeconds: 60 });
 
 /**
  * POST /api/lead-magnet - Force regenerate PDF (clears cache).
  * Requires admin auth - used by admin panel "Regenerate PDF" button.
  */
 // FIX 1.8: POST requires platform admin auth — only admins can regenerate the PDF
-export const POST = withAuth(async (_req: NextRequest) => {
+export const POST = withRateLimit(withAuth(async (_req: NextRequest) => {
   try {
     // Clear cache
     cachedPdf = null;
@@ -128,7 +132,7 @@ export const POST = withAuth(async (_req: NextRequest) => {
       companyName,
       tagline: settings?.tagline || "COMMAND YOUR BRAND UNIVERSE",
       logoUrl: settings?.logoUrl || null,
-      companyEmail: settings?.companyEmail || "ashir@valtriox.com",
+      companyEmail: settings?.companyEmail || process.env.SUPPORT_EMAIL || "support@valtriox.com",
       companyPhone: settings?.companyPhone || null,
       companyWebsite: settings?.companyWebsite || null,
       companyAddress: settings?.companyAddress || null,
@@ -154,11 +158,12 @@ export const POST = withAuth(async (_req: NextRequest) => {
       size: pdfBuffer.length,
       pages: 9,
     });
-  } catch (error: any) {
-    console.error("[Lead Magnet] Regenerate error:", error?.message || error);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    logger.error("[Lead Magnet] Regenerate error:", message);
     return NextResponse.json(
-      { error: `Failed to regenerate PDF: ${error?.message || String(error)}` },
+      { error: "Failed to regenerate PDF" },
       { status: 500 }
     );
   }
-}, { requireRole: ["platform_owner", "platform_admin"] });
+}, { requireRole: ["platform_owner", "platform_admin"] }), { maxRequests: 20, windowSeconds: 60 });

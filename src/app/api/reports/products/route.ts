@@ -3,9 +3,10 @@ import { db, dbErrorResponse, isDbUnavailable, withRetry} from "@/lib/db";
 import { getCurrencyForCountry } from "@/lib/currency";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
+import { withRateLimit } from "@/lib/rate-limit";
 
 // GET /api/reports/products?orgId=xxx
-export const GET = withAuth(async (req: NextRequest, authCtx) => {
+export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   try {
     logger.info("[Reports Products] GET request", { userId: authCtx.userId });
     const orgId = req.nextUrl.searchParams.get("orgId") || authCtx.organizationId!;
@@ -97,10 +98,10 @@ export const GET = withAuth(async (req: NextRequest, authCtx) => {
       categories,
       currency: { code: currency.code, symbol: currency.symbol },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
     return NextResponse.json({ error: "Failed to fetch product report" }, { status: 500 });
   }
-});
+}), { maxRequests: 60, windowSeconds: 60 });

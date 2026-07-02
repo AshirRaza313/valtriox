@@ -70,7 +70,7 @@ export const GET = withRateLimit(withAuth(async (_req: NextRequest, authCtx) => 
       folderPrefix: parsed.folderPrefix || "org",
       message: parsed.enabled ? "Cloudinary active | client media storage configured" : "Cloudinary disabled | using Supabase fallback",
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("[StorageSettings] GET error:", error);
     return NextResponse.json({ error: "Failed to fetch storage settings" }, { status: 500 });
   }
@@ -137,7 +137,7 @@ export const PUT = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
       message: config.enabled ? "Cloudinary enabled successfully" : "Cloudinary disabled | files will use Supabase fallback",
       cloudName: config.cloudName,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("[StorageSettings] PUT error:", error);
     return NextResponse.json({ error: "Failed to save storage settings" }, { status: 500 });
   }
@@ -190,16 +190,16 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
         success: false,
         message: `Unexpected response: ${JSON.stringify(pingResult)}`,
       });
-    } catch (testErr: any) {
-      const msg = testErr?.message || String(testErr);
-      logger.warn("[StorageSettings] Connection test failed:", msg);
+    } catch (testErr: unknown) {
+      const msg = testErr instanceof Error ? testErr.message : String(testErr);
+      logger.warn("[StorageSettings] Connection test failed:", { error: msg });
 
       return NextResponse.json({
         success: false,
         message: `Connection failed: ${msg}`,
       });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("[StorageSettings] POST error:", error);
     return NextResponse.json({ error: "Failed to test connection" }, { status: 500 });
   }

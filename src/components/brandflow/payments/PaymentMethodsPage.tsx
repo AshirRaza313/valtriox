@@ -276,7 +276,7 @@ export function PaymentMethodsPage() {
             <p className={cn("text-xs", textSecondary)}>
               For international wire transfers, contact our finance team at{" "}
               <span className={cn("font-medium", textPrimary)}>
-                {platformSettings?.companyEmail || "ashir@valtriox.com"}
+                {platformSettings?.companyEmail || process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@valtriox.com"}
               </span>{" "}
               for SWIFT/BIC code and routing details.
             </p>
@@ -380,7 +380,7 @@ export function PaymentMethodsPage() {
               Contact us via WhatsApp at{" "}
               <span className="font-semibold">{platformSettings?.whatsappNumber || platformSettings?.companyPhone || "support"}</span>{" "}
               or email{" "}
-              <span className="font-semibold">{platformSettings?.companyEmail || "ashir@valtriox.com"}</span>
+              <span className="font-semibold">{platformSettings?.companyEmail || process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@valtriox.com"}</span>
             </p>
           </div>
         </div>

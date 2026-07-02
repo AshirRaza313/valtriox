@@ -50,7 +50,7 @@ interface LoginOrgData {
  */
 function createLoginResponse(userData: LoginUserData, orgData: LoginOrgData | null) {
   const response = NextResponse.json({ user: userData, organization: orgData });
-  const maxAge = 24 * 60 * 60; // 1 day (was 30 days)
+  const maxAge = 7 * 24 * 60 * 60; // Phase 7: 7 days — aligned between 1-day (too short) and 30-day (too long) session
   const cookieOptions = {
     path: "/",
     maxAge,
@@ -123,7 +123,7 @@ export const POST = withRateLimit(async (req: NextRequest) => {
       });
     } catch (dbErr: unknown) {
       const errMsg = getErrorMessage(dbErr);
-      console.error("Database connection error:", errMsg);
+      logger.error("Database connection error:", errMsg);
       if (!process.env.DATABASE_URL) {
         return NextResponse.json(
           { error: "Database not configured.", code: "DB_NOT_CONFIGURED" },
@@ -132,9 +132,9 @@ export const POST = withRateLimit(async (req: NextRequest) => {
       }
       if (errMsg.includes('relation') || errMsg.includes('does not exist') || errMsg.includes('column')) {
         // Schema mismatch - try auto-creating/updating tables
-        console.log("[Login] Schema mismatch detected, attempting auto-fix...");
+        logger.info("[Login] Schema mismatch detected, attempting auto-fix...");
         try {
-          console.log("[Login] Attempting auto-fix via ensureDb...");
+          logger.info("[Login] Attempting auto-fix via ensureDb...");
           // Retry the full query after auto-fix
           user = await db.user.findUnique({
             where: { email: email.toLowerCase() },
@@ -155,7 +155,7 @@ export const POST = withRateLimit(async (req: NextRequest) => {
             }
           });
         } catch (fixErr: unknown) {
-          console.error("[Login] Auto-fix failed:", getErrorMessage(fixErr));
+          logger.error("[Login] Auto-fix failed:", getErrorMessage(fixErr));
           // Last resort: try without includes
           try {
             user = await db.user.findUnique({
@@ -297,7 +297,7 @@ export const POST = withRateLimit(async (req: NextRequest) => {
             }, 2, 500);
           }
         } catch (notifErr: unknown) {
-          console.error("Failed to create notification:", getErrorMessage(notifErr));
+          logger.error("Failed to create notification:", getErrorMessage(notifErr));
         }
       }
 
@@ -389,7 +389,7 @@ export const POST = withRateLimit(async (req: NextRequest) => {
         }
       }
     } catch (autoOrgErr: unknown) {
-      console.error("[Login] Auto-assign org for VT member failed:", getErrorMessage(autoOrgErr));
+      logger.error("[Login] Auto-assign org for VT member failed:", getErrorMessage(autoOrgErr));
     }
 
     return createLoginResponse(

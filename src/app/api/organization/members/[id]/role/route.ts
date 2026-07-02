@@ -5,10 +5,11 @@ import { canAssignRole, getAdminEmail } from "@/lib/roles";
 import { validateBody } from "@/lib/validations/api";
 import { updateMemberRoleApiSchema } from "@/lib/validations/schemas";
 import logger from "@/lib/logger";
+import { withRateLimit } from "@/lib/rate-limit";
 
 // PUT /api/organization/members/[id]/role
 // Update a team member's role assignment
-export const PUT = withAuth(async (
+export const PUT = withRateLimit(withAuth(async (
   req: NextRequest,
   authCtx: any
 ) => {
@@ -102,8 +103,8 @@ export const PUT = withAuth(async (
       message: "Role updated successfully",
       member: updatedMember,
     });
-  } catch (error: any) {
-    console.error("Member role update error:", error?.message || error);
+  } catch (error: unknown) {
+    logger.error("Member role update error:", error);
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
@@ -112,4 +113,4 @@ export const PUT = withAuth(async (
       { status: 500 }
     );
   }
-});
+}), { maxRequests: 30, windowSeconds: 60 });

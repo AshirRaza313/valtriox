@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, dbErrorResponse, isDbUnavailable, withRetry } from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
+import { withRateLimit } from "@/lib/rate-limit";
 
 // ── Priority Scoring Algorithm ──
 
@@ -49,7 +50,7 @@ function formatAge(createdAt: Date): string {
 
 // ── GET: Returns all orders with priority scores ──
 
-export const GET = withAuth(async (req, authCtx) => {
+export const GET = withRateLimit(withAuth(async (req, authCtx) => {
   try {
     const { searchParams } = new URL(req.url);
     const orgId = searchParams.get("orgId") || authCtx.organizationId;
@@ -129,11 +130,11 @@ export const GET = withAuth(async (req, authCtx) => {
       orders: filteredOrders,
       summary,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error("Priority orders error", error, { orgId: authCtx?.organizationId });
     if (isDbUnavailable(error)) {
       return dbErrorResponse(error);
     }
     return NextResponse.json({ error: "Failed to calculate priority scores" }, { status: 500 });
   }
-});
+}), { maxRequests: 60, windowSeconds: 60 });
