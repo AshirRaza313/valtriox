@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef } from "react";
+import Image from "next/image";
 import {
   Dialog,
   DialogContent,
@@ -455,7 +456,7 @@ export function SubscriptionInvoiceView({ invoice, open, onClose }: Subscription
           <div className="flex items-start justify-between px-8 pt-8 pb-6">
             <div className="flex items-center gap-3">
               {displayLogo ? (
-                <img src={displayLogo} alt={displayBrand} className="w-12 h-12 rounded-xl object-cover border-2 border-slate-100" />
+                <Image src={displayLogo} alt={`${displayBrand} logo`} width={48} height={48} className="w-12 h-12 rounded-xl object-cover border-2 border-slate-100" unoptimized />
               ) : (
                 <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-gradient-to-br from-amber-400 to-amber-600 text-white font-extrabold text-base shadow-lg shadow-amber-200">
                   {displayBrand[0]?.toUpperCase() || "V"}

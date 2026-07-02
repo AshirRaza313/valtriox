@@ -5,11 +5,10 @@ const nextConfig: NextConfig = {
   // "standalone" output for Railway deployment
   output: "standalone",
   typescript: {
-    // Phase 6: Pre-existing TS errors remain in ~15 files (Decimal/Prisma type mismatches,
-    // logger call signatures, bcrypt overloads). These are non-critical runtime-safe issues.
-    // ignoreBuildErrors is kept ON to unblock deployment while we fix them incrementally.
-    // All NEW Phase 6 code follows strict typing. Track remaining in tech debt backlog.
-    ignoreBuildErrors: true,
+    // Phase 8: ignoreBuildErrors removed — all TS errors must be fixed or explicitly
+    // suppressed with @ts-expect-error per-line. This ensures type safety is enforced
+    // at build time and prevents type regressions from reaching production.
+    ignoreBuildErrors: false,
   },
   reactStrictMode: true, // Enable strict mode for better React practices
   allowedDevOrigins: ["http://localhost:3000"],

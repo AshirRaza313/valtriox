@@ -3,6 +3,7 @@ import { db, ensurePlatformSettingsColumns, withRetry } from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
 import { withRateLimit } from "@/lib/rate-limit";
+import { SUPPORT_EMAIL } from "@/lib/email";
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  Uses Prisma ORM with pgbouncer=true (configured in db.ts).
@@ -13,7 +14,7 @@ import { withRateLimit } from "@/lib/rate-limit";
 const DEFAULT_SETTINGS = {
   id: "default",
   companyName: "Valtriox",
-  companyEmail: process.env.SUPPORT_EMAIL || "support@valtriox.com",
+  companyEmail: SUPPORT_EMAIL,
   companyPhone: "",
   companyWebsite: "",
   companyAddress: "",
@@ -130,7 +131,7 @@ export const GET = withRateLimit(withAuth(async (_req: NextRequest, authCtx) => 
       const created = await db.platformSettings.create({
         data: {
           companyName: "Valtriox",
-          companyEmail: process.env.SUPPORT_EMAIL || "support@valtriox.com",
+          companyEmail: SUPPORT_EMAIL,
           currency: "PKR",
         },
       });
@@ -248,7 +249,7 @@ export const PUT = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
         row = await db.platformSettings.create({
           data: {
             companyName: data.companyName || "Valtriox",
-            companyEmail: data.companyEmail || process.env.SUPPORT_EMAIL || "support@valtriox.com",
+            companyEmail: data.companyEmail || SUPPORT_EMAIL,
             currency: data.currency || "PKR",
             ...data,
           },

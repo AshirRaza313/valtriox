@@ -609,8 +609,19 @@ export function Sidebar() {
           </div>
           {/* "Powered by Valtriox" subtle text - hidden when collapsed */}
           {!isCollapsed && (
-            <div className="pb-3 flex justify-center">
+            <div className="pb-3 flex flex-col items-center gap-1">
               <span className="text-[10px] text-slate-500/60">Powered by {companyName}</span>
+              <span className="text-[9px] text-slate-600/70">
+                Made by{" "}
+                <a
+                  href="https://www.linkedin.com/in/muhammad-ashir-raza"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-amber-500/50 hover:text-amber-400/80 transition-colors font-medium"
+                >
+                  Muhammad Ashir Raza
+                </a>
+              </span>
             </div>
           )}
         </div>

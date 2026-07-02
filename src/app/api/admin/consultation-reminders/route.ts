@@ -3,6 +3,7 @@ import { db, safeDbQuery } from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import { withRateLimit } from "@/lib/rate-limit";
 import logger from "@/lib/logger";
+import { SUPPORT_EMAIL } from "@/lib/email";
 
 // Allow up to 30 seconds for DB operations on Vercel serverless
 export const maxDuration = 30;
@@ -206,7 +207,7 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest) => {
       message: lead.message,
       platformName: platformSettings?.companyName || "Valtriox",
       platformWebsite: platformSettings?.companyWebsite || process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_BASE_URL || "https://valtriox.com",
-      companyEmail: platformSettings?.companyEmail || process.env.SUPPORT_EMAIL || "support@valtriox.com",
+      companyEmail: platformSettings?.companyEmail || SUPPORT_EMAIL,
       companyPhone: platformSettings?.companyPhone || null,
     };
 
@@ -229,9 +230,11 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest) => {
     }
 
     // ── Step 3: Send email ──
-    const { sendEmail } = await import("@/lib/email");
+    const { sendEmail, SUPPORT_FROM, SUPPORT_REPLY_TO } = await import("@/lib/email");
     const sent = await sendEmail({
       to: lead.email,
+      from: SUPPORT_FROM,
+      replyTo: SUPPORT_REPLY_TO,
       subject,
       html,
     });

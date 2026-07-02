@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Target, Eye, Heart, Globe, Zap, Award, Users, TrendingUp, Shield } from "lucide-react";
+import { Target, Eye, Heart, Globe, Zap, Award, Users, TrendingUp, Shield, Linkedin, Mail, Code2 } from "lucide-react";
 import { usePlatformIdentity } from "@/lib/platform-identity";
 
 export function About() {
@@ -162,6 +162,60 @@ export function About() {
                 </div>
               </motion.div>
             ))}
+          </div>
+        </motion.div>
+
+        {/* Founder Section — Muhammad Ashir Raza */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0.4 }}
+          className="mt-20 max-w-4xl mx-auto"
+        >
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-amber-500/[0.08] via-white/[0.02] to-transparent border border-amber-500/15 p-8 sm:p-12">
+            <div className="absolute -top-12 -right-12 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl" />
+            <div className="relative flex flex-col sm:flex-row items-center sm:items-start gap-6 sm:gap-8">
+              {/* Avatar */}
+              <div className="flex-shrink-0 w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-gradient-to-br from-amber-400 via-amber-500 to-amber-700 flex items-center justify-center text-4xl font-bold text-white shadow-2xl shadow-amber-600/30">
+                AR
+              </div>
+              {/* Bio */}
+              <div className="flex-1 text-center sm:text-left">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 mb-3">
+                  <Code2 className="h-3 w-3 text-amber-400" />
+                  <span className="text-[11px] font-semibold uppercase tracking-widest text-amber-300">Founder &amp; Developer</span>
+                </div>
+                <h3 className="text-2xl sm:text-3xl font-bold text-white mb-2">
+                  Muhammad Ashir Raza
+                </h3>
+                <p className="text-sm text-slate-400 leading-relaxed mb-5">
+                  The visionary and engineer behind {companyName}. Muhammad Ashir Raza designed and built
+                  the entire platform from the ground up — every feature, every integration, every line of
+                  code reflects a commitment to empowering brands with enterprise-grade tooling at an
+                  accessible price point. His mission: give every business the power to command its brand
+                  universe from a single, beautiful dashboard.
+                </p>
+                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3">
+                  <a
+                    href="https://www.linkedin.com/in/muhammad-ashir-raza"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 text-white text-sm font-medium hover:from-amber-600 hover:to-amber-700 transition-all"
+                  >
+                    <Linkedin className="h-4 w-4" />
+                    Connect on LinkedIn
+                  </a>
+                  <a
+                    href={`mailto:${identity.companyEmail || process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "ashir@valtriox.com"}`}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-white/10 text-slate-300 text-sm font-medium hover:bg-white/5 hover:text-white transition-all"
+                  >
+                    <Mail className="h-4 w-4" />
+                    Email Founder
+                  </a>
+                </div>
+              </div>
+            </div>
           </div>
         </motion.div>
       </div>

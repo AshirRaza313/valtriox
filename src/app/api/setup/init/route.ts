@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAllTables } from "@/lib/db";
 import crypto from "crypto";
 import logger from "@/lib/logger";
+import { SUPPORT_EMAIL } from "@/lib/email";
 
 // POST /api/setup/init - Creates all tables, admin account, seeds plans
 // This is a ONE-TIME setup endpoint called after DATABASE_URL is configured.
@@ -151,7 +152,7 @@ export async function POST(req: NextRequest) {
       await prisma.platformSettings.create({
         data: {
           companyName: "Valtriox",
-          companyEmail: process.env.SUPPORT_EMAIL || "support@valtriox.com",
+          companyEmail: SUPPORT_EMAIL,
           tagline: "COMMAND YOUR BRAND UNIVERSE",
           primaryBrandColor: "#D4A73A",
           secondaryBrandColor: "#B8942F",

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef } from "react";
+import Image from "next/image";
 import {
   Dialog,
   DialogContent,
@@ -317,7 +318,7 @@ export function InvoiceGenerator({ order, open, onClose }: InvoiceGeneratorProps
           <div className="flex items-start justify-between px-8 pt-8 pb-6">
             <div className="flex items-center gap-3">
               {displayLogo ? (
-                <img src={displayLogo} alt={displayBrand} className="h-10 w-10 rounded-lg object-cover" />
+                <Image src={displayLogo} alt={`${displayBrand} logo`} width={40} height={40} className="h-10 w-10 rounded-lg object-cover" unoptimized />
               ) : (
                 <div className="h-10 w-10 rounded-lg flex items-center justify-center bg-amber-600 text-white font-bold text-sm">
                   {displayBrand[0]?.toUpperCase() || "B"}

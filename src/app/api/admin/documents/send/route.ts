@@ -16,7 +16,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db, withRetry, safeDbQuery } from "@/lib/db";
-import { sendEmail } from "@/lib/email";
+import { sendEmail, SUPPORT_EMAIL, SUPPORT_FROM, SUPPORT_REPLY_TO} from "@/lib/email";
 import { withAuth, AuthContext } from "@/lib/auth-middleware";
 import { withRateLimit } from "@/lib/rate-limit";
 import logger from "@/lib/logger";
@@ -99,9 +99,11 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx: Aut
         // Send email
         const emailSent = await sendEmail({
           to: recipientEmail,
+          from: SUPPORT_FROM,
+          replyTo: SUPPORT_REPLY_TO,
           subject: `${parsed.title || "Document"} from Valtriox`,
           html: buildTextDocumentEmail(parsed.title, processedContent, ph),
-          text: `Hello ${ph.client_name},\n\nHere is the document "${parsed.title}" for ${ph.company_name}.\n\n${processedContent}\n\nBest regards,\nValtriox Team\n${process.env.SUPPORT_EMAIL || "support@valtriox.com"}`,
+          text: `Hello ${ph.client_name},\n\nHere is the document "${parsed.title}" for ${ph.company_name}.\n\n${processedContent}\n\nBest regards,\nValtriox Team\n${SUPPORT_EMAIL}`,
         });
 
         return {
@@ -162,9 +164,11 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx: Aut
 
         const emailSent = await sendEmail({
           to: recipientEmail,
+          from: SUPPORT_FROM,
+          replyTo: SUPPORT_REPLY_TO,
           subject: `${file.title} | Document from Valtriox`,
           html: buildFileDocumentEmail(file, customMessage, ph, fileSize, fileIcon),
-          text: `Hello ${ph.client_name},\n\n${customMessage}\n\nDocument: ${file.title}\nType: ${file.fileType.toUpperCase()}\nSize: ${fileSize}\nDownload: ${file.cloudinaryUrl}\n\nBest regards,\nValtriox Team\n${process.env.SUPPORT_EMAIL || "support@valtriox.com"}`,
+          text: `Hello ${ph.client_name},\n\n${customMessage}\n\nDocument: ${file.title}\nType: ${file.fileType.toUpperCase()}\nSize: ${fileSize}\nDownload: ${file.cloudinaryUrl}\n\nBest regards,\nValtriox Team\n${SUPPORT_EMAIL}`,
         });
 
         return {
@@ -220,9 +224,9 @@ function buildTextDocumentEmail(title: string, content: string, ph: Record<strin
       <p style="color: #334155; font-size: 15px;">Hello <strong>${ph.client_name}</strong>,</p>
       <p style="color: #334155; font-size: 15px;">Please find below the document <strong>"${title}"</strong> prepared for <strong>${ph.company_name}</strong>.</p>
       <div style="background: #fafaf9; border: 1px solid #e8dcc8; border-radius: 10px; padding: 24px; margin: 20px 0; font-size: 14px; color: #1a1a2e; line-height: 1.7; white-space: pre-wrap;">${escapedContent}</div>
-      <p style="color: #64748b; font-size: 13px;">If you have any questions, reply to this email or contact <a href="mailto:${process.env.SUPPORT_EMAIL || 'support@valtriox.com'}" style="color: #D4A73A;">${process.env.SUPPORT_EMAIL || "support@valtriox.com"}</a></p>
+      <p style="color: #64748b; font-size: 13px;">If you have any questions, reply to this email or contact <a href="mailto:${SUPPORT_EMAIL}" style="color: #D4A73A;">${SUPPORT_EMAIL}</a></p>
       <div style="border-top: 1px solid #e8dcc8; padding-top: 16px; margin-top: 24px; text-align: center;">
-        <p style="color: #94a3b8; font-size: 11px; margin: 0;">Valtriox Platform &bull; ${process.env.SUPPORT_EMAIL || "support@valtriox.com"} &bull; valtriox.com</p>
+        <p style="color: #94a3b8; font-size: 11px; margin: 0;">Valtriox Platform &bull; ${SUPPORT_EMAIL} &bull; valtriox.com</p>
       </div>
     </div>
   `;
@@ -253,9 +257,9 @@ function buildFileDocumentEmail(
           Download Document
         </a>
       </div>
-      <p style="color: #64748b; font-size: 13px;">If you have any questions, reply to this email or contact <a href="mailto:${process.env.SUPPORT_EMAIL || 'support@valtriox.com'}" style="color: #D4A73A;">${process.env.SUPPORT_EMAIL || "support@valtriox.com"}</a></p>
+      <p style="color: #64748b; font-size: 13px;">If you have any questions, reply to this email or contact <a href="mailto:${SUPPORT_EMAIL}" style="color: #D4A73A;">${SUPPORT_EMAIL}</a></p>
       <div style="border-top: 1px solid #e8dcc8; padding-top: 16px; margin-top: 24px; text-align: center;">
-        <p style="color: #94a3b8; font-size: 11px; margin: 0;">Valtriox Platform &bull; ${process.env.SUPPORT_EMAIL || "support@valtriox.com"} &bull; valtriox.com</p>
+        <p style="color: #94a3b8; font-size: 11px; margin: 0;">Valtriox Platform &bull; ${SUPPORT_EMAIL} &bull; valtriox.com</p>
       </div>
     </div>
   `;

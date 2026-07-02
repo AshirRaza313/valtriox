@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, withRetry} from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
-import { sendEmail, isEmailConfigured } from "@/lib/email";
+import { sendEmail, isEmailConfigured, SUPPORT_EMAIL, SUPPORT_FROM, SUPPORT_REPLY_TO } from "@/lib/email";
 import { getValtrioxInvitationHtml, generateWhatsAppInviteLink, generateInvitationPlainText } from "@/lib/email-templates";
 import { withRateLimit } from "@/lib/rate-limit";
 import logger from "@/lib/logger";
@@ -128,11 +128,13 @@ export const POST = withRateLimit(withAuth(async (req, authCtx) => {
         inviterName,
         platformName: "Valtriox",
         platformWebsite: process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_BASE_URL || "https://valtriox.com",
-        supportEmail: process.env.SUPPORT_EMAIL || "support@valtriox.com",
+        supportEmail: SUPPORT_EMAIL,
       });
 
       emailSent = await sendEmail({
         to: email.toLowerCase(),
+        from: SUPPORT_FROM,
+        replyTo: SUPPORT_REPLY_TO,
         subject: `You're Invited to Join Valtriox - ${roleLabel}`,
         html,
       });
@@ -164,7 +166,7 @@ export const POST = withRateLimit(withAuth(async (req, authCtx) => {
       expiresAt: expiresAt.toISOString(),
       inviterName,
       platformName: "Valtriox",
-      supportEmail: process.env.SUPPORT_EMAIL || "support@valtriox.com",
+      supportEmail: SUPPORT_EMAIL,
     });
 
     return NextResponse.json({

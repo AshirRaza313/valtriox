@@ -5,6 +5,7 @@ import { withRateLimit } from "@/lib/rate-limit";
 import logger from "@/lib/logger";
 import { z } from "zod";
 import { validateBody } from "@/lib/validations";
+import { SUPPORT_EMAIL } from "@/lib/email";
 
 // Inline schemas for document CRUD
 const createDocumentSchema = z.object({
@@ -421,7 +422,7 @@ For privacy-related inquiries: privacy@valtriox.com
 {{client_email}}
 
 **From**: Valtriox Team
-${process.env.SUPPORT_EMAIL || "support@valtriox.com"}
+${SUPPORT_EMAIL}
 
 ---
 
@@ -454,7 +455,7 @@ We look forward to a successful partnership.
 Warm regards,
 
 The Valtriox Team
-${process.env.SUPPORT_EMAIL || "support@valtriox.com"}
+${SUPPORT_EMAIL}
 `,
   },
 ];

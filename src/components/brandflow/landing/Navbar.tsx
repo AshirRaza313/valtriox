@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -79,7 +80,14 @@ export function Navbar({ onAuthClick }: NavbarProps) {
         <div className="flex items-center h-14 sm:h-16">
           {/* Logo */}
           <div className="flex items-center min-w-0 shrink">
-            <img src="/valtriox-logo.png" alt={companyName} className="h-7 sm:h-9 w-auto object-contain" />
+            <Image
+              src="/valtriox-logo.png"
+              alt={`${companyName} logo`}
+              width={140}
+              height={36}
+              className="h-7 sm:h-9 w-auto object-contain"
+              priority
+            />
           </div>
 
           {/* Spacer - pushes hamburger to right on mobile; on desktop, nav links handle centering via flex-1 */}

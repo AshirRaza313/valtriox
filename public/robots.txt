@@ -1,3 +1,7 @@
+# Valtriox — robots.txt
+# https://valtriox.com/robots.txt
+
+# ── Allow major search engine crawlers ──
 User-agent: Googlebot
 Allow: /
 
@@ -10,5 +14,28 @@ Allow: /
 User-agent: facebookexternalhit
 Allow: /
 
+User-agent: LinkedInBot
+Allow: /
+
+User-agent: Applebot
+Allow: /
+
+User-agent: DuckDuckBot
+Allow: /
+
+# ── Default rule for all other bots ──
 User-agent: *
 Allow: /
+
+# ── Disallow sensitive / internal routes ──
+Disallow: /api/
+Disallow: /setup/
+Disallow: /beta-claim/
+Disallow: /valtriox-join/
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /_next/
+Disallow: /auth/
+
+# ── Sitemap ──
+Sitemap: https://valtriox.com/sitemap.xml

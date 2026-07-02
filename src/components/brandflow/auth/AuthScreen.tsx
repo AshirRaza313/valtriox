@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { useValtrioxStore } from "@/store/brandflow-store";
 import { usePlatformIdentity } from "@/lib/platform-identity";
 import { useAuthHandlers } from "@/hooks/useAuthHandlers";
@@ -141,7 +142,7 @@ export function AuthScreen() {
           transition={{ delay: 0.3, duration: 0.6 }}
         >
           <div className="inline-flex items-center justify-center px-4">
-            <img src={displayLogo} alt="Logo" className="h-16 sm:h-20 w-auto object-contain" />
+            <Image src={displayLogo} alt="Valtriox logo" width={120} height={80} className="h-16 sm:h-20 w-auto object-contain" priority />
           </div>
 
           {/* Tagline below vertical logo */}
@@ -348,6 +349,17 @@ export function AuthScreen() {
             </p>
             <div className="h-px w-8 bg-gradient-to-l from-transparent to-amber-500/30" />
           </div>
+          <p className="text-[10px] text-slate-600 text-center mt-3">
+            Made by{" "}
+            <a
+              href="https://www.linkedin.com/in/muhammad-ashir-raza"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-amber-500/70 hover:text-amber-400 transition-colors font-medium"
+            >
+              Muhammad Ashir Raza
+            </a>
+          </p>
         </motion.div>
       </motion.div>
     </div>

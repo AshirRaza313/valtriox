@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { Linkedin, Instagram } from "lucide-react";
 import { usePlatformIdentity } from "@/lib/platform-identity";
 
@@ -36,6 +37,37 @@ export function Footer({ onLegalClick }: FooterProps) {
     "Refund Policy": "refund",
   };
 
+  // Dedicated routes for legal pages (used when onLegalClick is not provided)
+  const legalRouteMap: Record<string, string> = {
+    "Privacy Policy": "/privacy",
+    "Terms of Service": "/terms",
+    "Cookie Policy": "/cookies",
+    "Refund Policy": "/refund",
+  };
+
+  // Map non-legal footer links to real routes / section anchors
+  // Replaces the old href="#" placeholders that hurt SEO and UX.
+  const linkRouteMap: Record<string, string> = {
+    // Product
+    "Features": "/#features",
+    "Pricing": "/#pricing",
+    "Integrations": "/#features",
+    "Changelog": "/",
+    "Documentation": "/",
+    // Company
+    "About": "/#about",
+    "Blog": "/",
+    "Careers": "/",
+    "Press": "/",
+    "Partners": "/",
+    // Resources
+    "Help Center": "/contact",
+    "Community": "/",
+    "Status": "/",
+    "API Docs": "/",
+    "Tutorials": "/",
+  };
+
   // Only 4 social icons: Instagram, LinkedIn, Discord, Reddit
   const socialLinks = [
     { icon: Instagram, url: identity.instagramUrl, label: "Instagram" },
@@ -58,7 +90,14 @@ export function Footer({ onLegalClick }: FooterProps) {
           {/* Brand */}
           <div className="col-span-2 sm:col-span-3 lg:col-span-1">
             <div className="flex items-center gap-2 mb-4">
-              <img src="/valtriox-logo.png" alt={companyName} className="h-8 w-auto object-contain" />
+              <Image
+                src="/valtriox-logo.png"
+                alt={`${companyName} logo`}
+                width={140}
+                height={32}
+                className="h-8 w-auto object-contain"
+                priority={false}
+              />
             </div>
             <p className="text-sm text-slate-500 leading-relaxed mb-6">
               COMMAND YOUR BRAND UNIVERSE. All-in-one operations portal for modern brands.
@@ -94,20 +133,32 @@ export function Footer({ onLegalClick }: FooterProps) {
               <ul className="space-y-2.5">
                 {links.map((link) => {
                   const slug = legalSlugMap[link];
-                  const isLegal = !!slug && onLegalClick;
+                  const isLegal = !!slug;
+                  const legalRoute = legalRouteMap[link];
+                  const isLegalModal = isLegal && onLegalClick;
+
+                  // Determine the href: legal modal button, legal dedicated route, or regular link route
+                  const regularHref = linkRouteMap[link] || "/";
 
                   return (
                     <li key={link}>
-                      {isLegal ? (
+                      {isLegalModal ? (
                         <button
-                          onClick={() => onLegalClick(slug)}
+                          onClick={() => onLegalClick!(slug)}
                           className="text-sm text-slate-500 hover:text-amber-400 transition-colors duration-200 cursor-pointer"
                         >
                           {link}
                         </button>
+                      ) : isLegal && legalRoute ? (
+                        <a
+                          href={legalRoute}
+                          className="text-sm text-slate-500 hover:text-amber-400 transition-colors duration-200"
+                        >
+                          {link}
+                        </a>
                       ) : (
                         <a
-                          href="#"
+                          href={regularHref}
                           className="text-sm text-slate-500 hover:text-amber-400 transition-colors duration-200"
                         >
                           {link}
@@ -123,9 +174,23 @@ export function Footer({ onLegalClick }: FooterProps) {
 
         {/* Bottom */}
         <div className="mt-12 pt-8 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-sm text-slate-500">
-            &copy; 2026 {companyName}. All rights reserved.
-          </p>
+          <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-6">
+            <p className="text-sm text-slate-500">
+              &copy; 2026 {companyName}. All rights reserved.
+            </p>
+            <p className="text-xs text-slate-600">
+              Made with <span className="text-amber-500/80">&#9829;</span> by{" "}
+              <a
+                href="https://www.linkedin.com/in/muhammad-ashir-raza"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-slate-400 hover:text-amber-400 transition-colors duration-200"
+                title="Muhammad Ashir Raza — Founder & Developer of Valtriox"
+              >
+                Muhammad Ashir Raza
+              </a>
+            </p>
+          </div>
           <div className="flex gap-6 text-sm">
             {onLegalClick ? (
               <>
@@ -147,9 +212,9 @@ export function Footer({ onLegalClick }: FooterProps) {
               </>
             ) : (
               <>
-                <a href="#" className="text-slate-500 hover:text-amber-400 transition-colors">Privacy</a>
-                <a href="#" className="text-slate-500 hover:text-amber-400 transition-colors">Terms</a>
-                <a href="#" className="text-slate-500 hover:text-amber-400 transition-colors">Support</a>
+                <a href="/privacy" className="text-slate-500 hover:text-amber-400 transition-colors">Privacy</a>
+                <a href="/terms" className="text-slate-500 hover:text-amber-400 transition-colors">Terms</a>
+                <a href="/contact" className="text-slate-500 hover:text-amber-400 transition-colors">Support</a>
               </>
             )}
           </div>

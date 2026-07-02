@@ -3,6 +3,7 @@ import { db, isDbUnavailable, isSchemaError, withRetry, ensureDb } from "@/lib/d
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
 import { withRateLimit } from "@/lib/rate-limit";
+import { SUPPORT_EMAIL } from "@/lib/email";
 
 /** Safely extract message and code from an unknown error */
 function getErrorInfo(e: unknown): { message: string; code: string } {
@@ -339,7 +340,7 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
         `  3. Add your first products and start receiving orders`,
         `  4. Explore the user guide for tips and best practices`,
         ``,
-        `Need help? Contact our support team at ${process.env.SUPPORT_EMAIL || "support@valtriox.com"}`,
+        `Need help? Contact our support team at ${SUPPORT_EMAIL}`,
       ].join('\n');
 
       await withRetry(

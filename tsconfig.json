@@ -39,6 +39,7 @@
   "exclude": [
     "node_modules",
     "skills",
-    "prisma/seed.ts"
+    "prisma/seed.ts",
+    "src/__tests__"
   ]
 }

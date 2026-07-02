@@ -9,6 +9,7 @@ import {
   Sparkles, Gift, Zap, Heart, Phone,
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { toast } from "sonner";
 
 type Step = "verify" | "details" | "success" | "error";
@@ -204,7 +205,7 @@ export default function BetaClaimContent() {
                 transition={{ delay: 0.2, duration: 0.5 }}
                 className="w-24 h-24 mx-auto mb-5 flex items-center justify-center overflow-hidden"
               >
-                <img src="/valtriox-logo.png" alt="Valtriox" className="w-full h-full object-contain" />
+                <Image src="/valtriox-logo.png" alt="Valtriox" fill className="w-full h-full object-contain" priority />
               </motion.div>
 
               <motion.div

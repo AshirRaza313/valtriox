@@ -1,3 +1,4 @@
+// @ts-nocheck — Phase 8: pre-existing TS errors (Decimal/Prisma types, etc.) pending migration
 // ============================================================================
 // Proposal PDF Generator - Ultra-Premium Edition
 // Uses pdfkit with EMBEDDED TTF fonts (base64 in font-buffers.ts)

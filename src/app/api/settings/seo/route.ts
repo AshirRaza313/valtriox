@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { db, isDbUnavailable, dbErrorResponse, withRetry, safeDbQuery } from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
-import { isDbUnavailable, dbErrorResponse, withRetry } from "@/lib/db";
 import { withRateLimit } from "@/lib/rate-limit";
 import { z } from "zod";
 import { validateBody } from "@/lib/validations";
+import logger from "@/lib/logger";
 
 // Inline schema matching the SEO route's actual body fields
 const seoSaveSchema = z.object({
@@ -12,7 +13,12 @@ const seoSaveSchema = z.object({
   description: z.string().max(1000).optional(),
   orgId: z.string().max(50).optional(),
 });
-import logger from "@/lib/logger";
+
+// ── SEO settings storage key helper ──
+// Stored in SystemSetting as key-value pairs: `seo:${orgId}` → JSON string
+function seoSettingKey(orgId: string): string {
+  return `seo:${orgId}`;
+}
 
 // GET /api/settings/seo?orgId=... — Retrieve stored SEO meta tags
 export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
@@ -24,16 +30,27 @@ export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
       return NextResponse.json({ error: "Organization ID required" }, { status: 400 });
     }
 
-    // Read from localStorage-style key-value in org model
-    // Since we don't have a dedicated SEO table, we store in a JSON file
-    const fs = require("fs");
-    const path = require("path");
-    const filePath = path.join(process.cwd(), "db", `seo-${orgId}.json`);
+    // Read from database (SystemSetting key-value store)
+    const { data: setting, error } = await safeDbQuery(async () => {
+      return await db.systemSetting.findUnique({
+        where: { key: seoSettingKey(orgId) },
+      });
+    }, 2, 500);
 
-    if (fs.existsSync(filePath)) {
-      const raw = fs.readFileSync(filePath, "utf-8");
-      const data = JSON.parse(raw);
-      return NextResponse.json({ seo: data });
+    if (error) {
+      logger.error("[SEO GET] DB error", { error });
+      if (isDbUnavailable(error)) return dbErrorResponse(error);
+      return NextResponse.json({ seo: null });
+    }
+
+    if (setting?.value) {
+      try {
+        const data = JSON.parse(setting.value);
+        return NextResponse.json({ seo: data });
+      } catch {
+        logger.warn("[SEO GET] Corrupted SEO setting in DB, returning null", { orgId });
+        return NextResponse.json({ seo: null });
+      }
     }
 
     return NextResponse.json({ seo: null });
@@ -63,18 +80,28 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
       updatedAt: new Date().toISOString(),
     };
 
-    // Store as JSON file (no Prisma schema change needed)
-    const fs = require("fs");
-    const path = require("path");
-    const dirPath = path.join(process.cwd(), "db");
+    // Store in database using SystemSetting upsert (key-value storage)
+    // This works on Vercel serverless — no filesystem access needed.
+    const { error } = await safeDbQuery(async () => {
+      return await db.systemSetting.upsert({
+        where: { key: seoSettingKey(orgId) },
+        update: {
+          value: JSON.stringify(seoData),
+          category: "seo",
+        },
+        create: {
+          key: seoSettingKey(orgId),
+          value: JSON.stringify(seoData),
+          category: "seo",
+        },
+      });
+    }, 2, 500);
 
-    // Ensure db directory exists
-    if (!fs.existsSync(dirPath)) {
-      fs.mkdirSync(dirPath, { recursive: true });
+    if (error) {
+      logger.error("[SEO POST] DB error", { error });
+      if (isDbUnavailable(error)) return dbErrorResponse(error);
+      return NextResponse.json({ error: "Failed to save SEO settings" }, { status: 503 });
     }
-
-    const filePath = path.join(dirPath, `seo-${orgId}.json`);
-    fs.writeFileSync(filePath, JSON.stringify(seoData, null, 2));
 
     return NextResponse.json({ seo: seoData, success: true });
   } catch (error: unknown) {

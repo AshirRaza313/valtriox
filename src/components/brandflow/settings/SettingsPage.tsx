@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
+import Image from "next/image";
 import { useValtrioxStore } from "@/store/brandflow-store";
 import { getCurrencyForCountry, getCurrencyInfoFromCode } from "@/lib/currency";
 import { Button } from "@/components/ui/button";
@@ -25,7 +26,7 @@ import { cn } from "@/lib/utils";
 import {
   Settings,
   Palette,
-  Image,
+  Image as ImageIcon,
   Save,
   Upload,
   Globe,
@@ -510,7 +511,7 @@ import { DocumentsPage } from "@/components/brandflow/settings/DocumentsPage";
 const BASE_SUBTABS = [
   { id: "general", label: "General", icon: Settings },
   { id: "theme", label: "Theme & Colors", icon: Palette },
-  { id: "branding", label: "Logo & Branding", icon: Image },
+  { id: "branding", label: "Logo & Branding", icon: ImageIcon },
   { id: "events", label: "Event Theming", icon: Calendar },
   { id: "payment-methods", label: "Payment Methods", icon: CreditCard },
 ];
@@ -1875,10 +1876,13 @@ export function SettingsPage() {
                           className={`w-10 h-10 flex items-center justify-center bg-white/20 backdrop-blur-sm ${getRadiusClass()}`}
                         >
                           {logoPreview ? (
-                            <img
+                            <Image
                               src={logoPreview}
                               alt="Logo"
+                              width={24}
+                              height={24}
                               className="w-6 h-6 object-contain"
+                              unoptimized
                             />
                           ) : (
                             <span className="text-white font-bold text-sm">BF</span>
@@ -2059,10 +2063,13 @@ export function SettingsPage() {
                       {logoPreview ? (
                         <div className="space-y-3">
                           <div className="mx-auto w-20 h-20 bg-slate-50 rounded-xl flex items-center justify-center border p-2">
-                            <img
+                            <Image
                               src={logoPreview}
                               alt="Logo preview"
+                              width={72}
+                              height={72}
                               className="max-w-full max-h-full object-contain"
+                              unoptimized
                             />
                           </div>
                           <p className="text-sm font-medium text-slate-700">
@@ -2143,10 +2150,13 @@ export function SettingsPage() {
                       {faviconPreview ? (
                         <div className="space-y-2 flex flex-col items-center">
                           <div className="w-12 h-12 bg-slate-50 rounded-lg border flex items-center justify-center p-1">
-                            <img
+                            <Image
                               src={faviconPreview}
                               alt="Favicon preview"
+                              width={40}
+                              height={40}
                               className="max-w-full max-h-full object-contain"
+                              unoptimized
                             />
                           </div>
                           <p className="text-sm font-medium text-slate-700">
@@ -2259,7 +2269,7 @@ export function SettingsPage() {
                       <div className="p-4 flex items-center gap-3" style={{ background: gradientString }}>
                         <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-white/20 backdrop-blur-sm">
                           {logoPreview ? (
-                            <img src={logoPreview} alt="Logo" className="w-6 h-6 object-contain" />
+                            <Image src={logoPreview} alt="Logo" width={24} height={24} className="w-6 h-6 object-contain" unoptimized />
                           ) : (
                             <span className="text-white font-bold text-sm">BF</span>
                           )}
@@ -2271,10 +2281,13 @@ export function SettingsPage() {
                           )}
                         </div>
                         {faviconPreview && (
-                          <img
+                          <Image
                             src={faviconPreview}
                             alt="Favicon"
+                            width={16}
+                            height={16}
                             className="ml-auto w-4 h-4 object-contain rounded"
+                            unoptimized
                           />
                         )}
                       </div>

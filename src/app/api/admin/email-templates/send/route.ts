@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, safeDbQuery } from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import { withRateLimit } from "@/lib/rate-limit";
+import { sendEmail, SUPPORT_FROM, SUPPORT_REPLY_TO, isEmailConfigured } from "@/lib/email";
 import logger from "@/lib/logger";
 
 // POST /api/admin/email-templates/send - Send an email template to a recipient
@@ -53,11 +54,37 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest) => {
       personalizedSubject = personalizedSubject.split(r.from).join(r.to);
     }
 
-    // Log the send (in production, this would integrate with an email service like Resend, SendGrid, etc.)
-    logger.info(`[Send Email] Template "${template.name}" (${template.type}) sent to ${recipientEmail}${clientName ? ` (client: ${clientName})` : ""}`);
+    // ── Actually send the email via sendEmail() (Resend → SMTP fallback) ──
+    let emailSent = false;
+    let emailError: string | undefined;
+
+    if (!isEmailConfigured()) {
+      logger.warn("[Send Email] No email provider configured — skipping actual send. Set RESEND_API_KEY or SMTP_* env vars.");
+      emailError = "Email provider not configured";
+    } else {
+      try {
+        emailSent = await sendEmail({
+          to: recipientEmail,
+          from: SUPPORT_FROM,
+          replyTo: SUPPORT_REPLY_TO,
+          subject: personalizedSubject,
+          html: personalizedHtml,
+          text: personalizedHtml.replace(/<[^>]*>/g, ""),
+        });
+
+        if (emailSent) {
+          logger.info(`[Send Email] Template "${template.name}" (${template.type}) sent to ${recipientEmail}${clientName ? ` (client: ${clientName})` : ""}`);
+        } else {
+          emailError = "Email provider returned failure";
+          logger.error("[Send Email] sendEmail() returned false", { templateId, recipientEmail });
+        }
+      } catch (sendErr: unknown) {
+        emailError = sendErr instanceof Error ? sendErr.message : String(sendErr);
+        logger.error("[Send Email] sendEmail() threw", sendErr, { templateId, recipientEmail });
+      }
+    }
 
     // Store sent email record for tracking (best-effort)
-    // Phase 6: sentEmail table may not exist in schema — use SystemSetting as fallback
     await safeDbQuery(() =>
       db.systemSetting.create({
         data: {
@@ -69,13 +96,24 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest) => {
             recipientEmail,
             clientName: clientName || null,
             subject: personalizedSubject,
-            status: "sent",
+            status: emailSent ? "sent" : "failed",
+            error: emailError || null,
             sentAt: new Date().toISOString(),
           }),
           category: "sent_email",
         },
       })
     );
+
+    if (!emailSent) {
+      return NextResponse.json({
+        success: false,
+        error: "Failed to send email. Please check email provider configuration.",
+        details: emailError,
+        templateId: template.id,
+        recipientEmail,
+      }, { status: 502 });
+    }
 
     return NextResponse.json({
       success: true,

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth-middleware";
 import { db, withRetry } from "@/lib/db";
-import { sendEmail, isEmailConfigured } from "@/lib/email";
+import { sendEmail, isEmailConfigured, SUPPORT_EMAIL, SUPPORT_FROM, SUPPORT_REPLY_TO } from "@/lib/email";
 import { withRateLimit } from "@/lib/rate-limit";
 import logger from "@/lib/logger";
 import {
@@ -27,7 +27,7 @@ function generateToken(): string {
 async function getPlatformSettings() {
   let platformName = "Valtriox",
     platformWebsite = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_BASE_URL || "https://valtriox.com",
-    companyEmail = process.env.SUPPORT_EMAIL || "support@valtriox.com",
+    companyEmail = SUPPORT_EMAIL,
     companyPhone: string | null = null,
     companyAddress: string | null = null;
   try {
@@ -187,6 +187,8 @@ export const POST = withRateLimit(withAuth(async (req, ctx) => {
         const textPlain = getUltraPremiumWhatsAppMessage(inviteData);
         sendResults.email = await sendEmail({
           to: invite.email,
+          from: SUPPORT_FROM,
+          replyTo: SUPPORT_REPLY_TO,
           subject: `Exclusive Beta Access - ${settings.platformName}`,
           html,
           text: textPlain,

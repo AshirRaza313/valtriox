@@ -1,7 +1,7 @@
 {
   "name": "Valtriox | Command Your Brand Universe",
   "short_name": "Valtriox",
-  "description": "The Universal Brand Management Portal. Manage orders, customers, products, team, and analytics from one powerful PWA.",
+  "description": "The Universal Brand Management Portal by Muhammad Ashir Raza. Manage orders, customers, products, team, and analytics from one powerful PWA.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -57,17 +57,17 @@
   "shortcuts": [
     {
       "name": "Dashboard",
-      "url": "/",
+      "url": "/?page=dashboard",
       "icons": [{ "src": "/valtriox-icon-32.png", "sizes": "32x32" }]
     },
     {
       "name": "Orders",
-      "url": "/",
+      "url": "/?page=orders",
       "icons": [{ "src": "/valtriox-icon-32.png", "sizes": "32x32" }]
     },
     {
       "name": "Customers",
-      "url": "/",
+      "url": "/?page=customers",
       "icons": [{ "src": "/valtriox-icon-32.png", "sizes": "32x32" }]
     }
   ]

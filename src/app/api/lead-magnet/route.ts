@@ -4,6 +4,7 @@ import { generateLeadMagnetPDF } from "@/lib/lead-magnet-generator";
 import { withAuth } from "@/lib/auth-middleware";
 import { withRateLimit } from "@/lib/rate-limit";
 import logger from "@/lib/logger";
+import { SUPPORT_EMAIL } from "@/lib/email";
 
 // Simple in-memory cache: generated PDFs are valid for 10 minutes
 let cachedPdf: { buffer: Buffer; timestamp: number } | null = null;
@@ -48,7 +49,7 @@ export const GET = withRateLimit(async () => {
       companyName,
       tagline: settings?.tagline || "COMMAND YOUR BRAND UNIVERSE",
       logoUrl: settings?.logoUrl || null,
-      companyEmail: settings?.companyEmail || process.env.SUPPORT_EMAIL || "support@valtriox.com",
+      companyEmail: settings?.companyEmail || SUPPORT_EMAIL,
       companyPhone: settings?.companyPhone || null,
       companyWebsite: settings?.companyWebsite || null,
       companyAddress: settings?.companyAddress || null,
@@ -132,7 +133,7 @@ export const POST = withRateLimit(withAuth(async (_req: NextRequest) => {
       companyName,
       tagline: settings?.tagline || "COMMAND YOUR BRAND UNIVERSE",
       logoUrl: settings?.logoUrl || null,
-      companyEmail: settings?.companyEmail || process.env.SUPPORT_EMAIL || "support@valtriox.com",
+      companyEmail: settings?.companyEmail || SUPPORT_EMAIL,
       companyPhone: settings?.companyPhone || null,
       companyWebsite: settings?.companyWebsite || null,
       companyAddress: settings?.companyAddress || null,

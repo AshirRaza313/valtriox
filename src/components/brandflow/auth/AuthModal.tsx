@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { useValtrioxStore } from "@/store/brandflow-store";
 import { usePlatformIdentity } from "@/lib/platform-identity";
 import { useAuthHandlers } from "@/hooks/useAuthHandlers";
@@ -128,7 +129,14 @@ export function AuthModal() {
               {/* Logo + Brand Identity */}
               <div className="text-center mb-6">
                 <div className="inline-flex items-center justify-center px-2">
-                  <img src={displayLogo} alt="Logo" className="h-16 w-auto object-contain" />
+                  <Image
+                    src={displayLogo}
+                    alt="Valtriox logo"
+                    width={64}
+                    height={64}
+                    className="h-16 w-auto object-contain"
+                    priority
+                  />
                 </div>
                 {/* Tagline below vertical logo */}
                 <p className="text-sm text-slate-500 mt-3">

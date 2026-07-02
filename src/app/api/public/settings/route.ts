@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { db, ensurePlatformSettingsColumns, withRetry} from "@/lib/db";
 import logger from "@/lib/logger";
+import { SUPPORT_EMAIL } from "@/lib/email";
 
 const DEFAULT_SETTINGS = {
   companyName: "Valtriox",
   tagline: "COMMAND YOUR BRAND UNIVERSE",
-  companyEmail: process.env.SUPPORT_EMAIL || "support@valtriox.com",
+  companyEmail: SUPPORT_EMAIL,
   companyPhone: null,
   companyWebsite: null,
   companyAddress: null,
