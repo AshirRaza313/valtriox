@@ -564,6 +564,8 @@ model PlatformSettings {
   currency            String   @default("PKR")
   logoUrl             String?
   faviconUrl          String?
+  founderImageUrl     String?
+  founderBio          String?
   primaryBrandColor   String   @default("#059669")
   secondaryBrandColor String   @default("#d97706")
   currencySymbol      String   @default("Rs.")

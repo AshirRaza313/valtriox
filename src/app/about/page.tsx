@@ -5,7 +5,7 @@ import { PlatformIdentityProvider } from "@/lib/platform-identity";
 const SITE_URL = "https://valtriox.com";
 const PAGE_URL = `${SITE_URL}/about`;
 
-const TITLE = "About Valtriox — Founded by Muhammad Ashir Raza";
+const TITLE = "About Valtriox | Founded by Muhammad Ashir Raza";
 const DESCRIPTION =
   "Valtriox is the universal brand operating system founded and built by Muhammad Ashir Raza in 2025. Learn about our mission, vision, core values, tech stack, and the founder's story of building a 100+ brand platform from Pakistan for the world.";
 
@@ -42,7 +42,7 @@ export const metadata: Metadata = {
         url: "/valtriox-icon-512.png",
         width: 512,
         height: 512,
-        alt: "Valtriox — Founded by Muhammad Ashir Raza",
+        alt: "Valtriox logo, founded by Muhammad Ashir Raza",
       },
     ],
   },

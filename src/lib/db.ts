@@ -2471,6 +2471,8 @@ const PLATFORM_SETTINGS_COLUMNS: { name: string; type: string }[] = [
   { name: "currency", type: "TEXT NOT NULL DEFAULT 'PKR'" },
   { name: "logoUrl", type: "TEXT" },
   { name: "faviconUrl", type: "TEXT" },
+  { name: "founderImageUrl", type: "TEXT" },
+  { name: "founderBio", type: "TEXT" },
   { name: "primaryBrandColor", type: "TEXT NOT NULL DEFAULT '#059669'" },
   { name: "secondaryBrandColor", type: "TEXT NOT NULL DEFAULT '#d97706'" },
   { name: "currencySymbol", type: "TEXT NOT NULL DEFAULT 'Rs.'" },

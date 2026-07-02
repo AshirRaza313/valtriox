@@ -20,43 +20,51 @@ export function AboutPage() {
   const { identity } = usePlatformIdentity();
   const companyName = identity.companyName;
 
+  // Use admin-uploaded founder image if available, otherwise fallback to a
+  // public path the founder can replace by dropping a file into /public.
+  const founderImage = identity.founderImageUrl || "/founder-avatar.png";
+
+  // Founder bio: admin can override via Platform Settings. Otherwise use
+  // the natural, humanized default below.
+  const founderBio = identity.founderBio || "I started Valtriox because I kept seeing the same problem everywhere. Brands in Pakistan were running their entire operation on WhatsApp, Excel sheets, and three or four disconnected apps. Orders got lost, customer details vanished, and inventory numbers never matched reality. It was chaos, and it was costing people real money. I wanted to fix that. Not with another tool that does one thing, but with one platform that handles everything and talks to itself. So I sat down, wrote the first lines of code, and did not stop until Valtriox could run a brand from order to delivery without the founder ever leaving the dashboard. Every feature in here exists because a real business owner told me they needed it. Nothing is here for show. If it does not help someone sell more, ship faster, or sleep better, it does not ship. That is the rule I built this company on, and the rule I will keep building it on.";
+
   // ── Core values ──
   const values = [
     {
       icon: Target,
-      title: "Mission-Driven",
+      title: "Build for Real People",
       description:
-        "We exist to democratize brand management, giving every business — from startup to enterprise — the tools to command their brand universe from a single dashboard. Operations, marketing, customer relationships, and analytics should live in one place, not ten.",
+        "Every feature starts with a real conversation. If a brand owner has not asked for it, we do not build it. No vanity features, no checkbox lists just to look impressive on a pricing page. Only things that actually make work easier.",
     },
     {
       icon: Eye,
-      title: "Vision-Led",
+      title: "One Platform, Not Ten",
       description:
-        "Our vision is a world where no brand is held back by fragmented tools. We are building the unified operating system that brands deserve — one that scales from a single founder to a multinational team without ever forcing a migration.",
+        "We believe a brand should not need eight tools and a spreadsheet to run its day. Valtriox replaces the chaos with one calm, organized place where orders, customers, inventory, and marketing all live together and stay in sync automatically.",
     },
     {
       icon: Heart,
-      title: "Customer Obsessed",
+      title: "Support That Picks Up",
       description:
-        "Every feature, every pixel, every interaction is crafted with our users in mind. We ship weekly, listen daily, and treat every support ticket as a chance to make the product better for everyone.",
+        "When something breaks, you talk to a person who knows the product, not a chatbot reading a script. We answer fast, we fix things fast, and we treat every support ticket as a chance to make the platform better for everyone.",
     },
     {
       icon: Globe,
-      title: "Pakistan and Beyond",
+      title: "Built Here, For Here",
       description:
-        "Built in Pakistan for Pakistani businesses first, with multi-currency (PKR, USD, EUR, GBP) and multi-language (English, Urdu) support baked in. We are expanding across South Asia and the Middle East in 2026.",
+        "Valtriox was built in Pakistan, for Pakistani businesses first. Multi-currency support, local payment methods, Urdu interface options, and pricing that makes sense in PKR. We are expanding in 2026, but our roots stay local.",
     },
     {
       icon: Shield,
-      title: "Security First",
+      title: "Security From Day One",
       description:
-        "Enterprise-grade security from day one. bcrypt password hashing, JWT-based sessions, rate limiting, CSP headers, input sanitization, audit logging, and role-based access control on every endpoint.",
+        "Your data is not an afterthought. We use bcrypt password hashing, JWT sessions, rate limiting, role based access control, audit logging, and encrypted connections on every single request. The same standards a bank would use.",
     },
     {
       icon: Zap,
-      title: "Performance Obsessed",
+      title: "Fast Where It Matters",
       description:
-        "Sub-200ms API responses, code-split pages, lazy-loaded components, image optimization, edge-cached static assets, and a 95+ Lighthouse score across Performance, Accessibility, Best Practices, and SEO.",
+        "Pages load in under 200 milliseconds. The dashboard works on a slow 3G connection. Images optimize themselves. We obsess over performance because every second of lag is a second your team wastes, a thousand times a day.",
     },
   ];
 
@@ -95,38 +103,38 @@ export function AboutPage() {
   // ── Journey / Timeline ──
   const milestones = [
     {
-      year: "2024 Q3",
-      title: "Conceptualization",
+      year: "2024, Late",
+      title: "The Problem Became Clear",
       event:
-        "Identified a critical gap in the Pakistani e-commerce ecosystem — brands were juggling 8–12 disconnected tools. The vision for a unified brand operating system was born.",
+        "I was helping a friend run his clothing brand and realized he was juggling WhatsApp for orders, an Excel sheet for inventory, a separate app for customer messages, and a notebook for tracking shipments. That week, three orders got lost. I knew there had to be a better way.",
       icon: Sparkles,
     },
     {
-      year: "2025 Q1",
-      title: "Foundation Built",
+      year: "2025, Early",
+      title: "First Lines of Code",
       event:
-        "Core architecture designed and built from scratch — multi-tenant database schema, role-based access, order management engine, and the dashboard foundation.",
+        "I started building Valtriox solo. Designed the database schema, wrote the first API routes, and shipped a working dashboard in about ten weeks. No team, no funding, just one person who wanted to fix a real problem.",
       icon: Database,
     },
     {
-      year: "2025 Q3",
-      title: "Beta Launch",
+      year: "2025, Mid",
+      title: "First 20 Brands",
       event:
-        "First 20 brands onboarded for closed beta. Iterated weekly based on real-world feedback, refining the UX and adding 40+ feature modules.",
+        "Invited twenty brands into a closed beta. They broke things, told me what was missing, and shaped the product into something people actually wanted to use. Most of the features that exist today came directly from those conversations.",
       icon: Rocket,
     },
     {
-      year: "2026 Q1",
+      year: "2025, Late",
       title: "Public Launch",
       event:
-        "Officially launched in Pakistan with 100+ brands across fashion, food, electronics, and services. Multi-currency and white-label support shipped.",
+        "Opened Valtriox to the public. Crossed 100 brands across fashion, food, electronics, and services. Shipped multi-currency support, white-label mode, and the mobile PWA so founders could run their brand from their phone.",
       icon: TrendingUp,
     },
     {
-      year: "2026 Q3",
-      title: "Regional Expansion",
+      year: "2026",
+      title: "What Comes Next",
       event:
-        "Preparing for expansion across South Asia and the Middle East. AI-powered insights, predictive analytics, and advanced marketing automation on the roadmap.",
+        "Building AI-powered insights, predictive analytics, and expanding across South Asia and the Middle East. The mission stays the same: one platform, every tool a brand needs, and a founder who actually picks up the phone.",
       icon: Globe,
     },
   ];
@@ -137,25 +145,25 @@ export function AboutPage() {
       icon: Layers,
       title: "40+ Feature Modules",
       description:
-        "Orders, inventory, customers, marketing, analytics, team, expenses, subscriptions, integrations, and more — all in one unified workspace.",
+        "Orders, inventory, customers, marketing, analytics, team, expenses, subscriptions, integrations, and more. All in one workspace, all talking to each other, none of them requiring a separate login.",
     },
     {
       icon: Smartphone,
-      title: "PWA + Mobile First",
+      title: "Installable On Any Phone",
       description:
-        "Installable as a native app on iOS, Android, and desktop. Offline-capable, push notifications, and a fully responsive experience across all devices.",
+        "Valtriox is a PWA. You can install it on iOS, Android, or desktop and it runs like a native app. Offline support, push notifications, and a responsive layout that works on any screen size.",
     },
     {
       icon: Lock,
-      title: "Enterprise Security",
+      title: "Enterprise-Grade Security",
       description:
-        "Role-based access control (Owner, Admin, Manager, Staff, Viewer), audit logging, data isolation per organization, and GDPR-compliant data handling.",
+        "Role based access control with Owner, Admin, Manager, Staff, and Viewer roles. Audit logging on every action. Data isolation per organization. GDPR-compliant data handling. Security is not a paid add-on.",
     },
     {
       icon: Cpu,
-      title: "AI-Powered Insights",
+      title: "AI Built Into The Workflow",
       description:
-        "Predictive analytics, churn detection, revenue forecasting, and an AI assistant that helps you make smarter business decisions in real time.",
+        "Predictive analytics, churn detection, revenue forecasting, and an AI assistant that surfaces insights before they become problems. The kind of tooling that used to require a data team, now built in.",
     },
   ];
 
@@ -176,15 +184,13 @@ export function AboutPage() {
               <span className="text-sm text-amber-300 font-medium tracking-wide">About Valtriox</span>
             </div>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight mb-6">
-              The Universal Brand{" "}
+              One Platform For{" "}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500">
-                Operating System
+                Your Whole Brand
               </span>
             </h1>
             <p className="text-lg sm:text-xl text-slate-400 leading-relaxed max-w-3xl mx-auto">
-              {companyName} is the all-in-one command center for modern businesses — built from the ground up
-              by a single founder to replace fragmented tools with one powerful, intelligent platform.
-              Founded in 2025, headquartered in Pakistan, built for the world.
+              {companyName} started as one person trying to fix a problem that was costing real businesses real money. Today it runs over 100 brands across Pakistan. Built from scratch, founded in 2025, and still run by the guy who wrote the first line of code.
             </p>
             <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
               <a
@@ -241,11 +247,7 @@ export function AboutPage() {
               <Target className="h-10 w-10 text-amber-400 mb-6" />
               <h2 className="text-2xl sm:text-3xl font-bold text-white mb-4">Our Mission</h2>
               <p className="text-slate-400 leading-relaxed">
-                To democratize enterprise-grade brand tooling. Every business — regardless of size, location,
-                or budget — deserves a command center that lets them run operations, marketing, customer
-                relationships, and analytics from a single, beautiful dashboard. We are committed to making
-                that power accessible at a price point Pakistani businesses can actually afford, without
-                compromising on the features and reliability that global SaaS platforms offer.
+                We exist to give every business, no matter how small, the same tools that big companies pay thousands of dollars a month for. Order management, inventory, customer relationships, marketing, analytics, and team collaboration should all live in one place. They should work together without manual syncing. And they should cost less than what most brands spend on a single fragmented tool. That is the bar we hold ourselves to, every release.
               </p>
             </motion.div>
             <motion.div
@@ -258,12 +260,7 @@ export function AboutPage() {
               <Eye className="h-10 w-10 text-amber-400 mb-6" />
               <h2 className="text-2xl sm:text-3xl font-bold text-white mb-4">Our Vision</h2>
               <p className="text-slate-400 leading-relaxed">
-                A world where no brand is held back by fragmented tools. We envision a future where{" "}
-                {companyName} is the default operating system for modern brands across South Asia, the
-                Middle East, and beyond — a platform that scales from a single founder to a multinational
-                team without ever forcing a migration, a re-platform, or a compromise on the user
-                experience. We are building the infrastructure for the next generation of digital-first
-                businesses.
+                We are building the default operating system for modern brands across South Asia and the Middle East. A platform that scales from a single founder working from their bedroom to a multinational team with warehouses in three countries, without ever forcing a migration or a re-platform. The vision is simple in words and hard in execution. One login, one dashboard, every tool your brand will ever need, all running on infrastructure that does not break when you grow.
               </p>
             </motion.div>
           </div>
@@ -281,9 +278,9 @@ export function AboutPage() {
             transition={{ duration: 0.6 }}
             className="text-center max-w-3xl mx-auto mb-16"
           >
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">Our Core Values</h2>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4">What We Care About</h2>
             <p className="text-lg text-slate-400">
-              The principles that guide every product decision, every line of code, and every customer interaction.
+              The principles that decide what gets built, what gets cut, and how we treat the people who trust us with their business.
             </p>
           </motion.div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -317,9 +314,9 @@ export function AboutPage() {
             transition={{ duration: 0.6 }}
             className="text-center max-w-3xl mx-auto mb-16"
           >
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">What We Built</h2>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4">What We Actually Built</h2>
             <p className="text-lg text-slate-400">
-              A complete platform — not a feature, not a tool, an operating system for your brand.
+              Not a feature, not a tool. An entire operating system for running a brand.
             </p>
           </motion.div>
           <div className="grid sm:grid-cols-2 gap-6">
@@ -358,11 +355,11 @@ export function AboutPage() {
           >
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 mb-6">
               <Code2 className="h-3.5 w-3.5 text-amber-400" />
-              <span className="text-sm text-amber-300 font-medium tracking-wide">Founder &amp; Lead Developer</span>
+              <span className="text-sm text-amber-300 font-medium tracking-wide">Founder and Lead Developer</span>
             </div>
             <h2 className="text-3xl sm:text-4xl font-bold mb-4">Meet Muhammad Ashir Raza</h2>
             <p className="text-lg text-slate-400">
-              The visionary, architect, and engineer who built {companyName} from the ground up.
+              The person who designed, built, and still runs {companyName}.
             </p>
           </motion.div>
 
@@ -377,10 +374,17 @@ export function AboutPage() {
             <div className="absolute -bottom-16 -left-16 w-48 h-48 bg-amber-500/5 rounded-full blur-3xl" />
 
             <div className="relative grid sm:grid-cols-[auto_1fr] gap-8 items-start">
-              {/* Avatar */}
+              {/* Founder Photo — admin can update via Platform Settings */}
               <div className="flex-shrink-0 mx-auto sm:mx-0">
-                <div className="w-32 h-32 sm:w-36 sm:h-36 rounded-3xl bg-gradient-to-br from-amber-400 via-amber-500 to-amber-700 flex items-center justify-center text-5xl font-bold text-white shadow-2xl shadow-amber-600/40">
-                  AR
+                <div className="w-36 h-36 sm:w-44 sm:h-44 rounded-3xl overflow-hidden bg-gradient-to-br from-amber-400 via-amber-500 to-amber-700 shadow-2xl shadow-amber-600/40 ring-4 ring-amber-500/20">
+                  <Image
+                    src={founderImage}
+                    alt="Muhammad Ashir Raza, Founder and Lead Developer of Valtriox"
+                    width={176}
+                    height={176}
+                    className="w-full h-full object-cover"
+                    unoptimized
+                  />
                 </div>
                 <div className="mt-4 flex justify-center sm:justify-start gap-2">
                   <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[11px] font-medium text-emerald-300">
@@ -396,30 +400,12 @@ export function AboutPage() {
                   Muhammad Ashir Raza
                 </h3>
                 <p className="text-amber-400 font-medium text-sm mb-5">
-                  Founder &amp; Lead Developer · {companyName}
+                  Founder and Lead Developer, {companyName}
                 </p>
 
-                <div className="space-y-4 text-slate-400 leading-relaxed text-sm sm:text-base">
-                  <p>
-                    Muhammad Ashir Raza is the founder, architect, and sole developer behind {companyName}.
-                    He designed and built the entire platform from the ground up — every feature, every
-                    integration, every line of code reflects a commitment to empowering brands with
-                    enterprise-grade tooling at an accessible price point.
-                  </p>
-                  <p>
-                    His journey began with a simple observation: Pakistani businesses were juggling 8–12
-                    disconnected tools — WhatsApp for orders, Excel for inventory, separate apps for
-                    marketing, analytics, and team coordination. The result was chaos, lost data, and
-                    missed opportunities. He set out to build a single, unified command center that would
-                    give every business the power to command its brand universe from one beautiful dashboard.
-                  </p>
-                  <p>
-                    His mission: give every business — regardless of size, location, or budget — the power
-                    to command its brand universe from a single, intelligent platform. Today, {companyName}{" "}
-                    serves 100+ brands across fashion, food, electronics, and services, with regional
-                    expansion planned for 2026.
-                  </p>
-                </div>
+                <p className="text-slate-300 leading-relaxed text-sm sm:text-base whitespace-pre-line">
+                  {founderBio}
+                </p>
 
                 {/* Quick facts */}
                 <div className="mt-6 grid grid-cols-2 gap-3">
@@ -478,8 +464,7 @@ export function AboutPage() {
           >
             <h2 className="text-3xl sm:text-4xl font-bold mb-4">Built on Modern Technology</h2>
             <p className="text-lg text-slate-400">
-              {companyName} is engineered with a battle-tested, production-grade stack — chosen for
-              performance, security, and scalability.
+              The stack behind {companyName}. Chosen for performance, security, and the ability to scale without rewriting everything in two years.
             </p>
           </motion.div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -523,8 +508,8 @@ export function AboutPage() {
             transition={{ duration: 0.6 }}
             className="text-center mb-16"
           >
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">Our Journey</h2>
-            <p className="text-lg text-slate-400">From a single idea to a 100+ brand platform.</p>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4">How We Got Here</h2>
+            <p className="text-lg text-slate-400">From one person with an idea to a platform running 100+ brands.</p>
           </motion.div>
           <div className="relative">
             {milestones.map((milestone, i) => (
@@ -568,18 +553,17 @@ export function AboutPage() {
             className="p-10 sm:p-14 rounded-3xl bg-gradient-to-br from-amber-500/[0.10] via-white/[0.02] to-transparent border border-amber-500/20"
           >
             <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-              Ready to Command Your Brand Universe?
+              Want to See What Valtriox Can Do For Your Brand?
             </h2>
             <p className="text-lg text-slate-400 mb-8 max-w-2xl mx-auto">
-              Join 100+ brands already running on {companyName}. Get a free consultation, see the platform
-              in action, and discover how we can help your business grow.
+              Book a free 30-minute walkthrough. We will show you the platform, answer your questions, and help you figure out if it fits your business. No pressure, no sales scripts, just a real conversation.
             </p>
             <div className="flex flex-wrap items-center justify-center gap-4">
               <a
                 href="/contact"
                 className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-white font-medium hover:from-amber-600 hover:to-amber-700 transition-all shadow-lg shadow-amber-600/20"
               >
-                Request Free Consultation
+                Book a Free Walkthrough
                 <ArrowRight className="h-4 w-4" />
               </a>
               <a
@@ -590,7 +574,7 @@ export function AboutPage() {
               </a>
             </div>
             <p className="mt-8 text-sm text-slate-500">
-              Made with <span className="text-amber-400">♥</span> by Muhammad Ashir Raza
+              Built and maintained by Muhammad Ashir Raza
             </p>
           </motion.div>
         </div>

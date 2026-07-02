@@ -11,6 +11,8 @@ interface PlatformIdentity {
   tagline: string;
   logoUrl: string | null;
   faviconUrl: string | null;
+  founderImageUrl: string | null;
+  founderBio: string | null;
   primaryColor: string;
   secondaryColor: string;
   companyEmail: string;
@@ -54,6 +56,8 @@ const DEFAULT_IDENTITY: PlatformIdentity = {
   tagline: "COMMAND YOUR BRAND UNIVERSE",
   logoUrl: null,
   faviconUrl: null,
+  founderImageUrl: null,
+  founderBio: null,
   primaryColor: "#D4A73A",
   secondaryColor: "#D4A73A",
   companyEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "ashir@valtriox.com",
@@ -106,6 +110,8 @@ export function PlatformIdentityProvider({ children }: { children: ReactNode }) 
           tagline: data.tagline || "COMMAND YOUR BRAND UNIVERSE",
           logoUrl: data.logoUrl || null,
           faviconUrl: data.faviconUrl || null,
+          founderImageUrl: data.founderImageUrl || null,
+          founderBio: data.founderBio || null,
           primaryColor: data.primaryBrandColor || "#D4A73A",
           secondaryColor: data.secondaryBrandColor || "#D4A73A",
           companyEmail: data.companyEmail || process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "ashir@valtriox.com",
@@ -162,6 +168,8 @@ export function PlatformIdentityProvider({ children }: { children: ReactNode }) 
         tagline: s.tagline || "COMMAND YOUR BRAND UNIVERSE",
         logoUrl: s.logoUrl || null,
         faviconUrl: s.faviconUrl || null,
+        founderImageUrl: s.founderImageUrl || null,
+        founderBio: s.founderBio || null,
         primaryColor: s.primaryBrandColor || "#D4A73A",
         secondaryColor: s.secondaryBrandColor || "#D4A73A",
         companyEmail: s.companyEmail || process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "ashir@valtriox.com",

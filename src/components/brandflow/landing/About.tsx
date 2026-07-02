@@ -191,7 +191,7 @@ export function About() {
                 </h3>
                 <p className="text-sm text-slate-400 leading-relaxed mb-5">
                   The visionary and engineer behind {companyName}. Muhammad Ashir Raza designed and built
-                  the entire platform from the ground up — every feature, every integration, every line of
+                  the entire platform from the ground up, every feature, every integration, every line of
                   code reflects a commitment to empowering brands with enterprise-grade tooling at an
                   accessible price point. His mission: give every business the power to command its brand
                   universe from a single, beautiful dashboard.

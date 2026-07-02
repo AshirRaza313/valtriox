@@ -295,10 +295,10 @@ export function Sidebar() {
           <div className="flex items-center gap-3">
             <div className="flex-shrink-0">
               <img
-                src={organization?.logo || "/assets/svg/valtriox-logo-horizontal-light.svg"}
+                src={identity.logoUrl || "/valtriox-icon-inverted.png"}
                 alt=""
-                className="h-8 w-auto object-contain"
-                onError={(e) => { (e.target as HTMLImageElement).src = "/assets/svg/valtriox-logo-horizontal-light.svg"; }}
+                className="h-9 w-9 object-contain rounded-md"
+                onError={(e) => { (e.target as HTMLImageElement).src = "/valtriox-icon-inverted.png"; }}
               />
             </div>
             {!isCollapsed && (

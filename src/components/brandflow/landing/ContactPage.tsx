@@ -1007,7 +1007,7 @@ export function ContactPage() {
           </h2>
           <p className="text-base text-slate-400 leading-relaxed mb-6 max-w-2xl mx-auto">
             Valtriox was founded and engineered by <span className="text-amber-300 font-medium">Muhammad Ashir Raza</span> with a single
-            mission — to give modern brands one universal portal to command every aspect of their business.
+            mission: to give modern brands one universal portal to command every aspect of their business.
             From order management to customer insights, every line of code reflects a commitment to power, simplicity, and elegance.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3">

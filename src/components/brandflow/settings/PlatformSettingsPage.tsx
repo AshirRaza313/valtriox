@@ -110,6 +110,8 @@ interface PlatformSettingsData {
   currency: string;
   logoUrl: string;
   faviconUrl: string;
+  founderImageUrl: string;
+  founderBio: string;
   primaryBrandColor: string;
   secondaryBrandColor: string;
   currencySymbol: string;
@@ -235,6 +237,8 @@ export function PlatformSettingsPage() {
     currency: "PKR",
     logoUrl: "",
     faviconUrl: "",
+    founderImageUrl: "",
+    founderBio: "",
     primaryBrandColor: "#D4A73A",
     secondaryBrandColor: "#D4A73A",
     currencySymbol: "Rs.",
@@ -381,6 +385,7 @@ export function PlatformSettingsPage() {
 
   const logoInputRef = useRef<HTMLInputElement>(null);
   const faviconInputRef = useRef<HTMLInputElement>(null);
+  const founderInputRef = useRef<HTMLInputElement>(null);
   const profilePicInputRef = useRef<HTMLInputElement>(null);
 
   // ── Access Check ────────────────────────────────────────────────────────
@@ -438,6 +443,8 @@ export function PlatformSettingsPage() {
     currency: "PKR",
     logoUrl: "",
     faviconUrl: "",
+    founderImageUrl: "",
+    founderBio: "",
     primaryBrandColor: "#D4A73A",
     secondaryBrandColor: "#D4A73A",
     currencySymbol: "Rs.",
@@ -503,6 +510,8 @@ export function PlatformSettingsPage() {
         currency: s.currency || DEFAULT_SETTINGS_FALLBACK.currency,
         logoUrl: s.logoUrl || "",
         faviconUrl: s.faviconUrl || "",
+        founderImageUrl: s.founderImageUrl || "",
+        founderBio: s.founderBio || "",
         primaryBrandColor: s.primaryBrandColor || DEFAULT_SETTINGS_FALLBACK.primaryBrandColor,
         secondaryBrandColor: s.secondaryBrandColor || DEFAULT_SETTINGS_FALLBACK.secondaryBrandColor,
         currencySymbol: s.currencySymbol || DEFAULT_SETTINGS_FALLBACK.currencySymbol,
@@ -786,6 +795,22 @@ export function PlatformSettingsPage() {
       const dataUrl = await fileToBase64(file);
       setSettings((prev) => ({ ...prev, faviconUrl: dataUrl }));
       toast.success("Favicon uploaded! Save to apply.");
+    } catch {
+      toast.error("Failed to process image");
+    }
+  }, []);
+
+  const handleFounderImageUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Image must be less than 2MB");
+      return;
+    }
+    try {
+      const dataUrl = await fileToBase64(file);
+      setSettings((prev) => ({ ...prev, founderImageUrl: dataUrl }));
+      toast.success("Founder photo uploaded! Save to apply.");
     } catch {
       toast.error("Failed to process image");
     }
@@ -1329,6 +1354,66 @@ export function PlatformSettingsPage() {
                       accept="image/*"
                       className="hidden"
                       onChange={handleFaviconUpload}
+                    />
+                  </div>
+                </div>
+
+                <Separator className={isDark ? "border-white/[0.06]" : "border-slate-200"} />
+
+                {/* Founder Photo & Bio (shown on About page) */}
+                <div className="space-y-4">
+                  <div>
+                    <Label className={cn(isDark && "text-slate-300")}>
+                      <User className="h-3.5 w-3.5 mr-1.5 inline" />
+                      Founder Photo
+                    </Label>
+                    <p className={cn("text-xs mt-1", textSecondary)}>
+                      This photo appears on the public About page in the "Meet the Founder" section. Upload a clear, professional headshot.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-[200px_1fr] gap-6">
+                    <div
+                      onClick={() => founderInputRef.current?.click()}
+                      className={cn(
+                        "h-48 rounded-xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-colors overflow-hidden",
+                        isDark
+                          ? "border-white/10 hover:border-white/20 bg-white/[0.02]"
+                          : "border-slate-200 hover:border-slate-300 bg-slate-50"
+                      )}
+                    >
+                      {settings.founderImageUrl ? (
+                        <img
+                          src={settings.founderImageUrl}
+                          alt="Founder"
+                          className="h-full w-full object-cover rounded-xl"
+                        />
+                      ) : (
+                        <>
+                          <Upload className={cn("h-6 w-6 mb-1", textSecondary)} />
+                          <p className={cn("text-xs", textSecondary)}>Click to upload photo</p>
+                          <p className={cn("text-[10px]", textSecondary)}>PNG, JPG (max 2MB)</p>
+                        </>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label className={cn(isDark && "text-slate-300")}>Founder Bio (optional)</Label>
+                      <Textarea
+                        placeholder="A short, personal bio that appears below the founder name on the About page. Leave blank to use the default bio."
+                        rows={5}
+                        value={settings.founderBio}
+                        onChange={(e) => setSettings((p) => ({ ...p, founderBio: e.target.value }))}
+                        className={cn(inputBg, "resize-none")}
+                      />
+                      <p className={cn("text-[11px]", textSecondary)}>
+                        Tip: Keep it natural and personal. The default bio is used if this is left empty.
+                      </p>
+                    </div>
+                    <input
+                      ref={founderInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleFounderImageUpload}
                     />
                   </div>
                 </div>

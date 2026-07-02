@@ -185,7 +185,7 @@ export function Footer({ onLegalClick }: FooterProps) {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="font-medium text-slate-400 hover:text-amber-400 transition-colors duration-200"
-                title="Muhammad Ashir Raza — Founder & Developer of Valtriox"
+                title="Muhammad Ashir Raza, Founder and Developer of Valtriox"
               >
                 Muhammad Ashir Raza
               </a>

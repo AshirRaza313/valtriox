@@ -38,9 +38,9 @@ export const viewport: Viewport = {
 
 const SITE_URL = "https://valtriox.com";
 const SITE_DESCRIPTION =
-  "The universal brand operating system for modern businesses. Founded and built by Muhammad Ashir Raza. Command every aspect of your brand — orders, inventory, customers, marketing, analytics — from a single, powerful platform.";
+  "The universal brand operating system for modern businesses. Founded and built by Muhammad Ashir Raza. Command every aspect of your brand (orders, inventory, customers, marketing, analytics) from a single, powerful platform.";
 const SITE_TITLE = "Valtriox | Command Your Brand Universe";
-const SITE_OG_TITLE = "Valtriox — Command Your Brand Universe | by Muhammad Ashir Raza";
+const SITE_OG_TITLE = "Valtriox | Command Your Brand Universe | by Muhammad Ashir Raza";
 const SITE_OG_DESCRIPTION =
   "The universal brand operating system founded and built by Muhammad Ashir Raza. Manage orders, inventory, customers, marketing, and analytics from one beautiful dashboard. Made in Pakistan for the world.";
 const FOUNDER_LINKEDIN = "https://www.linkedin.com/in/muhammad-ashir-raza";
@@ -86,7 +86,7 @@ export const metadata: Metadata = {
         url: "/valtriox-icon-512.png",
         width: 512,
         height: 512,
-        alt: "Valtriox — Founded by Muhammad Ashir Raza",
+        alt: "Valtriox logo, founded by Muhammad Ashir Raza",
       },
     ],
   },
@@ -267,7 +267,7 @@ export default async function RootLayout({
               "@type": "Offer",
               price: "7999",
               priceCurrency: "PKR",
-              description: "Starter plan — Brand Dashboard (Basic), 3 Marketing Channels, Standard Analytics.",
+              description: "Starter plan: Brand Dashboard (Basic), 3 Marketing Channels, Standard Analytics.",
             },
             aggregateRating: {
               "@type": "AggregateRating",
