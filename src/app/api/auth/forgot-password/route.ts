@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { db } from "@/lib/db";
-import { sendEmail, isEmailConfigured } from "@/lib/email";
+import { sendEmail, isEmailConfigured, OTP_FROM, SUPPORT_EMAIL } from "@/lib/email";
 import { sanitizeEmail } from "@/lib/sanitize";
 import logger from "@/lib/logger";
 import { withRateLimit } from "@/lib/rate-limit";
@@ -48,7 +48,7 @@ export const POST = withRateLimit(async (req: NextRequest) => {
       try {
         const platformName = process.env.NEXT_PUBLIC_PLATFORM_NAME || "Valtriox";
         const platformWebsite = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_BASE_URL || "https://valtriox.com";
-        const supportEmail = process.env.SUPPORT_EMAIL || "support@valtriox.com";
+        const supportEmail = SUPPORT_EMAIL;
 
         const html = getPasswordResetOtpEmailHtml({
           otp,
@@ -62,6 +62,7 @@ export const POST = withRateLimit(async (req: NextRequest) => {
 
         emailSent = await sendEmail({
           to: email,
+          from: OTP_FROM,  // noreply@valtriox.com — transactional OTP, no reply expected
           subject: `Password Reset Verification — ${platformName}`,
           html,
           text: `Your password reset code is: ${otp}\n\nThis code expires in ${OTP_EXPIRY_MINUTES} minutes.\n\nIf you did not request this, please ignore this email.`,

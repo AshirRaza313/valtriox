@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, dbErrorResponse, withRetry} from "@/lib/db";
 import { sanitizeObject } from "@/lib/sanitize";
 import logger from "@/lib/logger";
-import { sendEmail } from "@/lib/email";
+import { sendEmail, SUPPORT_FROM, SUPPORT_REPLY_TO, SUPPORT_EMAIL } from "@/lib/email";
 import { getLeadCaptureEmailHtml } from "@/lib/email-templates";
 import { withRateLimit } from "@/lib/rate-limit";
 import { createLeadSchema } from "@/lib/validations/schemas";
@@ -28,7 +28,7 @@ function sendLeadConfirmationEmail(leadEmail: string, leadName: string) {
         companyName: settings?.companyName || 'Valtriox',
         platformName,
         platformWebsite: settings?.companyWebsite || baseUrl,
-        companyEmail: settings?.companyEmail || process.env.SMTP_FROM || process.env.RESEND_FROM?.split('<')[0]?.trim() || process.env.SUPPORT_EMAIL || 'support@valtriox.com',
+        companyEmail: settings?.companyEmail || SUPPORT_EMAIL,
         companyPhone: settings?.companyPhone || null,
         companyAddress: settings?.companyAddress || null,
         whatsappNumber: settings?.whatsappNumber || null,
@@ -41,6 +41,8 @@ function sendLeadConfirmationEmail(leadEmail: string, leadName: string) {
 
       return sendEmail({
         to: leadEmail,
+        from: SUPPORT_FROM,
+        replyTo: SUPPORT_REPLY_TO,
         subject: `Thank You for Your Interest - ${platformName}`,
         html: getLeadCaptureEmailHtml(emailData),
       });
@@ -57,7 +59,7 @@ function sendLeadConfirmationEmail(leadEmail: string, leadName: string) {
           companyName: 'Valtriox',
           platformName: 'Valtriox',
           platformWebsite: baseUrl,
-          companyEmail: process.env.SMTP_FROM || process.env.RESEND_FROM?.split('<')[0]?.trim() || process.env.SUPPORT_EMAIL || 'support@valtriox.com',
+          companyEmail: SUPPORT_EMAIL,
           companyPhone: null,
           companyAddress: null,
           whatsappNumber: null,
