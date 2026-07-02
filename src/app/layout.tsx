@@ -38,8 +38,12 @@ export const viewport: Viewport = {
 
 const SITE_URL = "https://valtriox.com";
 const SITE_DESCRIPTION =
-  "The universal brand management portal for modern businesses. Command every aspect of your brand from a single, powerful platform";
+  "The universal brand operating system for modern businesses. Founded and built by Muhammad Ashir Raza. Command every aspect of your brand — orders, inventory, customers, marketing, analytics — from a single, powerful platform.";
 const SITE_TITLE = "Valtriox | Command Your Brand Universe";
+const SITE_OG_TITLE = "Valtriox — Command Your Brand Universe | by Muhammad Ashir Raza";
+const SITE_OG_DESCRIPTION =
+  "The universal brand operating system founded and built by Muhammad Ashir Raza. Manage orders, inventory, customers, marketing, and analytics from one beautiful dashboard. Made in Pakistan for the world.";
+const FOUNDER_LINKEDIN = "https://www.linkedin.com/in/muhammad-ashir-raza";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -71,8 +75,8 @@ export const metadata: Metadata = {
     title: "Valtriox",
   },
   openGraph: {
-    title: SITE_TITLE,
-    description: SITE_DESCRIPTION,
+    title: SITE_OG_TITLE,
+    description: SITE_OG_DESCRIPTION,
     type: "website",
     url: SITE_URL,
     siteName: "Valtriox",
@@ -80,19 +84,28 @@ export const metadata: Metadata = {
     images: [
       {
         url: "/valtriox-icon-512.png",
-        width: 1200,
-        height: 630,
-        alt: "Valtriox — Command Your Brand Universe",
+        width: 512,
+        height: 512,
+        alt: "Valtriox — Founded by Muhammad Ashir Raza",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: SITE_TITLE,
-    description: SITE_DESCRIPTION,
+    title: SITE_OG_TITLE,
+    description: SITE_OG_DESCRIPTION,
     images: ["/valtriox-icon-512.png"],
     creator: "@valtriox",
     site: "@valtriox",
+  },
+  other: {
+    "article:author": "Muhammad Ashir Raza",
+    "article:publisher": "Valtriox",
+    "profile:first_name": "Muhammad Ashir",
+    "profile:last_name": "Raza",
+    "profile:username": "muhammad-ashir-raza",
+    "founder": "Muhammad Ashir Raza",
+    "creator": "Muhammad Ashir Raza",
   },
   robots: {
     index: true,
@@ -167,7 +180,7 @@ export default async function RootLayout({
             </Script>
           </>
         )}
-        {/* JSON-LD Structured Data — Organization, WebSite, SoftwareApplication */}
+        {/* JSON-LD Structured Data — Organization, WebSite, SoftwareApplication, Person */}
         <Script id="ld-org" type="application/ld+json" strategy="beforeInteractive" nonce={nonce}>
           {JSON.stringify({
             "@context": "https://schema.org",
@@ -180,9 +193,19 @@ export default async function RootLayout({
             founder: {
               "@type": "Person",
               name: "Muhammad Ashir Raza",
-              url: "https://www.linkedin.com/in/muhammad-ashir-raza",
+              url: FOUNDER_LINKEDIN,
               jobTitle: "Founder & Lead Developer",
               email: "ashir@valtriox.com",
+              nationality: "Pakistani",
+              knowsAbout: [
+                "Full-Stack Development",
+                "SaaS Architecture",
+                "Brand Management Software",
+                "Next.js",
+                "TypeScript",
+                "PostgreSQL",
+                "Multi-tenant Systems",
+              ],
             },
             email: "ashir@valtriox.com",
             contactPoint: {
@@ -199,6 +222,32 @@ export default async function RootLayout({
             ],
           })}
         </Script>
+        <Script id="ld-person" type="application/ld+json" strategy="beforeInteractive" nonce={nonce}>
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Person",
+            name: "Muhammad Ashir Raza",
+            url: FOUNDER_LINKEDIN,
+            jobTitle: "Founder & Lead Developer at Valtriox",
+            email: "ashir@valtriox.com",
+            nationality: "Pakistani",
+            worksFor: {
+              "@type": "Organization",
+              name: "Valtriox",
+              url: "https://valtriox.com",
+            },
+            sameAs: [FOUNDER_LINKEDIN],
+            knowsAbout: [
+              "Full-Stack Development",
+              "SaaS Architecture",
+              "Brand Management Software",
+              "Next.js",
+              "TypeScript",
+              "PostgreSQL",
+              "Multi-tenant Systems",
+            ],
+          })}
+        </Script>
         <Script id="ld-software" type="application/ld+json" strategy="beforeInteractive" nonce={nonce}>
           {JSON.stringify({
             "@context": "https://schema.org",
@@ -211,7 +260,8 @@ export default async function RootLayout({
             author: {
               "@type": "Person",
               name: "Muhammad Ashir Raza",
-              url: "https://www.linkedin.com/in/muhammad-ashir-raza",
+              url: FOUNDER_LINKEDIN,
+              jobTitle: "Founder & Lead Developer",
             },
             offers: {
               "@type": "Offer",

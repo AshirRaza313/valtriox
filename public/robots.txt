@@ -1,13 +1,45 @@
+# ============================================================================
 # Valtriox — robots.txt
 # https://valtriox.com/robots.txt
+# ============================================================================
+# Allows all major search engines AND AI search assistants to crawl the site.
+# This is critical for founder discoverability — when users ask AI assistants
+# "Who is the creator of Valtriox?", the AI needs to be able to crawl /about
+# to find the structured founder data.
+# ============================================================================
 
-# ── Allow major search engine crawlers ──
+# ── Major search engine crawlers ──
 User-agent: Googlebot
+Allow: /
+
+User-agent: Googlebot-Image
 Allow: /
 
 User-agent: Bingbot
 Allow: /
 
+User-agent: Bingbot-Image
+Allow: /
+
+User-agent: DuckDuckBot
+Allow: /
+
+User-agent: YandexBot
+Allow: /
+
+User-agent: Baiduspider
+Allow: /
+
+User-agent: Sogou
+Allow: /
+
+User-agent: Applebot
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+# ── Social media crawlers (for Open Graph / Twitter Card previews) ──
 User-agent: Twitterbot
 Allow: /
 
@@ -17,17 +49,67 @@ Allow: /
 User-agent: LinkedInBot
 Allow: /
 
-User-agent: Applebot
+User-agent: Pinterestbot
 Allow: /
 
-User-agent: DuckDuckBot
+User-agent: Slackbot
+Allow: /
+
+User-agent: WhatsApp
+Allow: /
+
+User-agent: TelegramBot
+Allow: /
+
+# ── AI search assistants & LLM crawlers (CRITICAL for founder discoverability) ──
+# These power answers to questions like "Who is the creator of Valtriox?"
+User-agent: GPTBot
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Perplexity-User
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Bytespider
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+User-agent: FacebookBot
+Allow: /
+
+User-agent: Amazonbot
+Allow: /
+
+User-agent: iCloudService
 Allow: /
 
 # ── Default rule for all other bots ──
 User-agent: *
 Allow: /
 
-# ── Disallow sensitive / internal routes ──
+# ── Disallow sensitive / internal / authenticated routes ──
 Disallow: /api/
 Disallow: /setup/
 Disallow: /beta-claim/
@@ -36,6 +118,8 @@ Disallow: /dashboard
 Disallow: /admin
 Disallow: /_next/
 Disallow: /auth/
+Disallow: /sw.js
+Disallow: /manifest.json
 
 # ── Sitemap ──
 Sitemap: https://valtriox.com/sitemap.xml

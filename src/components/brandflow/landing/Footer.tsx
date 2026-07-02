@@ -55,7 +55,7 @@ export function Footer({ onLegalClick }: FooterProps) {
     "Changelog": "/",
     "Documentation": "/",
     // Company
-    "About": "/#about",
+    "About": "/about",
     "Blog": "/",
     "Careers": "/",
     "Press": "/",
