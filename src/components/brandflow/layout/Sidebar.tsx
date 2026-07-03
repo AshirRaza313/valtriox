@@ -18,7 +18,7 @@ import {
   ChevronDown, X, LogOut, Sparkles, ChevronsUpDown, ChevronLeft, ChevronRight,
   Lock, Crown, Eye, MessageCircle, Headphones, Zap, Rocket, Map,
   Download, MessageSquare, CalendarDays, UserPlus, CreditCard, Diamond,
-  Send,
+  Send, Stamp,
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { isSectionAccessible, isPlatformRole, isPlatformOwner, isReadOnlyRole, getRoleBadgeStyle } from "@/lib/roles";
@@ -97,6 +97,8 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   "admin-dashboard": <Shield className="h-4 w-4" />,
   "client-management": <Building2 className="h-4 w-4" />,
   "invoice-management": <FileText className="h-4 w-4" />,
+  "custom-invoices": <Stamp className="h-4 w-4" />,
+  "reports-center": <BarChart3 className="h-4 w-4" />,
   "audit-log": <FileText className="h-4 w-4" />,
   "integration-management": <Plug className="h-4 w-4" />,
   "feature-toggles": <Shield className="h-4 w-4" />,
@@ -115,6 +117,7 @@ const PLATFORM_ONLY_ITEM_IDS = new Set([
   "admin-dashboard", "client-management", "payment-approvals",
   "subscription-management", "audit-log", "platform-settings",
   "integration-management", "valtriox-team", "proposals", "beta-invites",
+  "custom-invoices", "reports-center",
 ]);
 
 // ============================================================================
@@ -200,7 +203,7 @@ export function Sidebar() {
       if (groupId === "system") {
         return groupDef.items.some((item) => {
           // Admin-only items: only for platform roles
-          if (["admin-dashboard", "client-management", "payment-approvals", "invoice-management", "audit-log", "platform-settings", "integration-management", "beta-invites"].includes(item.id)) {
+          if (["admin-dashboard", "client-management", "payment-approvals", "invoice-management", "custom-invoices", "reports-center", "audit-log", "platform-settings", "integration-management", "beta-invites"].includes(item.id)) {
             return isPlatformRole(userRole) || userRole === "valtriox_team";
           }
           return isSectionAccessible(item.id, userRole, hiddenSections);

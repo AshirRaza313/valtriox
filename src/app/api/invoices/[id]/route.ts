@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, dbErrorResponse, isDbUnavailable, withRetry } from "@/lib/db";
-import { generateInvoicePDF } from "@/lib/pdf-generator";
+import { generateInvoicePDF, generateCustomInvoicePDF } from "@/lib/pdf-generator";
 import { withAuth, RouteContext, isPlatformRole } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
 import { safeDate } from "@/lib/utils-extended";
@@ -38,6 +38,16 @@ export const GET = withRateLimit(withAuth(async (
     // Security: platform admins can view ANY invoice; regular users only their own org
     if (!isPlatformRole(authCtx.role) && invoice.organizationId !== authCtx.organizationId) {
       return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
+    }
+
+    // Phase 2: PDF download lock — non-admin users can only download when status is approved/paid
+    if (format === "pdf" && !isPlatformRole(authCtx.role)) {
+      if (!["approved", "paid"].includes(invoice.status)) {
+        return NextResponse.json({
+          error: `Invoice PDF is locked. Current status: ${invoice.status}. PDF unlocks after admin verifies payment.`,
+          status: invoice.status,
+        }, { status: 403 });
+      }
     }
 
     // If format=pdf, return PDF buffer
@@ -83,11 +93,27 @@ export const GET = withRateLimit(withAuth(async (
         platformPaymentMethods: (() => { try { const p = platformSettings?.paymentMethods; return p ? JSON.parse(p) : undefined; } catch { return undefined; } })(),
         platformLogo: platformSettings?.logoUrl || undefined,
         platformTagline: platformSettings?.tagline || "COMMAND YOUR BRAND UNIVERSE",
+        // Phase 2 fields
+        invoiceType: invoice.type,
+        invoiceTitle: invoice.invoiceTitle || undefined,
+        lineItems: Array.isArray(invoice.lineItems) ? invoice.lineItems : undefined,
+        subtotal: invoice.subtotal ? Number(invoice.subtotal) : undefined,
+        taxRate: invoice.taxRate ? Number(invoice.taxRate) : undefined,
+        taxAmount: invoice.taxAmount ? Number(invoice.taxAmount) : undefined,
+        discountAmount: invoice.discountAmount ? Number(invoice.discountAmount) : undefined,
+        clientName: invoice.clientName || undefined,
+        clientEmail: invoice.clientEmail || undefined,
+        clientAddress: invoice.clientAddress || undefined,
+        approvedAt: invoice.approvedAt,
+        sentAt: invoice.sentAt,
+        paymentStatus: invoice.paymentStatus || undefined,
       };
 
       let pdfBuffer: Buffer;
       try {
-        pdfBuffer = await generateInvoicePDF(invoiceData);
+        // Use new premium generator for custom invoices
+        const generator = invoice.type === "custom" ? generateCustomInvoicePDF : generateInvoicePDF;
+        pdfBuffer = await generator(invoiceData);
       } catch (pdfErr: unknown) {
         logger.error("[Invoice GET] PDF generation error:", pdfErr);
         return NextResponse.json(

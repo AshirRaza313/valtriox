@@ -63,7 +63,7 @@ function ensureFontsRegistered(doc: PDFKit.PDFDocument): void {
 
 export interface InvoiceData {
   invoiceNumber: string;
-  status: "pending" | "paid" | "approved" | "cancelled" | "refunded";
+  status: "draft" | "pending" | "sent" | "paid" | "approved" | "cancelled" | "refunded" | "overdue";
   planName: string;
   amount: number;
   billingCycle: string;
@@ -102,6 +102,26 @@ export interface InvoiceData {
   planOrderLimit?: number;
   planProductLimit?: number;
   planTrialDays?: number;
+  // ── Phase 2: Custom Invoice Fields ──
+  invoiceType?: "subscription" | "order" | "custom";
+  invoiceTitle?: string;
+  lineItems?: Array<{
+    description: string;
+    qty: number;
+    rate: number;
+    amount: number;
+  }>;
+  subtotal?: number;
+  taxRate?: number;
+  taxAmount?: number;
+  discountAmount?: number;
+  clientName?: string;
+  clientEmail?: string;
+  clientAddress?: string;
+  approvedBy?: string;
+  approvedAt?: Date | null;
+  sentAt?: Date | null;
+  paymentStatus?: "unpaid" | "pending_verification" | "verified" | "rejected";
 }
 
 export interface ReportData {
@@ -1095,6 +1115,370 @@ export async function generateInvoicePDF(invoice: InvoiceData): Promise<Buffer> 
       hasErrored = true;
       console.error("[PDF Invoice] Render error:", renderErr);
       reject(new Error(`Invoice PDF render failed: ${renderErr instanceof Error ? renderErr.message : String(renderErr)}`));
+    }
+
+    if (!hasErrored) {
+      try { doc.end(); } catch (e) {
+        hasErrored = true;
+        reject(new Error(`PDF generation failed: ${e instanceof Error ? e.message : String(e)}`));
+      }
+    } else {
+      try { doc.end(); } catch {}
+    }
+  });
+}
+
+// ============================================================================
+// PHASE 2: Generate Premium Custom Invoice PDF — Amber + Deep Navy theme
+// Supports: line items, tax/discount, "PAID / VERIFIED" stamp, payment approval
+// ============================================================================
+export async function generateCustomInvoicePDF(invoice: InvoiceData): Promise<Buffer> {
+  return new Promise(async (resolve, reject) => {
+    let hasErrored = false;
+    const buffers: Buffer[] = [];
+    const doc = new PDFDocument({
+      size: "A4",
+      margins: { top: 0, bottom: 0, left: 0, right: 0 },
+      bufferPages: true,
+      autoFirstPage: true,
+    });
+
+    doc.on("data", (chunk) => buffers.push(chunk));
+    doc.on("end", () => { if (!hasErrored) resolve(Buffer.concat(buffers)); });
+    doc.on("error", (err) => { hasErrored = true; reject(err); });
+
+    const issuedAt = safeDate(invoice.issuedAt) || new Date();
+    const dueDate = safeDate(invoice.dueDate);
+    const paidAt = safeDate(invoice.paidAt);
+    const approvedAt = safeDate(invoice.approvedAt);
+
+    const W = 595.28;
+    const H = 841.89;
+    const P = 48;
+    const CW = W - P * 2;
+
+    const platformName = invoice.platformName || "Valtriox";
+    const hasLogo = !!invoice.platformLogo;
+    const isPaid = invoice.status === "paid" || invoice.status === "approved" || invoice.paymentStatus === "verified";
+    const lineItems = Array.isArray(invoice.lineItems) ? invoice.lineItems : [];
+    const hasLineItems = lineItems.length > 0;
+    const subtotal = invoice.subtotal ?? (hasLineItems ? lineItems.reduce((s, li) => s + (li.amount || 0), 0) : invoice.amount);
+    const taxAmount = invoice.taxAmount ?? 0;
+    const discountAmount = invoice.discountAmount ?? 0;
+    const total = invoice.amount;
+
+    try {
+      ensureFontsRegistered(doc);
+
+      // ── NAVY HEADER BACKGROUND (full-bleed) ──
+      doc.save();
+      doc.rect(0, 0, W, 180).fill("#0F1B2D");
+      // Amber accent bar at bottom of navy header
+      doc.rect(0, 178, W, 3).fill(C.gold);
+      doc.restore();
+
+      // Subtle amber watermark pattern in header (top-right amber dot grid)
+      doc.save();
+      doc.fillColor("#D4A73A");
+      doc.opacity(0.08);
+      for (let dx = 0; dx < 8; dx++) {
+        for (let dy = 0; dy < 4; dy++) {
+          doc.circle(W - P - dx * 14, 30 + dy * 14, 1.5).fill();
+        }
+      }
+      doc.opacity(1);
+      doc.restore();
+
+      // ── LOGO + BRAND NAME (white text on navy) ──
+      let y = 36;
+      let headerRightStartX = P + 60;
+
+      if (hasLogo) {
+        const logoParsed = parseBase64DataUri(invoice.platformLogo!);
+        if (logoParsed) {
+          try {
+            const logoBuffer = Buffer.from(logoParsed.base64, "base64");
+            doc.save();
+            doc.roundedRect(P, y, 48, 48, 8).fill("#ffffff");
+            doc.image(logoBuffer, P + 4, y + 4, { width: 40, height: 40 });
+            doc.restore();
+          } catch {
+            // White V-tile fallback
+            doc.save();
+            doc.roundedRect(P, y, 48, 48, 8).fill(C.gold);
+            doc.fillColor("#ffffff").font(FONT.bold).fontSize(22).text("V", P, y + 12, { width: 48, align: "center" });
+            doc.restore();
+          }
+        }
+      } else {
+        doc.save();
+        doc.roundedRect(P, y, 48, 48, 8).fill(C.gold);
+        doc.fillColor("#ffffff").font(FONT.bold).fontSize(22).text("V", P, y + 12, { width: 48, align: "center" });
+        doc.restore();
+      }
+
+      // Brand name (white)
+      doc.font(FONT.bold).fontSize(22).fillColor("#ffffff");
+      doc.text(platformName, headerRightStartX, y + 2);
+
+      // Tagline (amber)
+      doc.font(FONT.italic).fontSize(8.5).fillColor(C.gold);
+      doc.text(invoice.platformTagline || "COMMAND YOUR BRAND UNIVERSE", headerRightStartX, y + 28);
+
+      // ── RIGHT SIDE: INVOICE TITLE + NUMBER ──
+      const rx = W - P;
+      doc.font(FONT.bold).fontSize(28).fillColor("#ffffff");
+      doc.text(invoice.invoiceTitle ? "INVOICE" : "INVOICE", P, y - 4, { width: CW, align: "right" });
+
+      doc.font(FONT.regular).fontSize(9).fillColor("#cbd5e1");
+      doc.text(invoice.invoiceNumber, P, y + 24, { width: CW, align: "right" });
+
+      // Issue date + Due date (right side, smaller)
+      doc.font(FONT.regular).fontSize(8).fillColor("#94a3b8");
+      const dateLine = `Issued: ${formatDate(issuedAt)}   |   Due: ${formatDate(dueDate)}`;
+      doc.text(dateLine, P, y + 38, { width: CW, align: "right" });
+
+      // ── STATUS PILL (top-right corner of body, below header) ──
+      let y2 = 200;
+      const statusLabel = isPaid
+        ? (invoice.paymentStatus === "verified" ? "✓ PAYMENT VERIFIED" : "PAID")
+        : invoice.status === "sent" ? "SENT — AWAITING PAYMENT"
+        : invoice.status === "pending" || invoice.paymentStatus === "pending_verification" ? "PAYMENT PENDING VERIFICATION"
+        : invoice.status === "overdue" ? "OVERDUE"
+        : invoice.status === "cancelled" ? "CANCELLED"
+        : invoice.status === "refunded" ? "REFUNDED"
+        : "DRAFT";
+
+      const pillColor = isPaid ? C.green : (invoice.status === "overdue" || invoice.status === "cancelled" ? C.red : C.gold);
+      const pillBg = isPaid ? C.greenBg : (invoice.status === "overdue" || invoice.status === "cancelled" ? C.redBg : C.goldBg);
+
+      doc.save();
+      const pillWidth = 220;
+      const pillX = W - P - pillWidth;
+      doc.roundedRect(pillX, y2, pillWidth, 26, 13).fill(pillBg);
+      doc.roundedRect(pillX, y2, pillWidth, 26, 13).lineWidth(0.5).strokeColor(pillColor).stroke();
+      doc.fillColor(pillColor).font(FONT.bold).fontSize(9);
+      doc.text(statusLabel, pillX, y2 + 8, { width: pillWidth, align: "center" });
+      doc.restore();
+
+      // ── BILL TO + FROM SECTIONS ──
+      y2 += 50;
+
+      // Two columns: "BILLED TO" (left) and "FROM" (right)
+      const colW = (CW - 24) / 2;
+      const leftColX = P;
+      const rightColX = P + colW + 24;
+
+      // BILLED TO
+      doc.font(FONT.bold).fontSize(8).fillColor(C.textMuted);
+      doc.text("BILLED TO", leftColX, y2, { width: colW });
+      doc.font(FONT.bold).fontSize(13).fillColor(C.textPrimary);
+      doc.text(invoice.clientName || invoice.orgName || "Client", leftColX, y2 + 14, { width: colW });
+      doc.font(FONT.regular).fontSize(9).fillColor(C.textSecondary);
+      let billedY = y2 + 34;
+      const clientAddress = invoice.clientAddress || invoice.orgAddress;
+      if (invoice.clientEmail || invoice.orgEmail) {
+        doc.text(invoice.clientEmail || invoice.orgEmail!, leftColX, billedY, { width: colW });
+        billedY += 12;
+      }
+      if (invoice.orgPhone) {
+        doc.text(invoice.orgPhone, leftColX, billedY, { width: colW });
+        billedY += 12;
+      }
+      if (clientAddress) {
+        doc.text(clientAddress, leftColX, billedY, { width: colW, lineBreak: true });
+        billedY += 22;
+      }
+      if (invoice.orgTaxId) {
+        doc.font(FONT.regular).fontSize(8).fillColor(C.textLight);
+        doc.text(`Tax ID: ${invoice.orgTaxId}`, leftColX, billedY, { width: colW });
+      }
+
+      // FROM
+      doc.font(FONT.bold).fontSize(8).fillColor(C.textMuted);
+      doc.text("FROM", rightColX, y2, { width: colW });
+      doc.font(FONT.bold).fontSize(13).fillColor(C.textPrimary);
+      doc.text(platformName, rightColX, y2 + 14, { width: colW });
+      doc.font(FONT.regular).fontSize(9).fillColor(C.textSecondary);
+      let fromY = y2 + 34;
+      if (invoice.platformEmail) { doc.text(invoice.platformEmail, rightColX, fromY, { width: colW }); fromY += 12; }
+      if (invoice.platformPhone) { doc.text(invoice.platformPhone, rightColX, fromY, { width: colW }); fromY += 12; }
+      if (invoice.platformAddress) { doc.text(invoice.platformAddress, rightColX, fromY, { width: colW, lineBreak: true }); fromY += 22; }
+      if (invoice.platformWebsite) { doc.font(FONT.regular).fontSize(8).fillColor(C.textLight); doc.text(invoice.platformWebsite, rightColX, fromY, { width: colW }); }
+
+      y2 = Math.max(billedY, fromY) + 28;
+
+      // ── LINE ITEMS TABLE (or single-line plan card) ──
+      if (hasLineItems) {
+        // Table header (navy bar)
+        doc.save();
+        doc.rect(P, y2, CW, 28).fill("#0F1B2D");
+        doc.fillColor("#ffffff").font(FONT.bold).fontSize(8.5);
+        doc.text("DESCRIPTION", P + 14, y2 + 10, { width: CW * 0.55 });
+        doc.text("QTY", P + CW * 0.6, y2 + 10, { width: CW * 0.1, align: "right" });
+        doc.text("RATE", P + CW * 0.72, y2 + 10, { width: CW * 0.14, align: "right" });
+        doc.text("AMOUNT", P + CW * 0.86, y2 + 10, { width: CW * 0.14 - 14, align: "right" });
+        doc.restore();
+
+        y2 += 28;
+
+        // Line item rows (alternating bg)
+        lineItems.forEach((item, idx) => {
+          const rowH = 36;
+          if (idx % 2 === 0) {
+            doc.save();
+            doc.rect(P, y2, CW, rowH).fill(C.bg2);
+            doc.restore();
+          }
+          doc.font(FONT.regular).fontSize(9.5).fillColor(C.textPrimary);
+          const desc = item.description || "—";
+          doc.text(desc, P + 14, y2 + 8, { width: CW * 0.55 - 14, lineBreak: true, ellipsis: true });
+          doc.font(FONT.regular).fontSize(9).fillColor(C.textSecondary);
+          doc.text(String(item.qty ?? 1), P + CW * 0.6, y2 + 12, { width: CW * 0.1, align: "right" });
+          doc.text(formatCurrency(item.rate || 0, invoice.currencySymbol), P + CW * 0.72, y2 + 12, { width: CW * 0.14, align: "right" });
+          doc.font(FONT.bold).fontSize(9.5).fillColor(C.textPrimary);
+          doc.text(formatCurrency(item.amount || 0, invoice.currencySymbol), P + CW * 0.86, y2 + 12, { width: CW * 0.14 - 14, align: "right" });
+          y2 += rowH;
+        });
+
+        // Table bottom border
+        doc.save().moveTo(P, y2).lineTo(P + CW, y2).lineWidth(0.5).strokeColor(C.goldBorder).stroke().restore();
+        y2 += 16;
+
+        // ── TOTALS BLOCK (right-aligned) ──
+        const totalsX = P + CW * 0.55;
+        const totalsW = CW * 0.45;
+        const labelX = totalsX;
+        const valX = P + CW - 14;
+
+        // Subtotal
+        doc.font(FONT.regular).fontSize(9.5).fillColor(C.textSecondary);
+        doc.text("Subtotal", labelX, y2, { width: totalsW * 0.55 });
+        doc.text(formatCurrency(subtotal, invoice.currencySymbol), labelX + totalsW * 0.55, y2, { width: totalsW * 0.45, align: "right" });
+        y2 += 18;
+
+        // Discount
+        if (discountAmount > 0) {
+          doc.fillColor(C.green);
+          doc.text("Discount", labelX, y2, { width: totalsW * 0.55 });
+          doc.text(`− ${formatCurrency(discountAmount, invoice.currencySymbol)}`, labelX + totalsW * 0.55, y2, { width: totalsW * 0.45, align: "right" });
+          y2 += 18;
+        }
+
+        // Tax
+        if (invoice.taxRate && invoice.taxRate > 0) {
+          doc.fillColor(C.textSecondary);
+          doc.text(`Tax (${invoice.taxRate}%)`, labelX, y2, { width: totalsW * 0.55 });
+          doc.text(formatCurrency(taxAmount, invoice.currencySymbol), labelX + totalsW * 0.55, y2, { width: totalsW * 0.45, align: "right" });
+          y2 += 18;
+        }
+
+        // Total (amber bar)
+        y2 += 4;
+        doc.save();
+        doc.rect(P + CW * 0.55 - 14, y2, totalsW + 14, 36).fill(C.goldBg3);
+        doc.rect(P + CW * 0.55 - 14, y2, totalsW + 14, 36).lineWidth(0.8).strokeColor(C.gold).stroke();
+        doc.restore();
+        doc.font(FONT.bold).fontSize(10).fillColor(C.textPrimary);
+        doc.text("TOTAL DUE", labelX, y2 + 12, { width: totalsW * 0.55 });
+        doc.font(FONT.bold).fontSize(15).fillColor("#0F1B2D");
+        doc.text(formatCurrency(total, invoice.currencySymbol), labelX + totalsW * 0.55, y2 + 9, { width: totalsW * 0.45, align: "right" });
+        y2 += 50;
+      } else {
+        // Single-line "Plan Card" style for subscription invoices
+        doc.save();
+        doc.roundedRect(P, y2, CW, 80, 8).fill(C.goldBg3);
+        doc.roundedRect(P, y2, CW, 80, 8).lineWidth(0.5).strokeColor(C.goldBorder).stroke();
+        doc.restore();
+        doc.font(FONT.bold).fontSize(13).fillColor(C.textPrimary);
+        doc.text(invoice.invoiceTitle || `${invoice.planName} Plan`, P + 18, y2 + 16, { width: CW - 36 });
+        doc.font(FONT.regular).fontSize(9).fillColor(C.textSecondary);
+        doc.text(invoice.billingCycle === "annually" ? "Annual Subscription" : "Monthly Subscription", P + 18, y2 + 36, { width: CW - 36 });
+        doc.font(FONT.bold).fontSize(18).fillColor("#0F1B2D");
+        doc.text(formatCurrency(total, invoice.currencySymbol), P + 18, y2 + 52, { width: CW - 36, align: "right" });
+        y2 += 100;
+      }
+
+      // ── PAYMENT INFO BOX (if paid) ──
+      if (isPaid && (invoice.paymentMethod || invoice.transactionId)) {
+        doc.save();
+        doc.roundedRect(P, y2, CW, 60, 6).fill(C.greenBg);
+        doc.roundedRect(P, y2, CW, 60, 6).lineWidth(0.5).strokeColor(C.green).stroke();
+        doc.restore();
+        doc.font(FONT.bold).fontSize(8).fillColor(C.green);
+        doc.text("PAYMENT RECEIVED", P + 14, y2 + 10, { width: CW - 28 });
+        doc.font(FONT.regular).fontSize(9).fillColor(C.textSecondary);
+        if (invoice.paymentMethod) {
+          doc.text(`Method: ${invoice.paymentMethod.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())}`, P + 14, y2 + 26, { width: CW * 0.5 });
+        }
+        if (invoice.transactionId) {
+          doc.text(`Transaction ID: ${invoice.transactionId}`, P + CW * 0.5, y2 + 26, { width: CW * 0.5 - 14 });
+        }
+        doc.font(FONT.regular).fontSize(8).fillColor(C.textMuted);
+        doc.text(`Paid on: ${formatDate(paidAt || approvedAt)}`, P + 14, y2 + 42, { width: CW - 28 });
+        y2 += 76;
+      }
+
+      // ── NOTES ──
+      if (invoice.notes) {
+        y2 += 8;
+        doc.font(FONT.bold).fontSize(8).fillColor(C.textMuted);
+        doc.text("NOTES", P, y2, { width: CW });
+        y2 += 14;
+        doc.font(FONT.regular).fontSize(9).fillColor(C.textSecondary);
+        const notesLines = doc.heightOfString(invoice.notes, { width: CW - 28, fontSize: 9 });
+        doc.save();
+        doc.roundedRect(P, y2 - 4, CW, notesLines + 16, 6).fill(C.bg2);
+        doc.restore();
+        doc.text(invoice.notes, P + 14, y2 + 4, { width: CW - 28 });
+        y2 += notesLines + 22;
+      }
+
+      // ── "VERIFIED" STAMP (watermark-style, only when paid + approved) ──
+      if (isPaid && invoice.paymentStatus === "verified") {
+        doc.save();
+        const stampX = W - P - 130;
+        const stampY = Math.min(y2 + 40, H - 220);
+        doc.translate(stampX, stampY);
+        doc.rotate(-12);
+        doc.roundedRect(0, 0, 130, 60, 6).lineWidth(2.5).strokeColor(C.green);
+        doc.roundedRect(6, 6, 118, 48, 4).lineWidth(1).strokeColor(C.green);
+        doc.fillColor(C.green).font(FONT.bold).fontSize(18);
+        doc.text("VERIFIED", 0, 14, { width: 130, align: "center" });
+        doc.font(FONT.regular).fontSize(7);
+        doc.text("PAYMENT CONFIRMED", 0, 36, { width: 130, align: "center" });
+        doc.restore();
+      }
+
+      // ── FOOTER (navy bar at bottom of page) ──
+      const footerY = H - 80;
+      doc.save();
+      doc.rect(0, footerY, W, 80).fill("#0F1B2D");
+      doc.rect(0, footerY, W, 2).fill(C.gold);
+      doc.restore();
+
+      doc.fillColor("#ffffff").font(FONT.bold).fontSize(10);
+      doc.text(`Thank you for choosing ${platformName}!`, P, footerY + 16, { width: CW, align: "center" });
+      doc.font(FONT.regular).fontSize(8).fillColor("#cbd5e1");
+      doc.text(invoice.platformTagline || "COMMAND YOUR BRAND UNIVERSE", P, footerY + 32, { width: CW, align: "center" });
+
+      // Contact row
+      const contactParts: string[] = [];
+      if (invoice.platformWebsite) contactParts.push(invoice.platformWebsite);
+      if (invoice.platformEmail) contactParts.push(invoice.platformEmail);
+      if (invoice.platformPhone) contactParts.push(invoice.platformPhone);
+      if (contactParts.length > 0) {
+        doc.font(FONT.regular).fontSize(7.5).fillColor(C.gold);
+        doc.text(contactParts.join("   |   "), P, footerY + 50, { width: CW, align: "center" });
+      }
+
+      doc.font(FONT.regular).fontSize(6.5).fillColor("#64748b");
+      doc.text(`Invoice ${invoice.invoiceNumber}  ·  Generated ${formatDate(new Date())}  ·  ${platformName}`, P, footerY + 64, { width: CW, align: "center" });
+
+    } catch (renderErr) {
+      hasErrored = true;
+      console.error("[PDF Custom Invoice] Render error:", renderErr);
+      reject(new Error(`Custom invoice PDF render failed: ${renderErr instanceof Error ? renderErr.message : String(renderErr)}`));
     }
 
     if (!hasErrored) {

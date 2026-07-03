@@ -6,10 +6,10 @@ import logger from "@/lib/logger";
 
 // ── Valid status transitions ──
 const VALID_TRANSITIONS: Record<string, string[]> = {
-  draft: ["sent", "cancelled"],
-  pending: ["paid", "approved", "cancelled"],
-  sent: ["paid", "overdue", "cancelled"],
-  overdue: ["paid", "cancelled"],
+  draft: ["sent", "pending", "cancelled"],
+  pending: ["paid", "approved", "sent", "cancelled"],
+  sent: ["paid", "approved", "overdue", "cancelled"],
+  overdue: ["paid", "approved", "cancelled"],
   paid: [],
   approved: [],
   cancelled: [],
@@ -35,6 +35,9 @@ export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx, ctx:
               name: true,
               email: true,
               phone: true,
+              address: true,
+              country: true,
+              taxId: true,
               plan: true,
             },
           },

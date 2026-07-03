@@ -22,7 +22,7 @@ import {
   SocialMediaGuidePage, ContentStrategyPage, MarketLaunchTimelinePage, FeatureRoadmapPage,
   ExpensesPage,
   SettingsPage, UserManagementPage, AdminDashboard, AuditLogPage,
-  SubscriptionPage, PaymentApprovalsPage, AdminSubscriptionsPage, InvoiceManagementPage, PlatformSettingsPage,
+  SubscriptionPage, PaymentApprovalsPage, AdminSubscriptionsPage, InvoiceManagementPage, CustomInvoicePage, ReportsCenterPage, PlatformSettingsPage,
   ClientManagementPage,
   IntegrationManagementPage,
   ValtrioxTeamPage,
@@ -529,6 +529,8 @@ export default function Home() {
       case "client-management": return <SafeRender name="Client Management"><ClientManagementPage /></SafeRender>;
       case "payment-approvals": return <SafeRender name="Payment Approvals"><PaymentApprovalsPage /></SafeRender>;
       case "invoice-management": return <SafeRender name="Invoice Management"><InvoiceManagementPage /></SafeRender>;
+      case "custom-invoices": return <SafeRender name="Custom Invoices"><CustomInvoicePage /></SafeRender>;
+      case "reports-center": return <SafeRender name="Reports Center"><ReportsCenterPage /></SafeRender>;
       case "subscription-management": return <SafeRender name="Subscription Management"><AdminSubscriptionsPage /></SafeRender>;
       case "audit-log": {
         const lock = checkLock("audit-log", "Audit Log");
