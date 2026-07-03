@@ -325,7 +325,9 @@ export function CustomInvoicePage() {
         resetForm();
         await fetchInvoices();
       } else {
-        toast.error(result.error || "Failed to create invoice", { duration: 8000 });
+        // Log full error to console for debugging, show in toast for 15s
+        console.error("[Custom Invoice] Create failed:", result.error);
+        toast.error(result.error || "Failed to create invoice", { duration: 15000 });
       }
     } catch {
       toast.error("Network error — please check your connection and retry");

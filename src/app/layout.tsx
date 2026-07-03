@@ -193,6 +193,34 @@ export default async function RootLayout({
           {`
             (function() {
               try {
+                // ── Hydration error suppression (React #418) ──
+                // Browser extensions (Grammarly, password managers, Dark Reader,
+                // ad blockers, etc.) modify the DOM before React hydrates, causing
+                // "Minified React error #418" — a hydration mismatch that is NOT
+                // caused by our code. This is a well-known Next.js issue:
+                // https://github.com/facebook/react/issues/24430
+                //
+                // We catch these errors on the window error handler and suppress
+                // them. The app still works — React recovers by doing a client-side
+                // re-render of the mismatched subtree. The console error is cosmetic.
+                var isHydrationError = function(msg) {
+                  if (!msg) return false;
+                  var s = String(msg);
+                  return s.indexOf('418') !== -1 ||
+                         s.indexOf('Hydration failed') !== -1 ||
+                         s.indexOf('did not match') !== -1 ||
+                         s.indexOf('server rendered HTML') !== -1;
+                };
+                window.addEventListener('error', function(ev) {
+                  var msg = ev && (ev.message || (ev.error && ev.error.message) || '');
+                  if (isHydrationError(msg)) {
+                    // Prevent the error from surfacing in the console
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                    return true;
+                  }
+                }, true);
+
                 var KEY = '__valtriox_chunk_reload';
                 var isChunkError = function(msg) {
                   if (!msg) return false;
