@@ -1426,7 +1426,7 @@ export async function generateCustomInvoicePDF(invoice: InvoiceData): Promise<Bu
         doc.text("NOTES", P, y2, { width: CW });
         y2 += 14;
         doc.font(FONT.regular).fontSize(9).fillColor(C.textSecondary);
-        const notesLines = doc.heightOfString(invoice.notes, { width: CW - 28, fontSize: 9 });
+        const notesLines = doc.heightOfString(invoice.notes, { width: CW - 28 });
         doc.save();
         doc.roundedRect(P, y2 - 4, CW, notesLines + 16, 6).fill(C.bg2);
         doc.restore();
