@@ -354,10 +354,14 @@ export function CustomInvoicePage() {
         toast.success(`Invoice emailed to ${data.recipientEmail}`);
         await fetchInvoices();
       } else {
-        toast.error(data.error || "Failed to send invoice");
+        const errMsg = data.error || "Failed to send invoice";
+        console.error("[Invoice Send] Failed:", errMsg);
+        toast.error(errMsg, { duration: 15000 });
       }
-    } catch {
-      toast.error("Network error");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Network error";
+      console.error("[Invoice Send] Network error:", msg);
+      toast.error(`Network error: ${msg}`, { duration: 15000 });
     } finally {
       setActionLoading((p) => ({ ...p, [`send-${inv.id}`]: false }));
     }
@@ -380,10 +384,14 @@ export function CustomInvoicePage() {
         toast.success("Payment verified. PDF download unlocked for client.");
         await fetchInvoices();
       } else {
-        toast.error(data.error || "Failed to approve payment");
+        const errMsg = data.error || "Failed to approve payment";
+        console.error("[Invoice Approve] Failed:", errMsg);
+        toast.error(errMsg, { duration: 15000 });
       }
-    } catch {
-      toast.error("Network error");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Network error";
+      console.error("[Invoice Approve] Network error:", msg);
+      toast.error(`Network error: ${msg}`, { duration: 15000 });
     } finally {
       setActionLoading((p) => ({ ...p, [`approve-${inv.id}`]: false }));
     }
@@ -396,7 +404,9 @@ export function CustomInvoicePage() {
       const res = await fetchWithAuth(`/api/admin/invoices/${inv.id}/pdf`);
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        toast.error(data.error || "Failed to download PDF");
+        const errMsg = data.error || "Failed to download PDF";
+        console.error("[Invoice PDF] Download failed:", errMsg);
+        toast.error(errMsg, { duration: 15000 });
         return;
       }
       const blob = await res.blob();
@@ -409,8 +419,10 @@ export function CustomInvoicePage() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       toast.success("PDF downloaded");
-    } catch {
-      toast.error("Network error");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Network error";
+      console.error("[Invoice PDF] Network error:", msg);
+      toast.error(`Network error: ${msg}`, { duration: 15000 });
     } finally {
       setActionLoading((p) => ({ ...p, [`pdf-${inv.id}`]: false }));
     }

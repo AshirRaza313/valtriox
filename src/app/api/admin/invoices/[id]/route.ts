@@ -16,6 +16,20 @@ const VALID_TRANSITIONS: Record<string, string[]> = {
   refunded: [],
 };
 
+/**
+ * Build a detailed error message from a safeDbQuery error.
+ */
+function describeDbError(error: unknown): string {
+  if (!error) return "unknown error";
+  const errObj = error as any;
+  const prismaCode = errObj?.code || "N/A";
+  const prismaMessage = errObj?.message
+    ? String(errObj.message).substring(0, 200)
+    : String(error).substring(0, 200);
+  const prismaMeta = errObj?.meta ? JSON.stringify(errObj.meta).substring(0, 200) : "";
+  return `Prisma[code=${prismaCode}]: ${prismaMessage}${prismaMeta ? ` | meta=${prismaMeta}` : ""}`;
+}
+
 // ── GET /api/admin/invoices/:id ──
 export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx, ctx: RouteContext) => {
     logger.info("[Admin Invoice Detail] GET request", {
@@ -25,7 +39,11 @@ export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx, ctx:
 
     const { id } = await ctx.params;
 
-    const { data: invoice, error } = await safeDbQuery(() =>
+    // ── Attempt 1: findUnique with organization include (full select) ──
+    let invoice: any = null;
+    let fetchErr: unknown = null;
+
+    const r1 = await safeDbQuery(() =>
       db.invoice.findUnique({
         where: { id },
         include: {
@@ -44,10 +62,41 @@ export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx, ctx:
         },
       })
     );
+    invoice = r1.data;
+    fetchErr = r1.error;
 
-    if (error) {
-      logger.error("[Admin Invoice Detail] GET failed", { error, userId: authCtx.userId });
-      return NextResponse.json({ error: "Failed to fetch invoice", detail: undefined }, { status: 503 });
+    // ── Attempt 2: retry WITHOUT the include if attempt 1 failed ──
+    if (!invoice && fetchErr) {
+      logger.warn("[Admin Invoice Detail] findUnique with include failed, retrying without include", {
+        invoiceId: id,
+        error: describeDbError(fetchErr),
+      });
+      const r2 = await safeDbQuery(() => db.invoice.findUnique({ where: { id } }));
+      invoice = r2.data;
+      if (!invoice && r2.error) {
+        const errInfo = describeDbError(r2.error);
+        logger.error("[Admin Invoice Detail] Both findUnique attempts failed", {
+          invoiceId: id,
+          attempt1Err: describeDbError(fetchErr),
+          attempt2Err: errInfo,
+          userId: authCtx.userId,
+        });
+        return NextResponse.json({
+          error: `Failed to fetch invoice. ${errInfo}`,
+        }, { status: 503 });
+      }
+      // Attempt 2 succeeded — fetch the organization separately (best-effort)
+      if (invoice?.organizationId) {
+        const orgRes = await safeDbQuery(() =>
+          db.organization.findUnique({
+            where: { id: invoice.organizationId },
+            select: { id: true, name: true, email: true, phone: true, plan: true },
+          })
+        );
+        if (orgRes.data) {
+          invoice.organization = orgRes.data;
+        }
+      }
     }
 
     if (!invoice) {
@@ -110,7 +159,10 @@ export const PUT = withRateLimit(withAuth(async (req: NextRequest, authCtx, ctx:
     }
 
     // Fetch existing invoice
-    const { data: existing, error: fetchErr } = await safeDbQuery(() =>
+    // Attempt 1: with include
+    let existing: any = null;
+    let fetchErr: unknown = null;
+    const r1 = await safeDbQuery(() =>
       db.invoice.findUnique({
         where: { id },
         include: {
@@ -120,10 +172,36 @@ export const PUT = withRateLimit(withAuth(async (req: NextRequest, authCtx, ctx:
         },
       })
     );
+    existing = r1.data;
+    fetchErr = r1.error;
 
-    if (fetchErr) {
-      logger.error("[Admin Invoice Update] Fetch failed", { error: fetchErr, userId: authCtx.userId });
-      return NextResponse.json({ error: "Failed to fetch invoice", detail: undefined }, { status: 503 });
+    // Attempt 2: WITHOUT include (defensive fallback)
+    if (!existing && fetchErr) {
+      logger.warn("[Admin Invoice Update] findUnique with include failed, retrying without include", {
+        invoiceId: id,
+        error: describeDbError(fetchErr),
+      });
+      const r2 = await safeDbQuery(() => db.invoice.findUnique({ where: { id } }));
+      existing = r2.data;
+      if (!existing && r2.error) {
+        const errInfo = describeDbError(r2.error);
+        logger.error("[Admin Invoice Update] Both findUnique attempts failed", {
+          invoiceId: id,
+          attempt1Err: describeDbError(fetchErr),
+          attempt2Err: errInfo,
+          userId: authCtx.userId,
+        });
+        return NextResponse.json({ error: `Failed to fetch invoice. ${errInfo}` }, { status: 503 });
+      }
+      if (existing?.organizationId) {
+        const orgRes = await safeDbQuery(() =>
+          db.organization.findUnique({
+            where: { id: existing.organizationId },
+            select: { id: true, name: true, email: true },
+          })
+        );
+        if (orgRes.data) existing.organization = orgRes.data;
+      }
     }
 
     if (!existing) {
@@ -200,7 +278,10 @@ export const PUT = withRateLimit(withAuth(async (req: NextRequest, authCtx, ctx:
       });
     }
 
-    const { data: updated, error: updateErr } = await safeDbQuery(() =>
+    // Perform update — Attempt 1: with include
+    let updated: any = null;
+    let updateErr: unknown = null;
+    const u1 = await safeDbQuery(() =>
       db.invoice.update({
         where: { id },
         data: updateData,
@@ -211,10 +292,38 @@ export const PUT = withRateLimit(withAuth(async (req: NextRequest, authCtx, ctx:
         },
       })
     );
+    updated = u1.data;
+    updateErr = u1.error;
 
-    if (updateErr) {
-      logger.error("[Admin Invoice Update] Update failed", { error: updateErr, userId: authCtx.userId });
-      return NextResponse.json({ error: "Failed to update invoice", detail: undefined }, { status: 503 });
+    // Attempt 2: WITHOUT include (defensive fallback)
+    if (!updated && updateErr) {
+      logger.warn("[Admin Invoice Update] update with include failed, retrying without include", {
+        invoiceId: id,
+        error: describeDbError(updateErr),
+      });
+      const u2 = await safeDbQuery(() =>
+        db.invoice.update({ where: { id }, data: updateData })
+      );
+      updated = u2.data;
+      if (!updated && u2.error) {
+        const errInfo = describeDbError(u2.error);
+        logger.error("[Admin Invoice Update] Both update attempts failed", {
+          invoiceId: id,
+          attempt1Err: describeDbError(updateErr),
+          attempt2Err: errInfo,
+          userId: authCtx.userId,
+        });
+        return NextResponse.json({ error: `Failed to update invoice. ${errInfo}` }, { status: 503 });
+      }
+      if (updated?.organizationId) {
+        const orgRes = await safeDbQuery(() =>
+          db.organization.findUnique({
+            where: { id: updated.organizationId },
+            select: { id: true, name: true, email: true, plan: true },
+          })
+        );
+        if (orgRes.data) updated.organization = orgRes.data;
+      }
     }
 
     // Create notification on status change

@@ -2429,6 +2429,21 @@ DO $$ BEGIN ALTER TABLE "Organization" ADD COLUMN IF NOT EXISTS "usageTeamChatsC
 DO $$ BEGIN ALTER TABLE "Organization" ADD COLUMN IF NOT EXISTS "usageBroadcastsCount" INTEGER NOT NULL DEFAULT 0; EXCEPTION WHEN OTHERS THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE "Organization" ADD COLUMN IF NOT EXISTS "usageLastResetAt" TIMESTAMP(3); EXCEPTION WHEN OTHERS THEN NULL; END $$;
 
+-- ── Organization (Brand Settings columns — added in Phase 2) ──
+-- These columns are referenced by the invoice /pdf and /send routes via
+-- include: { organization: { select: { country: true, taxId: true, address: true } } }.
+-- If they don't exist in production, the entire findUnique fails with P2022.
+DO $$ BEGIN ALTER TABLE "Organization" ADD COLUMN IF NOT EXISTS "country" TEXT; EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE "Organization" ADD COLUMN IF NOT EXISTS "religion" TEXT; EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE "Organization" ADD COLUMN IF NOT EXISTS "brandTagline" TEXT; EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE "Organization" ADD COLUMN IF NOT EXISTS "brandColor" TEXT; EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE "Organization" ADD COLUMN IF NOT EXISTS "secondaryBrandColor" TEXT; EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE "Organization" ADD COLUMN IF NOT EXISTS "brandDescription" TEXT; EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE "Organization" ADD COLUMN IF NOT EXISTS "industry" TEXT; EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE "Organization" ADD COLUMN IF NOT EXISTS "address" TEXT; EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE "Organization" ADD COLUMN IF NOT EXISTS "taxId" TEXT; EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE "Organization" ADD COLUMN IF NOT EXISTS "favicon" TEXT; EXCEPTION WHEN OTHERS THEN NULL; END $$;
+
 -- ── Lead (consultation columns) ──
 DO $$ BEGIN ALTER TABLE "Lead" ADD COLUMN IF NOT EXISTS "consultationType" TEXT; EXCEPTION WHEN OTHERS THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE "Lead" ADD COLUMN IF NOT EXISTS "preferredDate" TEXT; EXCEPTION WHEN OTHERS THEN NULL; END $$;

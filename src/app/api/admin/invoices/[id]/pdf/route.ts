@@ -8,6 +8,22 @@ import logger from "@/lib/logger";
 
 export const maxDuration = 60;
 
+/**
+ * Build a detailed error message from a safeDbQuery error.
+ * Mirrors the format used by /custom route so the user can see
+ * the actual Prisma/SQL error code and message.
+ */
+function describeDbError(error: unknown): string {
+  if (!error) return "unknown error";
+  const errObj = error as any;
+  const prismaCode = errObj?.code || "N/A";
+  const prismaMessage = errObj?.message
+    ? String(errObj.message).substring(0, 200)
+    : String(error).substring(0, 200);
+  const prismaMeta = errObj?.meta ? JSON.stringify(errObj.meta).substring(0, 200) : "";
+  return `Prisma[code=${prismaCode}]: ${prismaMessage}${prismaMeta ? ` | meta=${prismaMeta}` : ""}`;
+}
+
 // GET /api/admin/invoices/:id/pdf
 // Returns the branded PDF. For custom invoices, uses generateCustomInvoicePDF.
 // For subscription invoices, uses generateInvoicePDF.
@@ -16,7 +32,12 @@ export const maxDuration = 60;
 export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx, ctx: RouteContext) => {
   const { id } = await ctx.params;
 
-  const { data: invoice, error } = await safeDbQuery(() =>
+  // ── Attempt 1: findUnique with organization include ──
+  // This is the preferred path — fetches invoice + org in one query.
+  let invoice: any = null;
+  let fetchErr: unknown = null;
+
+  const r1 = await safeDbQuery(() =>
     db.invoice.findUnique({
       where: { id },
       include: {
@@ -24,8 +45,56 @@ export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx, ctx:
       },
     })
   );
-  if (error) return NextResponse.json({ error: "DB error" }, { status: 503 });
-  if (!invoice) return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
+  invoice = r1.data;
+  fetchErr = r1.error;
+
+  // ── Attempt 2: if include fails (likely Organization schema mismatch),
+  //     retry WITHOUT the include. We'll fetch the org separately if needed. ──
+  if (!invoice && fetchErr) {
+    logger.warn("[Invoice PDF] findUnique with include failed, retrying without include", {
+      invoiceId: id,
+      error: describeDbError(fetchErr),
+    });
+    const r2 = await safeDbQuery(() =>
+      db.invoice.findUnique({ where: { id } })
+    );
+    invoice = r2.data;
+    if (!invoice && r2.error) {
+      // Both paths failed — surface the detailed error
+      const errInfo = describeDbError(r2.error);
+      logger.error("[Invoice PDF] Both findUnique attempts failed", {
+        invoiceId: id,
+        attempt1Err: describeDbError(fetchErr),
+        attempt2Err: errInfo,
+      });
+      return NextResponse.json({
+        error: `Failed to fetch invoice. ${errInfo}`,
+      }, { status: 503 });
+    }
+    // Attempt 2 succeeded — fetch the organization separately (best-effort, only basic columns)
+    if (invoice?.organizationId) {
+      const orgRes = await safeDbQuery(() =>
+        db.organization.findUnique({
+          where: { id: invoice.organizationId },
+          select: { id: true, name: true, email: true, phone: true },
+        })
+      );
+      if (orgRes.data) {
+        invoice.organization = orgRes.data;
+      } else {
+        // Even the basic org fetch failed — proceed with whatever fields are on the invoice
+        logger.warn("[Invoice PDF] Org fetch failed (continuing with invoice-only data)", {
+          invoiceId: id,
+          orgId: invoice.organizationId,
+          error: orgRes.error ? describeDbError(orgRes.error) : "not found",
+        });
+      }
+    }
+  }
+
+  if (!invoice) {
+    return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
+  }
 
   const isAdmin = isPlatformRole(authCtx.role);
   if (!isAdmin && invoice.organizationId !== authCtx.organizationId) {
@@ -42,7 +111,7 @@ export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx, ctx:
     }
   }
 
-  // ── Load platform settings ──
+  // ── Load platform settings (best-effort, won't block PDF generation) ──
   const { data: ps } = await safeDbQuery(() => db.platformSettings.findFirst());
 
   // ── Build InvoiceData ──
@@ -129,6 +198,8 @@ export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx, ctx:
   } catch (pdfErr: unknown) {
     const msg = pdfErr instanceof Error ? pdfErr.message : String(pdfErr);
     logger.error("[Invoice PDF] Generation failed", { error: msg, invoiceId: id });
-    return NextResponse.json({ error: "PDF generation failed" }, { status: 500 });
+    return NextResponse.json({
+      error: `PDF generation failed: ${msg.substring(0, 200)}`,
+    }, { status: 500 });
   }
 }, { requireRole: [], requireOrg: false }), { maxRequests: 30, windowSeconds: 60 });
