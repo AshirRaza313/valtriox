@@ -153,6 +153,10 @@ export async function POST(req: NextRequest) {
         data: {
           companyName: "Valtriox",
           companyEmail: SUPPORT_EMAIL,
+          companyPhone: "+92-318 3916019",
+          companyAddress: "Karachi, Pakistan",
+          companyWebsite: "https://valtriox.com",
+          supportHours: "Mon-Fri: 9AM-6PM PKT",
           tagline: "COMMAND YOUR BRAND UNIVERSE",
           primaryBrandColor: "#D4A73A",
           secondaryBrandColor: "#B8942F",

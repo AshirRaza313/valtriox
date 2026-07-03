@@ -47,6 +47,24 @@ const SITE_OG_DESCRIPTION =
   "The universal brand operating system founded and built by Muhammad Ashir Raza. Manage orders, inventory, customers, marketing, and analytics from one beautiful dashboard. Made in Pakistan for the world.";
 const FOUNDER_LINKEDIN = "https://www.linkedin.com/in/muhammad-ashir-raza";
 
+// ── Real business contact details (single source of truth) ──
+// These values are referenced by JSON-LD structured data below so Google
+// and other search engines can surface them as a rich contact card in
+// search results. They MUST match the values shown in the visible UI
+// (Footer, ContactPage, ContactSection, /about).
+// If you change any of these, also update:
+//   - src/lib/platform-identity.tsx  (DEFAULT_IDENTITY)
+//   - src/components/brandflow/landing/ContactPage.tsx
+//   - src/components/brandflow/landing/ContactSection.tsx
+//   - src/app/api/setup/init/route.ts (DB seed)
+const BUSINESS_EMAIL = "ashir@valtriox.com";
+const BUSINESS_PHONE_DISPLAY = "+92-318 3916019";        // human-readable
+const BUSINESS_PHONE_TEL = "+923183916019";                // E.164 for tel: links
+const BUSINESS_ADDRESS_LOCALITY = "Karachi";
+const BUSINESS_ADDRESS_REGION = "Sindh";
+const BUSINESS_ADDRESS_COUNTRY = "PK";
+const BUSINESS_SUPPORT_HOURS = "Mon-Fri, 09:00-18:00 (PKT, UTC+5)";
+
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
@@ -108,6 +126,18 @@ export const metadata: Metadata = {
     "profile:username": "muhammad-ashir-raza",
     "founder": "Muhammad Ashir Raza",
     "creator": "Muhammad Ashir Raza",
+    // Geo hints — Google reads these for local-business entity association.
+    "geo.region": "PK-SD",          // ISO 3166-2 code for Sindh province, Pakistan
+    "geo.placename": "Karachi",
+    "geo.position": "24.8607;67.0011",
+    "ICBM": "24.8607, 67.0011",
+    // Business contact hints (Facebook Open Graph business vocabulary)
+    "business:contact_data:country_name": "Pakistan",
+    "business:contact_data:locality": "Karachi",
+    "business:contact_data:region": "Sindh",
+    "business:contact_data:email": "ashir@valtriox.com",
+    "business:contact_data:phone_number": "+92-318-3916019",
+    "business:contact_data:website": "https://valtriox.com",
   },
   robots: {
     index: true,
@@ -222,7 +252,7 @@ export default async function RootLayout({
                 name: "Muhammad Ashir Raza",
                 url: FOUNDER_LINKEDIN,
                 jobTitle: "Founder & Lead Developer",
-                email: "ashir@valtriox.com",
+                email: BUSINESS_EMAIL,
                 nationality: "Pakistani",
                 knowsAbout: [
                   "Full-Stack Development",
@@ -234,12 +264,104 @@ export default async function RootLayout({
                   "Multi-tenant Systems",
                 ],
               },
-              email: "ashir@valtriox.com",
-              contactPoint: {
-                "@type": "ContactPoint",
-                contactType: "customer support",
-                email: "ashir@valtriox.com",
-                availableLanguage: ["English"],
+              email: BUSINESS_EMAIL,
+              telephone: BUSINESS_PHONE_TEL,
+              address: {
+                "@type": "PostalAddress",
+                addressLocality: BUSINESS_ADDRESS_LOCALITY,
+                addressRegion: BUSINESS_ADDRESS_REGION,
+                addressCountry: BUSINESS_ADDRESS_COUNTRY,
+              },
+              // contactPoint is now an ARRAY (Google recommends multiple
+              // contactPoints: one per contact type). Each entry inherits
+              // the organization-level telephone/email if not specified.
+              contactPoint: [
+                {
+                  "@type": "ContactPoint",
+                  contactType: "customer support",
+                  email: BUSINESS_EMAIL,
+                  telephone: BUSINESS_PHONE_TEL,
+                  areaServed: ["PK", "Worldwide"],
+                  availableLanguage: ["English", "Urdu"],
+                  hoursAvailable: BUSINESS_SUPPORT_HOURS,
+                },
+                {
+                  "@type": "ContactPoint",
+                  contactType: "sales",
+                  email: BUSINESS_EMAIL,
+                  telephone: BUSINESS_PHONE_TEL,
+                  areaServed: ["PK", "Worldwide"],
+                  availableLanguage: ["English", "Urdu"],
+                  hoursAvailable: BUSINESS_SUPPORT_HOURS,
+                },
+              ],
+              sameAs: [
+                "https://instagram.com/valtriox",
+                "https://facebook.com/valtriox",
+                "https://twitter.com/valtriox",
+                "https://linkedin.com/company/valtriox",
+              ],
+            }),
+          }}
+        />
+        {/*
+          LocalBusiness JSON-LD — the schema Google uses to surface a
+          "knowledge panel" / contact card in search results with phone,
+          address, hours, and "Call now" / "Get directions" buttons.
+          Combined with the Organization schema above, this gives Google
+          everything it needs to display Valtriox's contact details when
+          users search for "Valtriox contact", "Valtriox phone", etc.
+        */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "LocalBusiness",
+              "@id": "https://valtriox.com/#localbusiness",
+              name: "Valtriox",
+              url: "https://valtriox.com",
+              logo: "https://valtriox.com/valtriox-logo.png",
+              image: "https://valtriox.com/valtriox-icon-512.png",
+              description: SITE_DESCRIPTION,
+              email: BUSINESS_EMAIL,
+              telephone: BUSINESS_PHONE_TEL,
+              priceRange: "$$",
+              currenciesAccepted: "PKR, USD",
+              paymentAccepted: "Credit Card, Bank Transfer, PayPal, JazzCash, EasyPaisa",
+              address: {
+                "@type": "PostalAddress",
+                addressLocality: BUSINESS_ADDRESS_LOCALITY,
+                addressRegion: BUSINESS_ADDRESS_REGION,
+                addressCountry: BUSINESS_ADDRESS_COUNTRY,
+              },
+              geo: {
+                "@type": "GeoCoordinates",
+                latitude: 24.8607,
+                longitude: 67.0011,
+              },
+              openingHoursSpecification: [
+                {
+                  "@type": "OpeningHoursSpecification",
+                  dayOfWeek: [
+                    "Monday",
+                    "Tuesday",
+                    "Wednesday",
+                    "Thursday",
+                    "Friday",
+                  ],
+                  opens: "09:00",
+                  closes: "18:00",
+                },
+              ],
+              areaServed: [
+                { "@type": "Country", name: "Pakistan" },
+                { "@type": "Place", name: "Worldwide" },
+              ],
+              founder: {
+                "@type": "Person",
+                name: "Muhammad Ashir Raza",
+                url: FOUNDER_LINKEDIN,
               },
               sameAs: [
                 "https://instagram.com/valtriox",
@@ -247,6 +369,34 @@ export default async function RootLayout({
                 "https://twitter.com/valtriox",
                 "https://linkedin.com/company/valtriox",
               ],
+              hasOfferCatalog: {
+                "@type": "OfferCatalog",
+                name: "Valtriox Subscription Plans",
+                itemListElement: [
+                  {
+                    "@type": "Offer",
+                    itemOffered: {
+                      "@type": "Service",
+                      name: "Free 30-minute Strategy Session",
+                      description:
+                        "Book a free 30-minute strategy session with the Valtriox founder to discuss how to streamline your brand's operations, orders, inventory, and marketing.",
+                    },
+                    price: "0",
+                    priceCurrency: "PKR",
+                  },
+                  {
+                    "@type": "Offer",
+                    itemOffered: {
+                      "@type": "Service",
+                      name: "Valtriox Starter Plan",
+                      description:
+                        "Brand Dashboard (Basic), 3 marketing channels, standard analytics.",
+                    },
+                    price: "7999",
+                    priceCurrency: "PKR",
+                  },
+                ],
+              },
             }),
           }}
         />
@@ -259,7 +409,7 @@ export default async function RootLayout({
               name: "Muhammad Ashir Raza",
               url: FOUNDER_LINKEDIN,
               jobTitle: "Founder & Lead Developer at Valtriox",
-              email: "ashir@valtriox.com",
+              email: BUSINESS_EMAIL,
               nationality: "Pakistani",
               worksFor: {
                 "@type": "Organization",

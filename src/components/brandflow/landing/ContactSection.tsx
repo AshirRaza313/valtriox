@@ -245,8 +245,8 @@ export function ContactSection({ onLegalClick }: ContactSectionProps) {
             {/* Contact Cards */}
             {[
               { icon: Mail, label: "Email Us", value: identity.companyEmail || process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "ashir@valtriox.com", href: `mailto:${identity.companyEmail || process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "ashir@valtriox.com"}` },
-              { icon: Phone, label: "Call Us", value: identity.companyPhone || "+92 300 1234567", href: `tel:${identity.companyPhone || "+923001234567"}` },
-              { icon: MapPin, label: "Visit Us", value: identity.companyAddress || "Lahore, Pakistan", href: "#" },
+              { icon: Phone, label: "Call Us", value: identity.companyPhone || "+92-318 3916019", href: `tel:${identity.companyPhone || "+923183916019"}` },
+              { icon: MapPin, label: "Visit Us", value: identity.companyAddress || "Karachi, Pakistan", href: "https://www.google.com/maps/search/?api=1&query=Karachi%2C+Pakistan" },
               { icon: Clock, label: "Support Hours", value: "Mon-Fri: 9AM-6PM PKT", href: "#" },
             ].map((item, i) => (
               <a
@@ -509,7 +509,7 @@ export function ContactSection({ onLegalClick }: ContactSectionProps) {
                           name="phone"
                           type="tel"
                           autoComplete="tel"
-                          placeholder="+92 300 1234567"
+                          placeholder="+92-318 3916019"
                           value={form.phone}
                           onChange={(e) => handleChange("phone", e.target.value)}
                           className="pl-10 border-white/10 bg-white/[0.03] text-white placeholder:text-slate-600 rounded-xl h-11 focus:border-amber-500/50 focus:ring-amber-500/20"

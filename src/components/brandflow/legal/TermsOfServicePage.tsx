@@ -366,11 +366,11 @@ export function TermsOfServicePage({ onBack }: LegalPageProps) {
               be resolved within 30 days through negotiation, either party may submit the dispute
               to binding arbitration administered under the rules of the Pakistani Arbitration
               Act 1940. The arbitration shall be conducted in English, and the seat of arbitration
-              shall be Lahore, Pakistan.
+              shall be Karachi, Pakistan.
             </p>
             <p className="text-slate-600 leading-relaxed mt-3">
               Notwithstanding the above, either party may seek injunctive or equitable relief in
-              any court of competent jurisdiction in Lahore, Pakistan to prevent the actual or
+              any court of competent jurisdiction in Karachi, Pakistan to prevent the actual or
               threatened infringement, misappropriation, or violation of intellectual property
               rights or confidentiality obligations.
             </p>
