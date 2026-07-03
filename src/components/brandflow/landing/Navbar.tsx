@@ -95,14 +95,26 @@ export function Navbar({ onAuthClick }: NavbarProps) {
 
           {/* Desktop Nav - centered between logo and right-side buttons */}
           <div className="hidden lg:flex flex-1 items-center justify-center gap-8">
+            {/*
+              SEO: Nav links render as real <a href> tags so crawlers can
+              discover internal routes. For section anchors (#features etc.)
+              we intercept the click with preventDefault and smooth-scroll;
+              for real routes (/about, /contact) we let the browser navigate.
+            */}
             {navLinks.map((link) => (
-              <button
+              <a
                 key={link.label}
-                onClick={() => scrollTo(link.href)}
+                href={link.href}
+                onClick={(e) => {
+                  if (link.href.startsWith("#")) {
+                    e.preventDefault();
+                    scrollTo(link.href);
+                  }
+                }}
                 className="text-sm font-medium text-slate-400 hover:text-amber-400 transition-colors"
               >
                 {link.label}
-              </button>
+              </a>
             ))}
           </div>
 
@@ -136,12 +148,13 @@ export function Navbar({ onAuthClick }: NavbarProps) {
             >
               Login
             </Button>
-            <Button
-              onClick={() => { window.location.href = '/contact'; }}
-              className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white rounded-xl shadow-[0_0_16px_rgba(211,166,56,0.25)]"
+            {/* SEO: <a href="/contact"> for crawler discovery */}
+            <a
+              href="/contact"
+              className="inline-flex items-center justify-center bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white rounded-xl shadow-[0_0_16px_rgba(211,166,56,0.25)] h-9 px-4 text-sm font-medium transition-colors"
             >
               Get Started
-            </Button>
+            </a>
           </div>
 
           {/* Mobile Hamburger - always inside viewport */}
@@ -166,13 +179,20 @@ export function Navbar({ onAuthClick }: NavbarProps) {
           >
             <div className="px-4 py-4 space-y-1">
               {navLinks.map((link) => (
-                <button
+                <a
                   key={link.label}
-                  onClick={() => scrollTo(link.href)}
+                  href={link.href}
+                  onClick={(e) => {
+                    if (link.href.startsWith("#")) {
+                      e.preventDefault();
+                      scrollTo(link.href);
+                      setMobileOpen(false);
+                    }
+                  }}
                   className="block w-full text-left px-4 py-3 text-sm font-medium text-slate-300 hover:text-amber-400 active:text-amber-300 hover:bg-amber-500/10 active:bg-amber-500/20 rounded-xl transition-colors min-h-[44px]"
                 >
                   {link.label}
-                </button>
+                </a>
               ))}
 
               {/* Mobile social links */}

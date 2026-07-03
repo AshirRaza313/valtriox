@@ -56,27 +56,26 @@ export function Hero({ onAuthClick }: HeroProps) {
               {companyName} is the all-in-one operations portal for modern businesses. Manage orders, track inventory, empower your team, and grow - all in one place.
             </p>
 
-            {/* CTA Buttons */}
+            {/* CTA Buttons — SEO: rendered as <a href> for crawler discovery */}
             <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row gap-3 sm:gap-4">
-              <Button
-                size="lg"
-                onClick={() => { window.location.href = '/contact'; }}
-                className="bg-amber-600 hover:bg-amber-700 text-white text-base px-8 h-12 rounded-xl shadow-lg shadow-amber-600/25"
+              <a
+                href="/contact"
+                className="inline-flex items-center justify-center bg-amber-600 hover:bg-amber-700 text-white text-base px-8 h-12 rounded-xl shadow-lg shadow-amber-600/25 transition-colors"
               >
                 Get Started
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                onClick={() => {
+              </a>
+              <a
+                href="#features"
+                onClick={(e) => {
+                  e.preventDefault();
                   const el = document.getElementById("features");
                   if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
                 }}
-                className="border-slate-600 text-slate-300 hover:bg-slate-800 hover:text-white text-base px-8 h-12 rounded-xl"
+                className="inline-flex items-center justify-center border border-slate-600 text-slate-300 hover:bg-slate-800 hover:text-white text-base px-8 h-12 rounded-xl transition-colors"
               >
                 <Play className="w-4 h-4 mr-2" />
                 Watch Demo
-              </Button>
+              </a>
             </div>
 
             {/* Trust Badges */}

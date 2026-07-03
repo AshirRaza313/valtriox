@@ -35,14 +35,14 @@ export function CTASection({ onAuthClick }: CTASectionProps) {
               Join 500+ businesses already using {companyName} to streamline their operations and accelerate growth.
             </p>
             <div className="mt-10">
-              <Button
-                size="lg"
-                onClick={() => { window.location.href = '/contact'; }}
-                className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-semibold text-lg px-10 h-14 rounded-xl shadow-[0_0_30px_rgba(211,166,56,0.3)] hover:shadow-[0_0_40px_rgba(211,166,56,0.4)] transition-all duration-300"
+              {/* SEO: rendered as <a href="/contact"> for crawler discovery */}
+              <a
+                href="/contact"
+                className="inline-flex items-center justify-center bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-semibold text-lg px-10 h-14 rounded-xl shadow-[0_0_30px_rgba(211,166,56,0.3)] hover:shadow-[0_0_40px_rgba(211,166,56,0.4)] transition-all duration-300"
               >
                 Get Started Today
                 <ArrowRight className="w-5 h-5 ml-2" />
-              </Button>
+              </a>
             </div>
             <p className="mt-4 text-sm text-slate-400">
               14-day free trial included with all plans · Setup fees apply

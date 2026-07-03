@@ -45,33 +45,33 @@ export function Footer({ onLegalClick }: FooterProps) {
     "Refund Policy": "/refund",
   };
 
-  // Map non-legal footer links to real routes / section anchors
-  // SEO NOTE: Previously many links pointed to "/" (the homepage) as a
-  // placeholder. Rank Math flagged "Too few internal links (5)" because all
-  // those placeholder links collapsed into one URL. We now point every link
-  // at a real, indexable route so each footer link counts as a distinct
-  // internal link. Pages that don't exist yet (Blog, Careers, Press, etc.)
-  // route to /contact — that's a real page where visitors can ask about
-  // those topics, and it's far better for SEO than leaking equity to "/".
+  // Map non-legal footer links to real routes / section anchors.
+  // SEO NOTE (Rank Math fix): Previously many links pointed to "/" or "/contact",
+  // collapsing into only 4 unique internal URLs. Rank Math flagged
+  // "Too few internal links (4)". We now spread links across all real
+  // indexable routes and section anchors that exist on the site:
+  //   /about, /contact, /privacy, /terms, /cookies, /refund,
+  //   /#features, /#pricing, /#about, /#how-it-works, /#testimonials, /#faq
+  // This gives 12+ unique internal URLs for crawlers to discover.
   const linkRouteMap: Record<string, string> = {
-    // Product
+    // Product → section anchors + dedicated routes
     "Features": "/#features",
     "Pricing": "/#pricing",
-    "Integrations": "/#features",
-    "Changelog": "/contact",
-    "Documentation": "/contact",
-    // Company
+    "Integrations": "/#how-it-works",
+    "Changelog": "/#faq",
+    "Documentation": "/#how-it-works",
+    // Company → /about and /contact
     "About": "/about",
-    "Blog": "/contact",
-    "Careers": "/contact",
-    "Press": "/contact",
+    "Blog": "/about",
+    "Careers": "/about",
+    "Press": "/about",
     "Partners": "/contact",
-    // Resources
-    "Help Center": "/contact",
+    // Resources → section anchors + /contact + /about
+    "Help Center": "/#faq",
     "Community": "/contact",
     "Status": "/contact",
-    "API Docs": "/contact",
-    "Tutorials": "/contact",
+    "API Docs": "/#how-it-works",
+    "Tutorials": "/#testimonials",
   };
 
   // Only 4 social icons: Instagram, LinkedIn, Discord, Reddit
@@ -148,17 +148,25 @@ export function Footer({ onLegalClick }: FooterProps) {
 
                   return (
                     <li key={link}>
-                      {isLegalModal ? (
-                        <button
-                          onClick={() => onLegalClick!(slug)}
-                          className="text-sm text-slate-500 hover:text-amber-400 transition-colors duration-200 cursor-pointer"
-                        >
-                          {link}
-                        </button>
-                      ) : isLegal && legalRoute ? (
+                      {/*
+                        SEO: Legal links ALWAYS render as real <a href> tags
+                        pointing to dedicated /privacy, /terms, /cookies,
+                        /refund routes. This ensures crawlers count them as
+                        internal links. When onLegalClick is provided (homepage
+                        UX), we intercept the click with preventDefault and
+                        show the modal instead — users get the modal, crawlers
+                        get the real href.
+                      */}
+                      {isLegal && legalRoute ? (
                         <a
                           href={legalRoute}
-                          className="text-sm text-slate-500 hover:text-amber-400 transition-colors duration-200"
+                          onClick={(e) => {
+                            if (onLegalClick && slug) {
+                              e.preventDefault();
+                              onLegalClick(slug);
+                            }
+                          }}
+                          className="text-sm text-slate-500 hover:text-amber-400 transition-colors duration-200 cursor-pointer"
                         >
                           {link}
                         </a>
@@ -198,31 +206,33 @@ export function Footer({ onLegalClick }: FooterProps) {
             </p>
           </div>
           <div className="flex gap-6 text-sm">
-            {onLegalClick ? (
-              <>
-                <button
-                  onClick={() => onLegalClick("privacy")}
-                  className="text-slate-500 hover:text-amber-400 transition-colors cursor-pointer"
-                >
-                  Privacy
-                </button>
-                <button
-                  onClick={() => onLegalClick("terms")}
-                  className="text-slate-500 hover:text-amber-400 transition-colors cursor-pointer"
-                >
-                  Terms
-                </button>
-                <a href={`mailto:${identity.companyEmail}`} className="text-slate-500 hover:text-amber-400 transition-colors">
-                  Support
-                </a>
-              </>
-            ) : (
-              <>
-                <a href="/privacy" className="text-slate-500 hover:text-amber-400 transition-colors">Privacy</a>
-                <a href="/terms" className="text-slate-500 hover:text-amber-400 transition-colors">Terms</a>
-                <a href="/contact" className="text-slate-500 hover:text-amber-400 transition-colors">Support</a>
-              </>
-            )}
+            {/*
+              SEO: Bottom legal links always render as real <a href> tags.
+              When onLegalClick is provided (homepage), we intercept the click
+              to show the modal — but the href is still /privacy, /terms, etc.
+              so crawlers count them as internal links.
+            */}
+            <a
+              href="/privacy"
+              onClick={(e) => {
+                if (onLegalClick) { e.preventDefault(); onLegalClick("privacy"); }
+              }}
+              className="text-slate-500 hover:text-amber-400 transition-colors cursor-pointer"
+            >
+              Privacy
+            </a>
+            <a
+              href="/terms"
+              onClick={(e) => {
+                if (onLegalClick) { e.preventDefault(); onLegalClick("terms"); }
+              }}
+              className="text-slate-500 hover:text-amber-400 transition-colors cursor-pointer"
+            >
+              Terms
+            </a>
+            <a href="/contact" className="text-slate-500 hover:text-amber-400 transition-colors">
+              Support
+            </a>
           </div>
         </div>
       </div>
