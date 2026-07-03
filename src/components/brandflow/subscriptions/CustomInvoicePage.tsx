@@ -750,8 +750,8 @@ export function CustomInvoicePage() {
               </div>
 
               <div className="space-y-2">
-                {/* Header row */}
-                <div className="grid grid-cols-[1fr_80px_120px_120px_40px] gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-500 px-2">
+                {/* Header row — hidden on mobile (each row has its own labels) */}
+                <div className="hidden md:grid grid-cols-[1fr_70px_100px_110px_36px] gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-500 px-2">
                   <div>Description</div>
                   <div className="text-right">Qty</div>
                   <div className="text-right">Rate</div>
@@ -762,39 +762,48 @@ export function CustomInvoicePage() {
                 {lineItems.map((li, idx) => (
                   <div
                     key={idx}
-                    className="grid grid-cols-[1fr_80px_120px_120px_40px] gap-2 items-center p-2 rounded-md bg-amber-500/5 border border-amber-500/10"
+                    className="grid grid-cols-2 md:grid-cols-[1fr_70px_100px_110px_36px] gap-2 items-center p-2 rounded-md bg-amber-500/5 border border-amber-500/10"
                   >
                     <Input
                       value={li.description}
                       onChange={(e) => updateLineItem(idx, "description", e.target.value)}
                       placeholder="Item description"
-                      className="h-8 text-sm"
+                      className="h-8 text-sm col-span-2 md:col-span-1"
                     />
-                    <Input
-                      type="number"
-                      min="1"
-                      step="1"
-                      value={li.qty}
-                      onChange={(e) => updateLineItem(idx, "qty", e.target.value)}
-                      className="h-8 text-sm text-right"
-                    />
-                    <Input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={li.rate}
-                      onChange={(e) => updateLineItem(idx, "rate", e.target.value)}
-                      className="h-8 text-sm text-right"
-                    />
-                    <div className="text-right text-sm font-semibold text-amber-500">
-                      {fmtCurrency(li.qty * li.rate)}
+                    <div className="flex flex-col">
+                      <Label className="text-[9px] uppercase text-slate-500 mb-0.5 md:hidden">Qty</Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={li.qty}
+                        onChange={(e) => updateLineItem(idx, "qty", e.target.value)}
+                        className="h-8 text-sm text-right"
+                      />
+                    </div>
+                    <div className="flex flex-col">
+                      <Label className="text-[9px] uppercase text-slate-500 mb-0.5 md:hidden">Rate</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={li.rate}
+                        onChange={(e) => updateLineItem(idx, "rate", e.target.value)}
+                        className="h-8 text-sm text-right"
+                      />
+                    </div>
+                    <div className="flex flex-col">
+                      <Label className="text-[9px] uppercase text-slate-500 mb-0.5 md:hidden">Amount</Label>
+                      <div className="h-8 flex items-center justify-end text-sm font-semibold text-amber-500 px-2">
+                        {fmtCurrency(li.qty * li.rate)}
+                      </div>
                     </div>
                     <Button
                       size="sm"
                       variant="ghost"
                       onClick={() => removeLineItem(idx)}
                       disabled={lineItems.length === 1}
-                      className="h-8 w-8 p-0 text-red-500 hover:text-red-400"
+                      className="h-8 w-8 p-0 text-red-500 hover:text-red-400 col-span-2 md:col-span-1 justify-self-end"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>

@@ -116,6 +116,8 @@ model Organization {
   integrations          IntegrationConnection[]
   feedbacks             Feedback[]
   platformDocuments     PlatformDocument[]
+  // ── Phase 3: Client Communication Center ──
+  clientMessages        ClientMessage[]
   // ── Atomic Counters (race-safe via increment) ──
   orderCounter          Int                     @default(0) // Monotonic counter for VTX-XXXX order numbers
   // ── Billing Security ──
@@ -447,6 +449,65 @@ model ReportExport {
 
   @@index([organizationId])
   @@index([type])
+  @@index([createdAt])
+}
+
+// ── Phase 3: Client Communication Center ──────────────────────────────────
+// Premium threaded messaging system between Valtriox admin (Muhammad Ashir
+// Raza) and his clients. Supports categories: monthly deadlines, subscription
+// plan features sharing, document sharing, improvements feedback, invoices,
+// reports, and general professional communication.
+model ClientMessage {
+  id              String   @id @default(cuid())
+  organizationId  String   // client org this conversation belongs to
+
+  // ── Threading ──
+  threadId        String   // shared by all messages in a conversation
+                           // (auto-generated from first message, format: "thread_<cuid>")
+  parentMessageId String?  // direct reply target (for nested replies)
+
+  // ── Direction & Sender ──
+  direction       String   // "admin_to_client" | "client_to_admin"
+  senderUserId    String?  // UserId of sender (admin or client user)
+  senderName      String   // display name (e.g. "Muhammad Ashir Raza")
+  senderEmail     String   // display email
+  senderRole      String   // platform_owner | platform_admin | brand_owner | etc.
+  senderAvatar    String?  // optional avatar URL/base64
+
+  // ── Content ──
+  category        String   // deadline | subscription_features | document |
+                           // improvements | invoice | report | general | onboarding | billing
+  subject         String   // short subject line
+  body            String   // markdown / plain text body
+  attachments     Json?    // [{ name, url, size, type }] — file metadata
+  priority        String   @default("normal") // low | normal | high | urgent
+
+  // ── Status ──
+  isReadByAdmin   Boolean  @default(false)
+  isReadByClient  Boolean  @default(false)
+  readAt          DateTime?
+  isPinned        Boolean  @default(false)  // admin can pin important threads
+  isArchived      Boolean  @default(false)
+
+  // ── Scheduling & Expiry ──
+  scheduledFor    DateTime?  // for scheduled deadline reminders (null = sent immediately)
+  deadlineDate    DateTime?  // for "deadline" category — actual deadline date
+  sentAt          DateTime   @default(now())
+
+  // ── Related Entities (optional cross-links) ──
+  relatedInvoiceId String?
+  relatedReportId  String?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, direction])
+  @@index([organizationId, category])
+  @@index([threadId])
+  @@index([scheduledFor])
+  @@index([isArchived])
   @@index([createdAt])
 }
 

@@ -85,6 +85,8 @@ export type Feature =
   | "invoice-management"
   | "custom-invoices"
   | "reports-center"
+  | "communication-center"
+  | "client-inbox"
   | "platform-settings"
   | "integration-management"
   | "valtriox-team"
@@ -207,6 +209,8 @@ export const SECTION_GROUP_MAP: Record<SidebarSection, SidebarGroup> = {
   "invoice-management": "system",
   "custom-invoices": "system",
   "reports-center": "system",
+  "communication-center": "system",
+  "client-inbox": "system",
   "platform-settings": "system",
   "integration-management": "system",
   "valtriox-team": "system",
@@ -360,6 +364,8 @@ export const SIDEBAR_STRUCTURE: Record<SidebarGroup, { label: string; emoji: str
       { id: "invoice-management", label: "Invoice Management" },
       { id: "custom-invoices", label: "Custom Invoices", subTabs: ["All", "Drafts", "Sent", "Verified"] },
       { id: "reports-center", label: "Reports Center" },
+      { id: "communication-center", label: "Communication Center" },
+      { id: "client-inbox", label: "Client Messages" },
       { id: "subscription-management", label: "Subscription Management" },
       { id: "audit-log", label: "Audit Log" },
       { id: "leads-management", label: "Leads Management" },
