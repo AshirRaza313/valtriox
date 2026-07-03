@@ -278,10 +278,16 @@ export function toDirectUrl(url: string): string | null {
     return null;
   }
 
-  // Last-resort fallback: try the db. host (may fail with ENOTFOUND in some
-  // regions, but it's the only option if we can't determine the pooler host).
-  const directUrl = `postgresql://postgres:${encodeURIComponent(password)}@db.${projectRef}.supabase.co:5432/${database}`;
-  return directUrl;
+  // Previously we constructed `db.{ref}.supabase.co:5432` here as a last-resort
+  // fallback, but Supabase has DEPRECATED direct external connections from
+  // Vercel/lambda — the DNS no longer resolves (ENOTFOUND). Returning null is
+  // safer: callers will fall back to using DATABASE_URL as-is (the pooler),
+  // which is guaranteed to work.
+  logger.warn('[DB] toDirectUrl: could not determine pooler host for Supabase URL — returning null to force pooler fallback', {
+    host,
+    projectRef,
+  });
+  return null;
 }
 
 /**
@@ -293,20 +299,30 @@ export function getDdlConnectionConfigs(): PoolConfig[] {
   const configs: PoolConfig[] = [];
 
   // Config 1: DIRECT_URL env var (user-provided, most reliable)
+  // BUT skip it if it points to the deprecated db.*.supabase.co direct host
+  // (Supabase has deprecated direct external connections — DNS no longer
+  // resolves in many regions, causing ENOTFOUND errors from Vercel).
   if (process.env.DIRECT_URL) {
     const parsed = parsePgUrl(process.env.DIRECT_URL);
     if (parsed) {
-      configs.push({
-        host: parsed.host,
-        port: parseInt(parsed.port) || 5432,
-        database: parsed.database,
-        user: parsed.username,
-        password: parsed.password,
-        ssl: { rejectUnauthorized: false },
-        max: 1,
-        connectionTimeoutMillis: 5000,
-        statement_timeout: 8000,
-      });
+      const isDeprecatedDirect = parsed.host.startsWith('db.') && parsed.host.endsWith('.supabase.co');
+      if (!isDeprecatedDirect) {
+        configs.push({
+          host: parsed.host,
+          port: parseInt(parsed.port) || 5432,
+          database: parsed.database,
+          user: parsed.username,
+          password: parsed.password,
+          ssl: { rejectUnauthorized: false },
+          max: 1,
+          connectionTimeoutMillis: 5000,
+          statement_timeout: 8000,
+        });
+      } else {
+        logger.warn('[DB] getDdlConnectionConfigs: skipping DIRECT_URL — deprecated db.*.supabase.co host', {
+          host: parsed.host,
+        });
+      }
     }
   }
 
@@ -2130,9 +2146,21 @@ export function getDirectPool(): Pool {
   // Build the best possible direct connection URL
   let bestUrl: string | null = null;
 
-  // 1. DIRECT_URL env var
+  // 1. DIRECT_URL env var — BUT only if it doesn't point to the deprecated
+  //    db.{ref}.supabase.co direct host. Supabase has deprecated direct
+  //    external connections from Vercel/lambda — the DNS no longer resolves
+  //    in many regions (returns ENOTFOUND). If DIRECT_URL points there, skip
+  //    it and fall through to the auto-converted session-mode pooler URL.
   if (process.env.DIRECT_URL) {
-    bestUrl = process.env.DIRECT_URL;
+    const directParsed = parsePgUrl(process.env.DIRECT_URL);
+    if (directParsed && directParsed.host.startsWith('db.') && directParsed.host.endsWith('.supabase.co')) {
+      // Deprecated direct host — skip and use session-mode pooler instead
+      logger.warn('[DB] getDirectPool: DIRECT_URL points to deprecated db.*.supabase.co host — skipping in favor of session-mode pooler', {
+        host: directParsed.host,
+      });
+    } else {
+      bestUrl = process.env.DIRECT_URL;
+    }
   }
 
   // 2. Auto-convert DATABASE_URL to direct (now: session-mode pooler)
@@ -2143,6 +2171,23 @@ export function getDirectPool(): Pool {
   // 3. Fallback: use DATABASE_URL as-is (remove pgbouncer param)
   if (!bestUrl) {
     bestUrl = url.replace(/[?&]pgbouncer=true/gi, '').replace(/[?&]$/, '');
+  }
+
+  // 4. Final safety net: if the resolved bestUrl STILL points to db.*.supabase.co
+  //    (e.g. toDirectUrl fallback path), swap to the pooler URL from DATABASE_URL.
+  //    This guarantees we never try to connect to a host that returns ENOTFOUND.
+  if (bestUrl) {
+    const finalParsed = parsePgUrl(bestUrl);
+    if (finalParsed && finalParsed.host.startsWith('db.') && finalParsed.host.endsWith('.supabase.co')) {
+      const dbUrlParsed = parsePgUrl(url);
+      if (dbUrlParsed && dbUrlParsed.host.includes('.pooler.supabase.com')) {
+        // Use session-mode pooler: same hostname, port 5432
+        bestUrl = `postgresql://${encodeURIComponent(dbUrlParsed.username)}:${encodeURIComponent(dbUrlParsed.password)}@${dbUrlParsed.host}:5432/${dbUrlParsed.database}`;
+        logger.warn('[DB] getDirectPool: bestUrl was deprecated db.* host — replaced with session-mode pooler', {
+          poolerHost: dbUrlParsed.host,
+        });
+      }
+    }
   }
 
   // Reuse pool if the URL hasn't changed
@@ -2227,9 +2272,43 @@ export async function resilientDirectQuery(
             prismaSql = prismaSql.replace('?', `$${idx}`);
             idx++;
           }
+          // For non-SELECT statements (DDL, INSERT, UPDATE, DELETE, DO $$),
+          // use $executeRawUnsafe which returns affected-row count instead of
+          // trying to deserialize rows (which fails for INSERT ... RETURNING
+          // and DO blocks in PgBouncer transaction mode).
+          const trimmed = prismaSql.trim().toUpperCase();
+          const isMutation =
+            trimmed.startsWith('INSERT') ||
+            trimmed.startsWith('UPDATE') ||
+            trimmed.startsWith('DELETE') ||
+            trimmed.startsWith('ALTER') ||
+            trimmed.startsWith('CREATE') ||
+            trimmed.startsWith('DROP') ||
+            trimmed.startsWith('DO') ||
+            trimmed.startsWith('BEGIN') ||
+            trimmed.startsWith('COMMIT');
+          if (isMutation) {
+            await db.$executeRawUnsafe(prismaSql, ...params);
+            return { ok: true, rows: [] };
+          }
           const rows = await db.$queryRawUnsafe(prismaSql, ...params);
           return { ok: true, rows: rows as any[] };
         } else {
+          const trimmed = sqlText.trim().toUpperCase();
+          const isMutation =
+            trimmed.startsWith('INSERT') ||
+            trimmed.startsWith('UPDATE') ||
+            trimmed.startsWith('DELETE') ||
+            trimmed.startsWith('ALTER') ||
+            trimmed.startsWith('CREATE') ||
+            trimmed.startsWith('DROP') ||
+            trimmed.startsWith('DO') ||
+            trimmed.startsWith('BEGIN') ||
+            trimmed.startsWith('COMMIT');
+          if (isMutation) {
+            await db.$executeRawUnsafe(sqlText);
+            return { ok: true, rows: [] };
+          }
           const rows = await db.$queryRawUnsafe(sqlText);
           return { ok: true, rows: rows as any[] };
         }

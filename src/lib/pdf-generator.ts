@@ -1618,20 +1618,13 @@ export async function generateReportPDF(report: ReportData): Promise<Buffer> {
       // Top gold bar
       doc.rect(0, 0, W, 3).fill(accentColor);
 
-      // CONFIDENTIAL watermark (diagonal, very faint)
+      // CONFIDENTIAL watermark (single, very subtle — diagonal across center)
+      // Kept faint so it doesn't visually compete with the logo or title.
       doc.save();
-      doc.font(FONT.bold).fontSize(72).fillColor(C.goldUltraFaint);
+      doc.font(FONT.bold).fontSize(54).fillColor(C.goldUltraFaint);
       doc.translate(W / 2, H / 2);
       doc.rotate(-Math.PI / 7);
-      doc.text("CONFIDENTIAL", -200, -36, { width: 400, align: "center" });
-      doc.restore();
-
-      // Secondary watermark layer (offset)
-      doc.save();
-      doc.font(FONT.bold).fontSize(48).fillColor(C.goldUltraFaint);
-      doc.translate(W / 2 + 40, H / 2 + 60);
-      doc.rotate(-Math.PI / 7);
-      doc.text("CONFIDENTIAL", -160, -24, { width: 320, align: "center" });
+      doc.text("CONFIDENTIAL", -180, -27, { width: 360, align: "center" });
       doc.restore();
 
       // ── Cover content (centered vertically) ──
@@ -1694,10 +1687,12 @@ export async function generateReportPDF(report: ReportData): Promise<Buffer> {
           }
         }
       }
-      // Priority 3: bundled vertical inverted-color logo (premium default)
+      // Priority 3: bundled vertical logo (premium default)
+      // Uses the ACTUAL vertical logo (508x733, taller than wide) per founder's
+      // branding spec. Rendered on a gold background card for the light PDF theme.
       if (!logoDrawn) {
-        logoCenterY = await renderVerticalLogo(doc, W / 2, logoCenterY, 140);
-        logoCenterY += 24;
+        logoCenterY = await renderVerticalLogo(doc, W / 2, logoCenterY, 120, "light");
+        logoCenterY += 28;
       }
 
       // Organization name — use heightOfString for proper advance (no overlap)
@@ -2136,15 +2131,9 @@ export async function generateReportPDF(report: ReportData): Promise<Buffer> {
           }
         }
 
-        // ── CONFIDENTIAL WATERMARK on content pages - drawn ON TOP of all content ──
-        doc.save();
-        doc.opacity(0.05);
-        doc.font(FONT.bold).fontSize(72).fillColor(C.goldMid);
-        doc.translate(W / 2, H / 2);
-        doc.rotate(-Math.PI / 7);
-        doc.text("CONFIDENTIAL", -200, -36, { width: 400, align: "center" });
-        doc.opacity(1);
-        doc.restore();
+        // NOTE: Content-page CONFIDENTIAL watermark removed — it was drawn
+        // ON TOP of all content at 72pt and was being perceived as "content
+        // overlap" by users. The cover page retains a single subtle watermark.
       }
 
     } catch (renderErr: unknown) {
@@ -2185,14 +2174,20 @@ function renderCoverDefaultLogo(doc: PDFKit.PDFDocument, centerX: number, y: num
 // Vertical Logo Helper - Renders the bundled vertical Valtriox logo
 // ============================================================================
 //
-// The logo file (valtriox-logo-vertical-inverted.png, 1209x999 RGBA) is bundled
-// in /public so it's available on Vercel serverless. We load it once and cache
+// The logo file (valtriox-logo-vertical.png, 508x733 RGBA) is bundled in
+// /public so it's available on Vercel serverless. We load it once and cache
 // the buffer for the lifetime of the function instance.
 //
-// The "inverted colour" variant has its own dark background, which works on
-// the light PDF theme. For dark-background PDFs we would use the transparent
-// variant (valtriox-icon-inverted-nobg.png) instead — but our PDFs use a
-// light cream/white theme, so the background variant is correct here.
+// This is the actual VERTICAL logo (taller than wide, 508x733 — aspect ratio
+// 1.443:1). The previous "valtriox-logo-vertical-inverted.png" was actually
+// HORIZONTAL (1209x999) and is no longer used here.
+//
+// BRANDING RULES (per founder's spec):
+//   - Light PDF theme (current cream/white): render logo on top of a colored
+//     background card (goldBg2 + goldBorder2) so the transparent logo has a
+//     visible frame. This is the "logo with background" variant.
+//   - Dark PDF theme: render logo with NO background card (transparent bg).
+//     To enable dark mode, pass `theme: 'dark'` to renderVerticalLogo.
 //
 // Returns the height consumed (for layout advancement).
 
@@ -2202,7 +2197,8 @@ async function getVerticalLogoBuffer(): Promise<Buffer | null> {
   try {
     const fs = await import("fs");
     const path = await import("path");
-    const logoPath = path.join(process.cwd(), "public", "valtriox-logo-vertical-inverted.png");
+    // Use the ACTUAL vertical logo (508x733, transparent background)
+    const logoPath = path.join(process.cwd(), "public", "valtriox-logo-vertical.png");
     if (fs.existsSync(logoPath)) {
       _verticalLogoBuffer = fs.readFileSync(logoPath);
     } else {
@@ -2220,13 +2216,16 @@ async function getVerticalLogoBuffer(): Promise<Buffer | null> {
  * @param centerX X coordinate of the logo center
  * @param y Top Y coordinate where the logo starts
  * @param targetWidth Desired width in points (height auto-scales to preserve aspect ratio)
+ * @param theme 'light' (default) renders a colored background card behind the
+ *              transparent logo; 'dark' renders the logo with no background.
  * @returns The Y position just below the logo (for layout advancement)
  */
 async function renderVerticalLogo(
   doc: PDFKit.PDFDocument,
   centerX: number,
   y: number,
-  targetWidth: number
+  targetWidth: number,
+  theme: "light" | "dark" = "light"
 ): Promise<number> {
   const buffer = await getVerticalLogoBuffer();
   if (!buffer) {
@@ -2235,17 +2234,29 @@ async function renderVerticalLogo(
     return y + 68;
   }
   try {
-    // Source logo is 1209 x 999 (aspect ratio ~1.21:1, slightly wider than tall)
+    // Source logo is 508 x 733 (aspect ratio ~1.443:1, taller than wide — VERTICAL)
     // Compute height to preserve aspect ratio
-    const aspectRatio = 999 / 1209; // height / width
+    const aspectRatio = 733 / 508; // height / width
     const targetHeight = targetWidth * aspectRatio;
     const x = centerX - targetWidth / 2;
     doc.save();
-    // Light rounded card behind the logo for a premium framed look
-    const pad = 12;
-    doc.roundedRect(x - pad, y - pad, targetWidth + pad * 2, targetHeight + pad * 2, 14).fill(C.goldBg2);
-    doc.roundedRect(x - pad, y - pad, targetWidth + pad * 2, targetHeight + pad * 2, 14).lineWidth(0.6).strokeColor(C.goldBorder2).stroke();
-    // Draw the logo image (it has its own background, so no fill needed)
+    if (theme === "light") {
+      // Light theme: render a colored background card behind the transparent logo
+      // (the "logo with background" variant per founder's branding spec)
+      const pad = 14;
+      const cardW = targetWidth + pad * 2;
+      const cardH = targetHeight + pad * 2;
+      // Outer card with subtle gold background
+      doc.roundedRect(x - pad, y - pad, cardW, cardH, 16).fill(C.goldBg2);
+      doc.roundedRect(x - pad, y - pad, cardW, cardH, 16).lineWidth(0.8).strokeColor(C.goldBorder2).stroke();
+      // Inner subtle gradient overlay for depth
+      const innerGrad = doc.linearGradient(x - pad, y - pad, x - pad, y + targetHeight + pad);
+      innerGrad.stop(0, C.goldBg3, 0.4);
+      innerGrad.stop(1, C.goldBg2, 0);
+      doc.roundedRect(x - pad, y - pad, cardW, cardH, 16).fill(innerGrad);
+    }
+    // For dark theme, no background card — logo renders directly on dark bg
+    // Draw the logo image
     doc.image(buffer, x, y, { width: targetWidth, height: targetHeight });
     doc.restore();
     return y + targetHeight;

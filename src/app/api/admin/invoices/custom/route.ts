@@ -35,8 +35,12 @@ async function ensureInvoicePhase2Columns(): Promise<void> {
   ];
   let allOk = true;
   for (const [col, type] of cols) {
+    // Use plain ALTER TABLE ... ADD COLUMN IF NOT EXISTS (no DO $$ wrapper).
+    // The IF NOT EXISTS clause is already idempotent in PostgreSQL 9.6+,
+    // so the exception handler is unnecessary. Plain ALTER TABLE is also
+    // more compatible with PgBouncer transaction-mode pooling.
     const result = await resilientDirectQuery(
-      `DO $$ BEGIN ALTER TABLE "Invoice" ADD COLUMN IF NOT EXISTS "${col}" ${type}; EXCEPTION WHEN OTHERS THEN NULL; END $$;`
+      `ALTER TABLE "Invoice" ADD COLUMN IF NOT EXISTS "${col}" ${type};`
     );
     if (!result.ok) allOk = false;
   }
@@ -201,9 +205,28 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
     let createErr: any = null;
 
     // Attempt 1: Prisma create
-    const prismaResult = await safeDbQuery(() => db.invoice.create({ data: createData }));
+    let prismaResult = await safeDbQuery(() => db.invoice.create({ data: createData }));
     invoice = prismaResult.data;
     createErr = prismaResult.error;
+
+    // Attempt 1b: If Prisma failed due to a missing column, force a fresh
+    // schema ensure (reset the cached flag first) and retry the create once.
+    // This handles the race condition where the very first request after a
+    // deploy hits the schema-ensure step while the direct pool is still
+    // warming up — the ALTERs fail silently, then the create fails too.
+    if (!invoice && createErr) {
+      const errMsg = String(createErr).toLowerCase();
+      if (errMsg.includes('does not exist') || errMsg.includes('column') || errMsg.includes('schema')) {
+        logger.warn("[Custom Invoice Create] Prisma failed with schema error — forcing fresh schema ensure + retry", {
+          error: String(createErr).substring(0, 150),
+        });
+        invoiceSchemaEnsured = false; // force re-ensure
+        await ensureInvoicePhase2Columns();
+        prismaResult = await safeDbQuery(() => db.invoice.create({ data: createData }));
+        invoice = prismaResult.data;
+        createErr = prismaResult.error;
+      }
+    }
 
     // Attempt 2: Direct SQL INSERT fallback (if Prisma fails for any reason)
     if (!invoice && createErr) {
