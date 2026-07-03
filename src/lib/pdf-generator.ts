@@ -259,15 +259,23 @@ async function renderDefaultLogo(doc: PDFKit.PDFDocument, x: number, y: number):
   try {
     const fs = await import("fs");
     const path = await import("path");
-    const logoPath = path.join(process.cwd(), "public", "valtriox-logo.png");
-    if (fs.existsSync(logoPath)) {
-      const logoBuffer = fs.readFileSync(logoPath);
-      doc.save();
-      doc.roundedRect(x, y, 44, 44, 8).fill(C.goldBg2);
-      doc.roundedRect(x, y, 44, 44, 8).lineWidth(0.5).strokeColor(C.goldBorder2).stroke();
-      doc.image(logoBuffer, x + 4, y + 4, { width: 36, height: 36 });
-      doc.restore();
-      return x + 56;
+    // Try the inverted-color no-bg icon first (best quality on light cream PDF theme)
+    const logoPaths = [
+      "valtriox-icon-inverted-nobg.png",
+      "valtriox-icon-inverted.png",
+      "valtriox-logo.png",
+    ];
+    for (const fname of logoPaths) {
+      const logoPath = path.join(process.cwd(), "public", fname);
+      if (fs.existsSync(logoPath)) {
+        const logoBuffer = fs.readFileSync(logoPath);
+        doc.save();
+        doc.roundedRect(x, y, 44, 44, 8).fill(C.goldBg2);
+        doc.roundedRect(x, y, 44, 44, 8).lineWidth(0.5).strokeColor(C.goldBorder2).stroke();
+        doc.image(logoBuffer, x + 4, y + 4, { width: 36, height: 36 });
+        doc.restore();
+        return x + 56;
+      }
     }
   } catch {}
   // Fallback: VTX text logo
@@ -1190,6 +1198,11 @@ export async function generateCustomInvoicePDF(invoice: InvoiceData): Promise<Bu
       doc.restore();
 
       // ── LOGO + BRAND NAME (white text on navy) ──
+      // Since the header is dark navy (#0F1B2D), we use the transparent-background
+      // inverted logo variant (valtriox-icon-inverted-nobg.png) directly on the
+      // navy — no white tile needed. If a custom platform logo is configured,
+      // we draw it on a white tile as before (custom logos may not be designed
+      // for dark backgrounds).
       let y = 36;
       let headerRightStartX = P + 60;
 
@@ -1203,18 +1216,49 @@ export async function generateCustomInvoicePDF(invoice: InvoiceData): Promise<Bu
             doc.image(logoBuffer, P + 4, y + 4, { width: 40, height: 40 });
             doc.restore();
           } catch {
-            // White V-tile fallback
-            doc.save();
-            doc.roundedRect(P, y, 48, 48, 8).fill(C.gold);
-            doc.fillColor("#ffffff").font(FONT.bold).fontSize(22).text("V", P, y + 12, { width: 48, align: "center" });
-            doc.restore();
+            // Transparent inverted icon on navy (no white tile)
+            try {
+              const fs = await import("fs");
+              const path = await import("path");
+              const nobgPath = path.join(process.cwd(), "public", "valtriox-icon-inverted-nobg.png");
+              if (fs.existsSync(nobgPath)) {
+                const nobgBuf = fs.readFileSync(nobgPath);
+                doc.save();
+                doc.image(nobgBuf, P + 4, y + 4, { width: 40, height: 40 });
+                doc.restore();
+              } else {
+                throw new Error("no-bg logo not found");
+              }
+            } catch {
+              // Gold V-tile fallback
+              doc.save();
+              doc.roundedRect(P, y, 48, 48, 8).fill(C.gold);
+              doc.fillColor("#ffffff").font(FONT.bold).fontSize(22).text("V", P, y + 12, { width: 48, align: "center" });
+              doc.restore();
+            }
           }
         }
       } else {
-        doc.save();
-        doc.roundedRect(P, y, 48, 48, 8).fill(C.gold);
-        doc.fillColor("#ffffff").font(FONT.bold).fontSize(22).text("V", P, y + 12, { width: 48, align: "center" });
-        doc.restore();
+        // No custom logo → use the transparent inverted icon on the navy header
+        try {
+          const fs = await import("fs");
+          const path = await import("path");
+          const nobgPath = path.join(process.cwd(), "public", "valtriox-icon-inverted-nobg.png");
+          if (fs.existsSync(nobgPath)) {
+            const nobgBuf = fs.readFileSync(nobgPath);
+            doc.save();
+            doc.image(nobgBuf, P + 4, y + 4, { width: 40, height: 40 });
+            doc.restore();
+          } else {
+            throw new Error("no-bg logo not found");
+          }
+        } catch {
+          // Gold V-tile fallback
+          doc.save();
+          doc.roundedRect(P, y, 48, 48, 8).fill(C.gold);
+          doc.fillColor("#ffffff").font(FONT.bold).fontSize(22).text("V", P, y + 12, { width: 48, align: "center" });
+          doc.restore();
+        }
       }
 
       // Brand name (white)
@@ -1593,7 +1637,7 @@ export async function generateReportPDF(report: ReportData): Promise<Buffer> {
       // ── Cover content (centered vertically) ──
 
       // Decorative top line
-      const topDecoY = 180;
+      const topDecoY = 130;
       doc.save();
       const decoGrad = doc.linearGradient(W / 2 - 100, 0, W / 2 + 100, 0);
       decoGrad.stop(0, C.bg);
@@ -1609,87 +1653,89 @@ export async function generateReportPDF(report: ReportData): Promise<Buffer> {
       doc.rect(-4, -4, 8, 8).fill(accentColor);
       doc.restore();
 
-      // Logo (centered)
-      let logoCenterY = topDecoY + 30;
-      const logoTargetSize = 60;
+      // ── LOGO (vertical, large, prominent) ──
+      // Use the new vertical inverted-color logo (with background, since PDF is light theme)
+      // at 140px wide. If a custom brand logo is provided via report.brandLogo, prefer that.
+      // Falls back to renderCoverDefaultLogo (VTX box) if no logo available.
+      let logoCenterY = topDecoY + 24;
 
+      const drawCustomLogoBox = (logoBuffer: Buffer, size: number) => {
+        doc.save();
+        doc.roundedRect(W / 2 - size / 2 - 4, logoCenterY - 4, size + 8, size + 8, 10).fill(C.goldBg2);
+        doc.roundedRect(W / 2 - size / 2 - 4, logoCenterY - 4, size + 8, size + 8, 10).lineWidth(0.5).strokeColor(C.goldBorder2).stroke();
+        doc.image(logoBuffer, W / 2 - size / 2, logoCenterY, { width: size, height: size });
+        doc.restore();
+      };
+
+      let logoDrawn = false;
+      // Priority 1: custom brand logo (base64) from report data
       if (hasBrandLogo && safeBrandLogo) {
         const brandParsed = parseBase64DataUri(safeBrandLogo);
         if (brandParsed) {
           try {
-            const logoBuffer = Buffer.from(brandParsed.base64, "base64");
-            doc.save();
-            doc.roundedRect(W / 2 - logoTargetSize / 2 - 4, logoCenterY - 4, logoTargetSize + 8, logoTargetSize + 8, 10).fill(C.goldBg2);
-            doc.roundedRect(W / 2 - logoTargetSize / 2 - 4, logoCenterY - 4, logoTargetSize + 8, logoTargetSize + 8, 10).lineWidth(0.5).strokeColor(C.goldBorder2).stroke();
-            doc.image(logoBuffer, W / 2 - logoTargetSize / 2, logoCenterY, { width: logoTargetSize, height: logoTargetSize });
-            doc.restore();
+            drawCustomLogoBox(Buffer.from(brandParsed.base64, "base64"), 72);
+            logoCenterY += 72 + 20;
+            logoDrawn = true;
           } catch {
-            renderCoverDefaultLogo(doc, W / 2, logoCenterY, logoTargetSize, accentColor);
+            // fall through to platform logo
           }
-        } else {
-          renderCoverDefaultLogo(doc, W / 2, logoCenterY, logoTargetSize, accentColor);
         }
-      } else if (hasLogo && safePlatformLogo) {
+      }
+      // Priority 2: custom platform logo (base64)
+      if (!logoDrawn && hasLogo && safePlatformLogo) {
         const logoParsed = parseBase64DataUri(safePlatformLogo);
         if (logoParsed) {
           try {
-            const logoBuffer = Buffer.from(logoParsed.base64, "base64");
-            doc.save();
-            doc.roundedRect(W / 2 - logoTargetSize / 2 - 4, logoCenterY - 4, logoTargetSize + 8, logoTargetSize + 8, 10).fill(C.goldBg2);
-            doc.roundedRect(W / 2 - logoTargetSize / 2 - 4, logoCenterY - 4, logoTargetSize + 8, logoTargetSize + 8, 10).lineWidth(0.5).strokeColor(C.goldBorder2).stroke();
-            doc.image(logoBuffer, W / 2 - logoTargetSize / 2, logoCenterY, { width: logoTargetSize, height: logoTargetSize });
-            doc.restore();
+            drawCustomLogoBox(Buffer.from(logoParsed.base64, "base64"), 72);
+            logoCenterY += 72 + 20;
+            logoDrawn = true;
           } catch {
-            renderCoverDefaultLogo(doc, W / 2, logoCenterY, logoTargetSize, accentColor);
+            // fall through to vertical logo
           }
-        } else {
-          renderCoverDefaultLogo(doc, W / 2, logoCenterY, logoTargetSize, accentColor);
         }
-      } else {
-        renderCoverDefaultLogo(doc, W / 2, logoCenterY, logoTargetSize, accentColor);
+      }
+      // Priority 3: bundled vertical inverted-color logo (premium default)
+      if (!logoDrawn) {
+        logoCenterY = await renderVerticalLogo(doc, W / 2, logoCenterY, 140);
+        logoCenterY += 24;
       }
 
-      logoCenterY += logoTargetSize + 20;
-
-      // Organization name
-      doc.save();
+      // Organization name — use heightOfString for proper advance (no overlap)
       doc.font(FONT.regular).fontSize(14).fillColor(C.textMuted);
+      const orgNameHeight = doc.heightOfString(safeOrgName, { width: CW, align: "center" });
       doc.text(safeOrgName, P, logoCenterY, { width: CW, align: "center" });
-      doc.restore();
-      logoCenterY += 30;
+      logoCenterY += orgNameHeight + 16;
 
-      // Report title (large, bold, gold)
-      doc.save();
-      doc.font(FONT.bold).fontSize(30).fillColor(C.gold);
+      // Report title (large, bold, gold) — use heightOfString to handle wrap
+      doc.font(FONT.bold).fontSize(28).fillColor(C.gold);
+      const titleHeight = doc.heightOfString(safeTitle, { width: CW, align: "center" });
       doc.text(safeTitle, P, logoCenterY, { width: CW, align: "center" });
-      doc.restore();
-      logoCenterY += 42;
+      logoCenterY += titleHeight + 14;
 
-      // Subtitle
+      // Subtitle — use heightOfString
       if (safeSubtitle) {
-        doc.save();
         doc.font(FONT.italic).fontSize(12).fillColor(C.goldDim);
+        const subHeight = doc.heightOfString(safeSubtitle, { width: CW, align: "center" });
         doc.text(safeSubtitle, P, logoCenterY, { width: CW, align: "center" });
-        doc.restore();
-        logoCenterY += 22;
+        logoCenterY += subHeight + 18;
       }
 
       // Period badge
-      doc.save();
       const periodW = 220;
       const periodH = 30;
+      doc.save();
       doc.roundedRect(W / 2 - periodW / 2, logoCenterY, periodW, periodH, 6).fill(C.goldBg2);
       doc.roundedRect(W / 2 - periodW / 2, logoCenterY, periodW, periodH, 6).lineWidth(0.5).strokeColor(C.goldBorder2).stroke();
       doc.font(FONT.regular).fontSize(10).fillColor(C.goldDim);
       doc.text(safePeriod, W / 2 - periodW / 2 + 8, logoCenterY + 9, { width: periodW - 16, align: "center" });
       doc.restore();
-      logoCenterY += periodH + 16;
+      logoCenterY += periodH + 14;
 
       // Plan badge (if exists)
       if (safePlan) {
-        doc.save();
         const planW = 140;
         const planH = 22;
+        doc.save();
         doc.roundedRect(W / 2 - planW / 2, logoCenterY, planW, planH, 4).fill(C.goldBg);
         doc.roundedRect(W / 2 - planW / 2, logoCenterY, planW, planH, 4).lineWidth(0.3).strokeColor(C.goldBorder).stroke();
         doc.font(FONT.bold).fontSize(8).fillColor(C.textMuted);
@@ -2133,6 +2179,80 @@ function renderCoverDefaultLogo(doc: PDFKit.PDFDocument, centerX: number, y: num
   doc.fontSize(size * 0.35).fillColor("#ffffff");
   doc.font(FONT.bold).text("VTX", centerX - size / 2, y + size * 0.3, { width: size, align: "center" });
   doc.restore();
+}
+
+// ============================================================================
+// Vertical Logo Helper - Renders the bundled vertical Valtriox logo
+// ============================================================================
+//
+// The logo file (valtriox-logo-vertical-inverted.png, 1209x999 RGBA) is bundled
+// in /public so it's available on Vercel serverless. We load it once and cache
+// the buffer for the lifetime of the function instance.
+//
+// The "inverted colour" variant has its own dark background, which works on
+// the light PDF theme. For dark-background PDFs we would use the transparent
+// variant (valtriox-icon-inverted-nobg.png) instead — but our PDFs use a
+// light cream/white theme, so the background variant is correct here.
+//
+// Returns the height consumed (for layout advancement).
+
+let _verticalLogoBuffer: Buffer | null | undefined;
+async function getVerticalLogoBuffer(): Promise<Buffer | null> {
+  if (_verticalLogoBuffer !== undefined) return _verticalLogoBuffer;
+  try {
+    const fs = await import("fs");
+    const path = await import("path");
+    const logoPath = path.join(process.cwd(), "public", "valtriox-logo-vertical-inverted.png");
+    if (fs.existsSync(logoPath)) {
+      _verticalLogoBuffer = fs.readFileSync(logoPath);
+    } else {
+      _verticalLogoBuffer = null;
+    }
+  } catch {
+    _verticalLogoBuffer = null;
+  }
+  return _verticalLogoBuffer;
+}
+
+/**
+ * Render the vertical Valtriox logo on the cover page, centered horizontally.
+ * @param doc PDFKit document
+ * @param centerX X coordinate of the logo center
+ * @param y Top Y coordinate where the logo starts
+ * @param targetWidth Desired width in points (height auto-scales to preserve aspect ratio)
+ * @returns The Y position just below the logo (for layout advancement)
+ */
+async function renderVerticalLogo(
+  doc: PDFKit.PDFDocument,
+  centerX: number,
+  y: number,
+  targetWidth: number
+): Promise<number> {
+  const buffer = await getVerticalLogoBuffer();
+  if (!buffer) {
+    // Fallback to VTX box if logo file isn't available
+    renderCoverDefaultLogo(doc, centerX, y, 60, C.gold);
+    return y + 68;
+  }
+  try {
+    // Source logo is 1209 x 999 (aspect ratio ~1.21:1, slightly wider than tall)
+    // Compute height to preserve aspect ratio
+    const aspectRatio = 999 / 1209; // height / width
+    const targetHeight = targetWidth * aspectRatio;
+    const x = centerX - targetWidth / 2;
+    doc.save();
+    // Light rounded card behind the logo for a premium framed look
+    const pad = 12;
+    doc.roundedRect(x - pad, y - pad, targetWidth + pad * 2, targetHeight + pad * 2, 14).fill(C.goldBg2);
+    doc.roundedRect(x - pad, y - pad, targetWidth + pad * 2, targetHeight + pad * 2, 14).lineWidth(0.6).strokeColor(C.goldBorder2).stroke();
+    // Draw the logo image (it has its own background, so no fill needed)
+    doc.image(buffer, x, y, { width: targetWidth, height: targetHeight });
+    doc.restore();
+    return y + targetHeight;
+  } catch {
+    renderCoverDefaultLogo(doc, centerX, y, 60, C.gold);
+    return y + 68;
+  }
 }
 
 // ============================================================================

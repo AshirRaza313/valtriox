@@ -1,6 +1,6 @@
 // @ts-nocheck — Phase 8: pre-existing TS errors pending migration
 import { NextRequest, NextResponse } from "next/server";
-import { db, safeDbQuery, getDirectPool } from "@/lib/db";
+import { db, safeDbQuery, getDirectPool, resilientDirectQuery } from "@/lib/db";
 import { generateInvoiceNumber } from "@/lib/pdf-generator";
 import { getCurrencyForCountry } from "@/lib/currency";
 import { withAuth, isPlatformRole } from "@/lib/auth-middleware";
@@ -11,42 +11,40 @@ import logger from "@/lib/logger";
 // Runs idempotent ALTER TABLE ADD COLUMN IF NOT EXISTS for every Phase 2 column
 // BEFORE attempting the create. This eliminates the "create fails → auto-repair →
 // retry" round-trip that was causing invoice creation to fail silently.
+//
+// Uses resilientDirectQuery which falls back to Prisma's PgBouncer pool if the
+// direct pool DNS fails (ENOTFOUND on db.{ref}.supabase.co from Vercel).
 let invoiceSchemaEnsured = false;
 async function ensureInvoicePhase2Columns(): Promise<void> {
   if (invoiceSchemaEnsured) return;
-  try {
-    const pool = getDirectPool();
-    const cols: [string, string][] = [
-      ["lineItems", "JSONB"],
-      ["subtotal", "DECIMAL(12,2)"],
-      ["taxRate", "DECIMAL(5,2)"],
-      ["taxAmount", "DECIMAL(10,2)"],
-      ["discountAmount", "DECIMAL(10,2)"],
-      ["clientEmail", "TEXT"],
-      ["clientName", "TEXT"],
-      ["clientAddress", "TEXT"],
-      ["approvedBy", "TEXT"],
-      ["approvedAt", "TIMESTAMP(3)"],
-      ["sentAt", "TIMESTAMP(3)"],
-      ["createdBy", "TEXT"],
-      ["invoiceTitle", "TEXT"],
-      ["paymentStatus", "TEXT"],
-    ];
-    for (const [col, type] of cols) {
-      try {
-        await pool.query(
-          `DO $$ BEGIN ALTER TABLE "Invoice" ADD COLUMN IF NOT EXISTS "${col}" ${type}; EXCEPTION WHEN OTHERS THEN NULL; END $$;`
-        );
-      } catch {
-        // ignore individual column errors — best effort
-      }
-    }
+  const cols: [string, string][] = [
+    ["lineItems", "JSONB"],
+    ["subtotal", "DECIMAL(12,2)"],
+    ["taxRate", "DECIMAL(5,2)"],
+    ["taxAmount", "DECIMAL(10,2)"],
+    ["discountAmount", "DECIMAL(10,2)"],
+    ["clientEmail", "TEXT"],
+    ["clientName", "TEXT"],
+    ["clientAddress", "TEXT"],
+    ["approvedBy", "TEXT"],
+    ["approvedAt", "TIMESTAMP(3)"],
+    ["sentAt", "TIMESTAMP(3)"],
+    ["createdBy", "TEXT"],
+    ["invoiceTitle", "TEXT"],
+    ["paymentStatus", "TEXT"],
+  ];
+  let allOk = true;
+  for (const [col, type] of cols) {
+    const result = await resilientDirectQuery(
+      `DO $$ BEGIN ALTER TABLE "Invoice" ADD COLUMN IF NOT EXISTS "${col}" ${type}; EXCEPTION WHEN OTHERS THEN NULL; END $$;`
+    );
+    if (!result.ok) allOk = false;
+  }
+  if (allOk) {
     invoiceSchemaEnsured = true;
     logger.info("[Custom Invoice] Phase 2 columns ensured");
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    logger.warn("[Custom Invoice] Schema ensure failed (non-fatal)", { error: msg.substring(0, 120) });
-    // Don't set invoiceSchemaEnsured — allow retry on next request
+  } else {
+    logger.warn("[Custom Invoice] Some Phase 2 columns could not be ensured (will retry next request)");
   }
 }
 
@@ -212,67 +210,65 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
       logger.warn("[Custom Invoice Create] Prisma path failed, trying direct SQL fallback", {
         error: String(createErr).substring(0, 200),
       });
-      try {
-        const pool = getDirectPool();
-        const invId = `inv_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
-        const lineItemsJson = JSON.stringify(lineItems);
-        await pool.query(
-          `INSERT INTO "Invoice" (
-            "id", "invoiceNumber", "organizationId", "planName", "amount",
-            "billingCycle", "status", "type", "currencyCode", "currencySymbol",
-            "issuedAt", "dueDate", "notes", "orgName", "orgEmail", "orgAddress",
-            "lineItems", "subtotal", "taxRate", "taxAmount", "discountAmount",
-            "clientName", "clientEmail", "clientAddress", "createdBy",
-            "invoiceTitle", "paymentStatus", "sentAt", "createdAt", "updatedAt"
-          ) VALUES (
-            $1, $2, $3, $4, $5,
-            $6, $7, $8, $9, $10,
-            $11, $12, $13, $14, $15, $16,
-            $17::jsonb, $18, $19, $20, $21,
-            $22, $23, $24, $25,
-            $26, $27, $28, NOW(), NOW()
-          )`,
-          [
-            invId,
-            invoiceNumber,
-            resolvedOrgId,
-            invoiceTitle || "Custom Services",
-            total,
-            "one_time",
-            sendImmediately ? "sent" : "draft",
-            "custom",
-            resolvedCurrencyCode,
-            resolvedCurrencySymbol,
-            issuedAt,
-            resolvedDueDate,
-            notes || null,
-            clientName,
-            clientEmail || null,
-            clientAddress || null,
-            lineItemsJson,
-            subtotal,
-            tRate || null,
-            taxAmount || null,
-            discount || null,
-            clientName,
-            clientEmail || null,
-            clientAddress || null,
-            authCtx.userId,
-            invoiceTitle || null,
-            "unpaid",
-            sendImmediately ? issuedAt : null,
-          ]
-        );
+      const invId = `inv_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
+      const lineItemsJson = JSON.stringify(lineItems);
+      const insertResult = await resilientDirectQuery(
+        `INSERT INTO "Invoice" (
+          "id", "invoiceNumber", "organizationId", "planName", "amount",
+          "billingCycle", "status", "type", "currencyCode", "currencySymbol",
+          "issuedAt", "dueDate", "notes", "orgName", "orgEmail", "orgAddress",
+          "lineItems", "subtotal", "taxRate", "taxAmount", "discountAmount",
+          "clientName", "clientEmail", "clientAddress", "createdBy",
+          "invoiceTitle", "paymentStatus", "sentAt", "createdAt", "updatedAt"
+        ) VALUES (
+          $1, $2, $3, $4, $5,
+          $6, $7, $8, $9, $10,
+          $11, $12, $13, $14, $15, $16,
+          $17::jsonb, $18, $19, $20, $21,
+          $22, $23, $24, $25,
+          $26, $27, $28, NOW(), NOW()
+        )`,
+        [
+          invId,
+          invoiceNumber,
+          resolvedOrgId,
+          invoiceTitle || "Custom Services",
+          total,
+          "one_time",
+          sendImmediately ? "sent" : "draft",
+          "custom",
+          resolvedCurrencyCode,
+          resolvedCurrencySymbol,
+          issuedAt,
+          resolvedDueDate,
+          notes || null,
+          clientName,
+          clientEmail || null,
+          clientAddress || null,
+          lineItemsJson,
+          subtotal,
+          tRate || null,
+          taxAmount || null,
+          discount || null,
+          clientName,
+          clientEmail || null,
+          clientAddress || null,
+          authCtx.userId,
+          invoiceTitle || null,
+          "unpaid",
+          sendImmediately ? issuedAt : null,
+        ]
+      );
+      if (insertResult.ok) {
         // Fetch the created invoice to return consistent shape
         const fetchResult = await safeDbQuery(() =>
           db.invoice.findUnique({ where: { id: invId } })
         );
         invoice = fetchResult.data;
         logger.info("[Custom Invoice Create] Direct SQL fallback succeeded", { invoiceId: invId });
-      } catch (sqlErr: unknown) {
-        const sqlMsg = sqlErr instanceof Error ? sqlErr.message : String(sqlErr);
+      } else {
+        const sqlMsg = insertResult.error || "unknown SQL error";
         logger.error("[Custom Invoice Create] Direct SQL fallback also failed", { error: sqlMsg.substring(0, 200) });
-        // Surface a clear, actionable error to the user
         const errMsg = process.env.NODE_ENV === "production"
           ? `Failed to create invoice. Prisma: ${String(createErr).substring(0, 80)} | SQL: ${sqlMsg.substring(0, 80)}`
           : `Failed to create invoice. Prisma: ${String(createErr).substring(0, 150)} | SQL: ${sqlMsg.substring(0, 150)}`;

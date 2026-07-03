@@ -225,7 +225,7 @@ export function toDirectUrl(url: string): string | null {
     return null;
   }
 
-  const { username, password, host, database } = parts;
+  const { username, password, host, port, database } = parts;
 
   // Already a direct connection
   if (host.startsWith('db.') && host.includes('.supabase.co')) {
@@ -237,21 +237,37 @@ export function toDirectUrl(url: string): string | null {
     return `postgresql://${encodeURIComponent(username)}:${encodeURIComponent(password)}@${host}:5432/${database}`;
   }
 
-  // ── Extract project ref ──
-  let projectRef = '';
+  // ── Supabase pooler URL → session-mode pooler URL ──
+  // Supabase has DEPRECATED direct connections via db.{ref}.supabase.co:5432
+  // from external IPs (Vercel, etc.). The DNS no longer resolves in many
+  // regions, causing ENOTFOUND errors.
+  //
+  // The correct approach for "direct-like" queries (DDL, ALTER TABLE, etc.)
+  // from external runtimes is to use the POOLER in SESSION MODE:
+  //   - Transaction mode (port 6543): no prepared statements, no DDL
+  //   - Session mode (port 5432): full SQL support including DDL
+  //
+  // Both modes share the same hostname (aws-X-{region}.pooler.supabase.com).
+  // We just change the port from 6543 → 5432 and drop pgbouncer=true.
+  //
+  // This keeps the same hostname that DATABASE_URL already uses successfully,
+  // so DNS resolution is guaranteed to work.
+  if (host.includes('.pooler.supabase.com')) {
+    // Session-mode pooler: same hostname, port 5432, no pgbouncer param.
+    // Username stays as postgres.{ref} (pooler requires this format).
+    return `postgresql://${encodeURIComponent(username)}:${encodeURIComponent(password)}@${host}:5432/${database}`;
+  }
 
-  // Method 1: From username - postgres.[ref] or postgres.[ref].[extra]
+  // Fallback for unknown Supabase URL shapes: extract project ref and try
+  // session-mode pooler. This is best-effort.
+  let projectRef = '';
   if (username.startsWith('postgres.')) {
     projectRef = username.replace(/^postgres\./, '');
   }
-
-  // Method 2: From hostname - [ref].pooler.supabase.com
   if (!projectRef) {
     const m = host.match(/^([a-z0-9]{8,})\.pooler\.supabase\.com$/i);
     if (m) projectRef = m[1];
   }
-
-  // Method 3: From hostname - [ref].supabase.co (without db. prefix)
   if (!projectRef) {
     const m = host.match(/^([a-z0-9]{8,})\.supabase\.co$/i);
     if (m) projectRef = m[1];
@@ -262,8 +278,9 @@ export function toDirectUrl(url: string): string | null {
     return null;
   }
 
+  // Last-resort fallback: try the db. host (may fail with ENOTFOUND in some
+  // regions, but it's the only option if we can't determine the pooler host).
   const directUrl = `postgresql://postgres:${encodeURIComponent(password)}@db.${projectRef}.supabase.co:5432/${database}`;
-  // FIX 4.9: Logging removed — avoid exposing DB host info
   return directUrl;
 }
 
@@ -2118,7 +2135,7 @@ export function getDirectPool(): Pool {
     bestUrl = process.env.DIRECT_URL;
   }
 
-  // 2. Auto-convert DATABASE_URL to direct
+  // 2. Auto-convert DATABASE_URL to direct (now: session-mode pooler)
   if (!bestUrl) {
     bestUrl = toDirectUrl(url);
   }
@@ -2162,6 +2179,71 @@ export function getDirectPool(): Pool {
 
   logger.info('[DB] getDirectPool: using direct connection');
   return pool;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  Resilient direct query — falls back to PgBouncer pool on ENOTFOUND/DNS err
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Run a SQL query on the direct pool, but if the direct pool fails with a
+ * DNS / connection error (ENOTFOUND, ECONNREFUSED, ECONNRESET), retry the
+ * same query through Prisma's normal pool (PgBouncer transaction mode).
+ *
+ * Use this for one-off DDL/INSERT/UPDATE statements that need the direct
+ * pool's session-mode capabilities but might be deployed to an environment
+ * where the direct host isn't reachable.
+ */
+export async function resilientDirectQuery(
+  sqlText: string,
+  params: any[] = []
+): Promise<{ ok: boolean; error?: string; rows?: any[] }> {
+  // Try direct pool first
+  try {
+    const pool = getDirectPool();
+    const result = await pool.query(sqlText, params);
+    return { ok: true, rows: result.rows };
+  } catch (directErr: unknown) {
+    const msg = directErr instanceof Error ? directErr.message : String(directErr);
+    // If it's a DNS/connection error, fall back to Prisma's PgBouncer pool
+    if (
+      msg.includes('ENOTFOUND') ||
+      msg.includes('ECONNREFUSED') ||
+      msg.includes('ECONNRESET') ||
+      msg.includes('getaddrinfo') ||
+      msg.includes('Can\'t reach database server')
+    ) {
+      logger.warn('[DB] resilientDirectQuery: direct pool failed, falling back to Prisma', {
+        error: msg.substring(0, 100),
+      });
+      try {
+        // For parameterized queries, use $queryRawUnsafe with placeholders
+        if (params.length > 0) {
+          // Prisma's $queryRawUnsafe supports ? or $1 placeholders depending on driver
+          // For pg, use $1, $2, ... — convert ? to $N
+          let prismaSql = sqlText;
+          let idx = 1;
+          while (prismaSql.includes('?')) {
+            prismaSql = prismaSql.replace('?', `$${idx}`);
+            idx++;
+          }
+          const rows = await db.$queryRawUnsafe(prismaSql, ...params);
+          return { ok: true, rows: rows as any[] };
+        } else {
+          const rows = await db.$queryRawUnsafe(sqlText);
+          return { ok: true, rows: rows as any[] };
+        }
+      } catch (prismaErr: unknown) {
+        const pmsg = prismaErr instanceof Error ? prismaErr.message : String(prismaErr);
+        logger.error('[DB] resilientDirectQuery: Prisma fallback also failed', {
+          error: pmsg.substring(0, 150),
+        });
+        return { ok: false, error: `direct: ${msg.substring(0, 80)} | prisma: ${pmsg.substring(0, 80)}` };
+      }
+    }
+    // For non-DNS errors, return the direct error
+    return { ok: false, error: msg };
+  }
 }
 
 /**
