@@ -1,7 +1,6 @@
 // @ts-nocheck — Phase 8: pre-existing TS errors pending migration
 import { NextRequest, NextResponse } from "next/server";
 import { db, safeDbQuery } from "@/lib/db";
-import { generateInvoiceNumber } from "@/lib/pdf-generator";
 import { getCurrencyForCountry } from "@/lib/currency";
 import { withAuth, isPlatformRole } from "@/lib/auth-middleware";
 import { withRateLimit } from "@/lib/rate-limit";
@@ -151,11 +150,33 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
     const taxAmount = Math.round(taxableBase * (tRate / 100) * 100) / 100;
     const total = Math.round((taxableBase + taxAmount) * 100) / 100;
 
-    // ── Generate invoice number ──
-    const { data: invoiceCount } = await safeDbQuery(() =>
-      db.invoice.count({ where: organizationId ? { organizationId } : {} })
-    );
-    const invoiceNumber = generateInvoiceNumber(invoiceCount || 0);
+    // ── Generate invoice number (collision-proof) ──
+    // The old approach used count() + 1, which is racy and breaks if any
+    // invoice was ever deleted (count goes down, but sequence doesn't).
+    // Instead, query the MAX existing sequence number for the current year
+    // and increment by 1. Also retry on unique-violation (P2002 / 23505)
+    // with a fresh sequence number.
+    const generateUniqueInvoiceNumber = async (): Promise<string> => {
+      const year = new Date().getFullYear();
+      // Query MAX sequence for this year via Prisma raw query
+      // Pattern: VTX-2026-0007 → extract 0007 → 7
+      const rows = await db.$queryRawUnsafe(
+        `SELECT "invoiceNumber" FROM "Invoice"
+         WHERE "invoiceNumber" LIKE $1
+         ORDER BY "invoiceNumber" DESC
+         LIMIT 1;`,
+        `VTX-${year}-%`
+      ) as any[];
+      let nextSeq = 1;
+      if (rows && rows.length > 0 && rows[0].invoiceNumber) {
+        const parts = String(rows[0].invoiceNumber).split("-");
+        const seqNum = parseInt(parts[parts.length - 1], 10);
+        if (!isNaN(seqNum)) nextSeq = seqNum + 1;
+      }
+      const seq = String(nextSeq).padStart(4, "0");
+      return `VTX-${year}-${seq}`;
+    };
+    let invoiceNumber = await generateUniqueInvoiceNumber();
     const issuedAt = new Date();
     const resolvedDueDate = dueDate ? new Date(dueDate) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
@@ -176,7 +197,9 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
       }
     }
 
-    // ── Persist (Prisma path) ──
+    // ── Persist (with retry on invoiceNumber collision) ──
+    // We try up to 3 times with a fresh invoiceNumber each attempt, in case
+    // of a unique-violation (P2002 / 23505) race condition.
     const createData: any = {
       invoiceNumber,
       organizationId: resolvedOrgId,
@@ -209,42 +232,62 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
 
     let invoice: any = null;
     let createErr: any = null;
+    let lastSqlErr: any = null;
 
-    // Attempt 1: Prisma create
-    let prismaResult = await safeDbQuery(() => db.invoice.create({ data: createData }));
-    invoice = prismaResult.data;
-    createErr = prismaResult.error;
-
-    // Attempt 1b: If Prisma failed due to a missing column, force a fresh
-    // schema ensure (reset the cached flag first) and retry the create once.
-    // This handles the race condition where the very first request after a
-    // deploy hits the schema-ensure step while the direct pool is still
-    // warming up — the ALTERs fail silently, then the create fails too.
-    if (!invoice && createErr) {
-      const errMsg = String(createErr).toLowerCase();
-      if (errMsg.includes('does not exist') || errMsg.includes('column') || errMsg.includes('schema')) {
-        logger.warn("[Custom Invoice Create] Prisma failed with schema error — forcing fresh schema ensure + retry", {
-          error: String(createErr).substring(0, 150),
-        });
-        invoiceSchemaEnsured = false; // force re-ensure
-        await ensureInvoicePhase2Columns();
-        prismaResult = await safeDbQuery(() => db.invoice.create({ data: createData }));
-        invoice = prismaResult.data;
-        createErr = prismaResult.error;
+    const MAX_ATTEMPTS = 3;
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS && !invoice; attempt++) {
+      if (attempt > 1) {
+        // Generate a fresh invoice number for retry
+        invoiceNumber = await generateUniqueInvoiceNumber();
+        createData.invoiceNumber = invoiceNumber;
       }
-    }
 
-    // Attempt 2: Direct SQL INSERT fallback via Prisma's $executeRawUnsafe
-    // (NOT the direct pg pool — Supabase has deprecated direct external
-    // connections from Vercel, causing ENOTFOUND errors. Prisma's normal
-    // PgBouncer connection handles INSERTs reliably.)
-    if (!invoice && createErr) {
-      logger.warn("[Custom Invoice Create] Prisma create failed, trying $executeRawUnsafe INSERT fallback", {
-        error: String(createErr).substring(0, 200),
-      });
-      const invId = `inv_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
-      const lineItemsJson = JSON.stringify(lineItems);
+      // ── Attempt A: Prisma create ──
+      const prismaResult = await safeDbQuery(() => db.invoice.create({ data: createData }));
+      invoice = prismaResult.data;
+      createErr = prismaResult.error;
+
+      if (createErr) {
+        // Log the FULL Prisma error object (code, meta, message) for debugging
+        const errObj = createErr as any;
+        logger.warn("[Custom Invoice Create] Prisma create failed", {
+          attempt,
+          invoiceNumber,
+          prismaCode: errObj?.code || "N/A",
+          prismaMessage: errObj?.message ? String(errObj.message).substring(0, 200) : String(createErr).substring(0, 200),
+          prismaMeta: errObj?.meta ? JSON.stringify(errObj.meta).substring(0, 300) : "N/A",
+        });
+
+        // If it's a unique constraint violation on invoiceNumber, retry with a new number
+        const errStr = String(createErr).toLowerCase();
+        const isUniqueViolation =
+          errObj?.code === "P2002" ||
+          errStr.includes("unique constraint") ||
+          errStr.includes("already exists");
+        if (isUniqueViolation && attempt < MAX_ATTEMPTS) {
+          logger.info("[Custom Invoice Create] Retrying with new invoice number due to unique violation", { attempt });
+          continue; // skip the SQL fallback, retry Prisma create with new number
+        }
+
+        // If it's a schema error (missing column), force re-ensure + retry once
+        if (errStr.includes("does not exist") || errStr.includes("column")) {
+          logger.warn("[Custom Invoice Create] Schema error — forcing fresh schema ensure", { attempt });
+          invoiceSchemaEnsured = false;
+          await ensureInvoicePhase2Columns();
+          const retryResult = await safeDbQuery(() => db.invoice.create({ data: createData }));
+          invoice = retryResult.data;
+          createErr = retryResult.error;
+          if (invoice) break;
+        }
+      }
+
+      if (invoice) break;
+
+      // ── Attempt B: $executeRawUnsafe INSERT fallback ──
+      // Use Prisma's PgBouncer connection (NOT the deprecated direct pool).
       try {
+        const invId = `inv_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
+        const lineItemsJson = JSON.stringify(lineItems);
         await db.$executeRawUnsafe(
           `INSERT INTO "Invoice" (
             "id", "invoiceNumber", "organizationId", "planName", "amount",
@@ -295,22 +338,54 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
           db.invoice.findUnique({ where: { id: invId } })
         );
         invoice = fetchResult.data;
-        logger.info("[Custom Invoice Create] $executeRawUnsafe INSERT fallback succeeded", { invoiceId: invId });
+        logger.info("[Custom Invoice Create] $executeRawUnsafe INSERT succeeded", { invoiceId: invId, attempt });
+        break;
       } catch (sqlErr: unknown) {
+        lastSqlErr = sqlErr;
+        const sqlErrObj = sqlErr as any;
         const sqlMsg = sqlErr instanceof Error ? sqlErr.message : String(sqlErr);
-        logger.error("[Custom Invoice Create] $executeRawUnsafe INSERT also failed", { error: sqlMsg.substring(0, 200) });
-        const errMsg = process.env.NODE_ENV === "production"
-          ? `Failed to create invoice. Prisma: ${String(createErr).substring(0, 80)} | SQL: ${sqlMsg.substring(0, 80)}`
-          : `Failed to create invoice. Prisma: ${String(createErr).substring(0, 150)} | SQL: ${sqlMsg.substring(0, 150)}`;
-        return NextResponse.json({ error: errMsg }, { status: 503 });
+        logger.error("[Custom Invoice Create] $executeRawUnsafe INSERT failed", {
+          attempt,
+          invoiceNumber,
+          sqlMessage: sqlMsg.substring(0, 300),
+          sqlCode: sqlErrObj?.code || "N/A",
+          sqlMeta: sqlErrObj?.meta ? JSON.stringify(sqlErrObj.meta).substring(0, 300) : "N/A",
+        });
+
+        // If it's a unique violation on invoiceNumber, retry with a new number
+        const errStr = sqlMsg.toLowerCase();
+        const isUniqueViolation =
+          errStr.includes("23505") ||
+          errStr.includes("unique constraint") ||
+          errStr.includes("already exists") ||
+          errStr.includes("duplicate key");
+        if (isUniqueViolation && attempt < MAX_ATTEMPTS) {
+          logger.info("[Custom Invoice Create] Retrying with new invoice number due to SQL unique violation", { attempt });
+          continue;
+        }
+        // For other SQL errors, break and surface the error
+        break;
       }
     }
 
     if (!invoice) {
-      // Both paths failed — surface the error
-      const errMsg = process.env.NODE_ENV === "production"
-        ? `Failed to create invoice: ${String(createErr || "unknown error").substring(0, 100)}`
-        : `Failed to create invoice: ${String(createErr || "unknown error").substring(0, 200)}`;
+      // Both paths failed — surface the FULL error for debugging
+      const errObj = createErr as any;
+      const sqlErrObj = lastSqlErr as any;
+      const prismaInfo = errObj
+        ? `Prisma[code=${errObj?.code || "?"}]: ${errObj?.message ? String(errObj.message).substring(0, 200) : String(createErr).substring(0, 200)}`
+        : "no error";
+      const sqlInfo = sqlErrObj
+        ? `SQL[code=${sqlErrObj?.code || "?"}]: ${sqlErrObj?.message ? String(sqlErrObj.message).substring(0, 200) : String(lastSqlErr).substring(0, 200)}`
+        : "no error";
+      const errMsg = `Failed to create invoice. ${prismaInfo} | ${sqlInfo}`;
+      logger.error("[Custom Invoice Create] All attempts failed", {
+        invoiceNumber,
+        prismaInfo,
+        sqlInfo,
+        prismaMeta: errObj?.meta ? JSON.stringify(errObj.meta) : "N/A",
+        sqlMeta: sqlErrObj?.meta ? JSON.stringify(sqlErrObj.meta) : "N/A",
+      });
       return NextResponse.json({ error: errMsg }, { status: 503 });
     }
 
