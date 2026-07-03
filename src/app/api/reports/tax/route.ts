@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, withRetry } from "@/lib/db";
 import { generateReportPDF, type ReportData } from "@/lib/pdf-generator";
 import { getCurrencyForCountry } from "@/lib/currency";
-import { withAuth } from "@/lib/auth-middleware";
+import { withAuth, isPlatformRole } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
 import { withRateLimit } from "@/lib/rate-limit";
 
@@ -15,7 +15,8 @@ export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
     const orgId = req.nextUrl.searchParams.get("orgId") || authCtx.organizationId!;
     const period = req.nextUrl.searchParams.get("period") || "monthly";
 
-    if (orgId !== authCtx.organizationId) {
+    const __isPlatformAdmin = isPlatformRole(authCtx.role);
+    if (!__isPlatformAdmin && orgId !== authCtx.organizationId) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 

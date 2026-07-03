@@ -290,17 +290,31 @@ export function CustomInvoicePage() {
         }),
       });
 
-      const data = await res.json();
+      // Robust error parsing — server may return JSON or plain text
+      let data: any = {};
+      try {
+        const text = await res.text();
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        data = { error: `Server returned status ${res.status}` };
+      }
       if (res.ok) {
         toast.success(sendImmediately ? "Invoice created and sent!" : "Invoice saved as draft");
         setCreateOpen(false);
         resetForm();
         await fetchInvoices();
       } else {
-        toast.error(data.error || "Failed to create invoice");
+        const errMsg = data.error || `Failed to create invoice (status ${res.status})`;
+        toast.error(errMsg, { duration: 8000 });
+        // If schema needs repair, hint the user to retry
+        if (String(errMsg).includes("schema") || String(errMsg).includes("auto-repair")) {
+          setTimeout(() => {
+            toast.info("Database schema has been auto-repaired. Please click Save again.", { duration: 8000 });
+          }, 1500);
+        }
       }
     } catch {
-      toast.error("Network error");
+      toast.error("Network error — please check your connection and retry");
     } finally {
       setCreating(false);
     }

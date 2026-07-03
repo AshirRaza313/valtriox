@@ -161,7 +161,18 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
       if (String(createErr).includes("P2002") || String(createErr).includes("Unique constraint")) {
         return NextResponse.json({ error: "Invoice number conflict. Please retry." }, { status: 409 });
       }
-      return NextResponse.json({ error: "Failed to create custom invoice" }, { status: 503 });
+      // Surface schema-mismatch as a clear hint
+      if (String(createErr).includes("does not exist") || String(createErr).toLowerCase().includes("schema")) {
+        return NextResponse.json(
+          { error: "Database schema needs updating. The auto-repair has been triggered — please retry in a few seconds." },
+          { status: 503 }
+        );
+      }
+      // In development, surface the actual error so debugging is possible
+      const errMsg = process.env.NODE_ENV === "production"
+        ? "Failed to create custom invoice (database error)"
+        : `Failed to create custom invoice: ${String(createErr).substring(0, 200)}`;
+      return NextResponse.json({ error: errMsg }, { status: 503 });
     }
 
     // ── Create notification ──
@@ -190,7 +201,11 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error);
     logger.error("[Custom Invoice Create] Unhandled error", msg);
-    return NextResponse.json({ error: "Failed to create custom invoice" }, { status: 500 });
+    // In development, surface the actual error so debugging is possible
+    const errMsg = process.env.NODE_ENV === "production"
+      ? "Failed to create custom invoice (server error)"
+      : `Failed to create custom invoice: ${msg.substring(0, 200)}`;
+    return NextResponse.json({ error: errMsg }, { status: 500 });
   }
 }, { requireRole: ["platform_owner", "platform_admin", "admin", "owner"], requireOrg: false }), { maxRequests: 30, windowSeconds: 60 });
 

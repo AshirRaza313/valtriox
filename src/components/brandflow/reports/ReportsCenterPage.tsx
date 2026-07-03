@@ -45,6 +45,7 @@ import {
   Send,
   History,
   TrendingUp,
+  Building2,
 } from "lucide-react";
 
 // ── Report type definitions ──
@@ -147,9 +148,17 @@ function fmtDate(s: string | null | undefined): string {
 
 // ── Main Component ──
 
+interface OrgOption {
+  id: string;
+  name: string;
+  email: string | null;
+  plan: string;
+}
+
 export function ReportsCenterPage() {
-  const { organization, appTheme } = useValtrioxStore();
+  const { organization, appTheme, user } = useValtrioxStore();
   const isDark = appTheme !== "light";
+  const isPlatformAdmin = user?.role === "platform_owner" || user?.role === "platform_admin";
 
   const [selectedType, setSelectedType] = useState<ReportType | null>(null);
   const [configOpen, setConfigOpen] = useState(false);
@@ -170,16 +179,49 @@ export function ReportsCenterPage() {
   const [auditLog, setAuditLog] = useState<AuditEntry[]>([]);
   const [loadingAudit, setLoadingAudit] = useState(true);
 
+  // ── Org picker state (for platform admins who want to view reports for any client org) ──
+  const [orgs, setOrgs] = useState<OrgOption[]>([]);
+  const [selectedOrgId, setSelectedOrgId] = useState<string>("");
+
+  // Active org ID: if admin picked an org, use that. Otherwise fall back to store org.
+  const activeOrgId = selectedOrgId || organization?.id || "";
+
+  // ── Fetch orgs list (for admins) ──
+  const fetchOrgs = useCallback(async () => {
+    if (!isPlatformAdmin) return;
+    try {
+      const res = await fetchWithAuth("/api/admin/clients");
+      if (res.ok) {
+        const data = await res.json();
+        const list: OrgOption[] = (data.clients || []).map((c: any) => ({
+          id: c.id,
+          name: c.name,
+          email: c.email || null,
+          plan: c.plan || "starter",
+        }));
+        setOrgs(list);
+        // Auto-select first org if none chosen yet and store has no org
+        if (!selectedOrgId && !organization?.id && list.length > 0) {
+          setSelectedOrgId(list[0].id);
+        }
+      }
+    } catch {
+      // ignore — best effort
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPlatformAdmin, organization?.id]);
+
   const cardBg = isDark ? "bg-white/[0.03] border-white/[0.06]" : "bg-white border-slate-200";
+  const inputBg = isDark ? "border-white/[0.1] bg-white/[0.03]" : "";
   const textPrimary = isDark ? "text-white" : "text-slate-900";
   const textSecondary = isDark ? "text-slate-400" : "text-slate-500";
 
   // ── Fetch audit log ──
   const fetchAuditLog = useCallback(async () => {
-    if (!organization?.id) return;
+    if (!activeOrgId) return;
     setLoadingAudit(true);
     try {
-      const res = await fetchWithAuth(`/api/reports-center?orgId=${organization.id}`);
+      const res = await fetchWithAuth(`/api/reports-center?orgId=${activeOrgId}`);
       if (res.ok) {
         const data = await res.json();
         setAuditLog(data.reports || []);
@@ -190,18 +232,19 @@ export function ReportsCenterPage() {
       setLoadingAudit(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [organization?.id]);
+  }, [activeOrgId]);
 
   /* eslint-disable react-hooks/set-state-in-effect -- fetching initial data on mount */
   useEffect(() => {
+    fetchOrgs();
     fetchAuditLog();
-  }, [fetchAuditLog]);
+  }, [fetchOrgs, fetchAuditLog]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   // ── Build endpoint URL ──
   const buildUrl = (rt: ReportType, opts: { period: string; from: string; to: string; customerId: string; dataTypes: string[] }) => {
     const params = new URLSearchParams();
-    if (organization?.id) params.set("orgId", organization.id);
+    if (activeOrgId) params.set("orgId", activeOrgId);
     if (rt.id === "sales") params.set("period", opts.period || "monthly");
     if (rt.id === "orders") params.set("period", opts.period || "monthly");
     if (rt.id === "tax") params.set("period", opts.period || "monthly");
@@ -227,7 +270,11 @@ export function ReportsCenterPage() {
 
   // ── Generate + Download ──
   const handleGenerate = async () => {
-    if (!selectedType || !organization?.id) return;
+    if (!selectedType) return;
+    if (!activeOrgId) {
+      toast.error(isPlatformAdmin ? "Please select a client org first." : "No organization context available.");
+      return;
+    }
     setGenerating(true);
     try {
       const url = buildUrl(selectedType, { period, from: fromDate, to: toDate, customerId, dataTypes });
@@ -259,7 +306,7 @@ export function ReportsCenterPage() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            organizationId: organization.id,
+            organizationId: activeOrgId,
             type: selectedType.id,
             title: selectedType.label,
             period: selectedType.id === "custom_range" ? "custom" : period,
@@ -308,7 +355,7 @@ export function ReportsCenterPage() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            organizationId: organization?.id,
+            organizationId: activeOrgId || undefined,
             type: lastBlob.title.toLowerCase().replace(/\s+/g, "_"),
             title: `${lastBlob.title} → ${emailRecipient}`,
             period: "emailed",
@@ -352,6 +399,60 @@ export function ReportsCenterPage() {
           <RefreshCw className="h-4 w-4" /> Refresh History
         </Button>
       </div>
+
+      {/* Org picker — for platform admins (lets admin view reports for ANY client org) */}
+      {isPlatformAdmin && (
+        <Card className={cardBg}>
+          <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="flex items-center gap-2 text-sm">
+              <Building2 className="h-4 w-4 text-amber-500" />
+              <span className={cn("font-medium", textPrimary)}>Client Organization:</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <Select value={selectedOrgId} onValueChange={(v) => { setSelectedOrgId(v); }}>
+                <SelectTrigger className={cn(inputBg, "w-full")}>
+                  <SelectValue placeholder={
+                    organization?.id
+                      ? `Using your org (${organization.name}) — pick another client to switch`
+                      : "Select a client org to generate reports for"
+                  } />
+                </SelectTrigger>
+                <SelectContent>
+                  {/* If admin has their own org in store, show it as the default option */}
+                  {organization?.id && (
+                    <SelectItem value={organization.id}>
+                      {organization.name} (your org)
+                    </SelectItem>
+                  )}
+                  {orgs
+                    .filter((o) => o.id !== organization?.id)
+                    .map((o) => (
+                      <SelectItem key={o.id} value={o.id}>
+                        {o.name} {o.email ? `· ${o.email}` : ""} · {o.plan}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className={cn("text-xs", textSecondary)}>
+              {activeOrgId ? (
+                <span className="text-emerald-500">✓ Reports will be generated for the selected org</span>
+              ) : (
+                <span className="text-amber-500">⚠ Select an org before generating reports</span>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Non-admin notice — if user has no org context */}
+      {!isPlatformAdmin && !activeOrgId && (
+        <Card className="border-amber-500/30 bg-amber-500/5">
+          <CardContent className="p-4 text-sm text-amber-500">
+            No organization context is available for your account. Please contact your administrator to be added to an organization before generating reports.
+          </CardContent>
+        </Card>
+      )}
 
       {/* Report type cards */}
       <div>

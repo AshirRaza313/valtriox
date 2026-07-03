@@ -2295,6 +2295,80 @@ DO $$ BEGIN ALTER TABLE "PlatformSettings" ADD COLUMN IF NOT EXISTS "leadMagnetE
 DO $$ BEGIN ALTER TABLE "PlatformSettings" ADD COLUMN IF NOT EXISTS "leadMagnetPdfUrl" TEXT; EXCEPTION WHEN OTHERS THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE "PlatformSettings" ADD COLUMN IF NOT EXISTS "leadMagnetSentCount" INTEGER NOT NULL DEFAULT 0; EXCEPTION WHEN OTHERS THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE "PlatformSettings" ADD COLUMN IF NOT EXISTS "leadMagnetDownloadCount" INTEGER NOT NULL DEFAULT 0; EXCEPTION WHEN OTHERS THEN NULL; END $$;
+
+-- ── Invoice (Phase 2: Custom Invoice + Payment Approval Workflow columns) ──
+DO $$ BEGIN ALTER TABLE "Invoice" ADD COLUMN IF NOT EXISTS "lineItems" JSONB; EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE "Invoice" ADD COLUMN IF NOT EXISTS "subtotal" DECIMAL(12,2); EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE "Invoice" ADD COLUMN IF NOT EXISTS "taxRate" DECIMAL(5,2); EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE "Invoice" ADD COLUMN IF NOT EXISTS "taxAmount" DECIMAL(10,2); EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE "Invoice" ADD COLUMN IF NOT EXISTS "discountAmount" DECIMAL(10,2); EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE "Invoice" ADD COLUMN IF NOT EXISTS "clientEmail" TEXT; EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE "Invoice" ADD COLUMN IF NOT EXISTS "clientName" TEXT; EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE "Invoice" ADD COLUMN IF NOT EXISTS "clientAddress" TEXT; EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE "Invoice" ADD COLUMN IF NOT EXISTS "approvedBy" TEXT; EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE "Invoice" ADD COLUMN IF NOT EXISTS "approvedAt" TIMESTAMP(3); EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE "Invoice" ADD COLUMN IF NOT EXISTS "sentAt" TIMESTAMP(3); EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE "Invoice" ADD COLUMN IF NOT EXISTS "createdBy" TEXT; EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE "Invoice" ADD COLUMN IF NOT EXISTS "invoiceTitle" TEXT; EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE "Invoice" ADD COLUMN IF NOT EXISTS "paymentStatus" TEXT; EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN CREATE INDEX IF NOT EXISTS "Invoice_type_idx" ON "Invoice" ("type"); EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN CREATE INDEX IF NOT EXISTS "Invoice_paymentStatus_idx" ON "Invoice" ("paymentStatus"); EXCEPTION WHEN OTHERS THEN NULL; END $$;
+
+-- ── ReportExport (Phase 2: Audit trail table — create if missing) ──
+CREATE TABLE IF NOT EXISTS "ReportExport" (
+  "id" TEXT NOT NULL,
+  "organizationId" TEXT NOT NULL,
+  "type" TEXT NOT NULL,
+  "title" TEXT NOT NULL,
+  "period" TEXT NOT NULL,
+  "dateFrom" TIMESTAMP(3),
+  "dateTo" TIMESTAMP(3),
+  "pdfUrl" TEXT,
+  "generatedById" TEXT,
+  "recipientEmail" TEXT,
+  "emailedAt" TIMESTAMP(3),
+  "emailStatus" TEXT,
+  "fileSizeKb" INTEGER,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "ReportExport_pkey" PRIMARY KEY ("id")
+);
+DO $$ BEGIN CREATE INDEX IF NOT EXISTS "ReportExport_organizationId_idx" ON "ReportExport" ("organizationId"); EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN CREATE INDEX IF NOT EXISTS "ReportExport_type_idx" ON "ReportExport" ("type"); EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN CREATE INDEX IF NOT EXISTS "ReportExport_createdAt_idx" ON "ReportExport" ("createdAt"); EXCEPTION WHEN OTHERS THEN NULL; END $$;
+
+-- ── ClientMessage (Phase 3: Premium Client Communication Center table — create if missing) ──
+CREATE TABLE IF NOT EXISTS "ClientMessage" (
+  "id" TEXT NOT NULL,
+  "organizationId" TEXT NOT NULL,
+  "threadId" TEXT NOT NULL,
+  "parentMessageId" TEXT,
+  "direction" TEXT NOT NULL,
+  "authorId" TEXT,
+  "authorName" TEXT NOT NULL,
+  "authorEmail" TEXT,
+  "authorRole" TEXT,
+  "category" TEXT NOT NULL,
+  "priority" TEXT NOT NULL DEFAULT 'normal',
+  "subject" TEXT NOT NULL,
+  "body" TEXT NOT NULL,
+  "attachments" JSONB,
+  "deadline" TIMESTAMP(3),
+  "isRead" BOOLEAN NOT NULL DEFAULT false,
+  "readAt" TIMESTAMP(3),
+  "isPinned" BOOLEAN NOT NULL DEFAULT false,
+  "isArchived" BOOLEAN NOT NULL DEFAULT false,
+  "scheduledFor" TIMESTAMP(3),
+  "sentAt" TIMESTAMP(3),
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMP(3) NOT NULL,
+  CONSTRAINT "ClientMessage_pkey" PRIMARY KEY ("id")
+);
+DO $$ BEGIN CREATE INDEX IF NOT EXISTS "ClientMessage_organizationId_idx" ON "ClientMessage" ("organizationId"); EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN CREATE INDEX IF NOT EXISTS "ClientMessage_threadId_idx" ON "ClientMessage" ("threadId"); EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN CREATE INDEX IF NOT EXISTS "ClientMessage_category_idx" ON "ClientMessage" ("category"); EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN CREATE INDEX IF NOT EXISTS "ClientMessage_isRead_idx" ON "ClientMessage" ("isRead"); EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN CREATE INDEX IF NOT EXISTS "ClientMessage_isArchived_idx" ON "ClientMessage" ("isArchived"); EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN CREATE INDEX IF NOT EXISTS "ClientMessage_createdAt_idx" ON "ClientMessage" ("createdAt"); EXCEPTION WHEN OTHERS THEN NULL; END $$;
 `;
 
   // If a TABLE is missing (not just a column), we need to run full table creation
@@ -2321,18 +2395,29 @@ DO $$ BEGIN ALTER TABLE "PlatformSettings" ADD COLUMN IF NOT EXISTS "leadMagnetD
 
   // Fallback: run via Prisma $executeRawUnsafe through PgBouncer
   try {
+    // Smarter splitter: handles DO $$ ... END $$; blocks, CREATE TABLE ... ); blocks,
+    // CREATE INDEX ... ; statements, and ALTER TABLE ... ; statements.
     const statements = repairSql.split('\n').filter((l: string) => l.trim() && !l.startsWith('--'));
     const combined: string[] = [];
     let current = '';
+    let inCreateTable = false;
     for (const line of statements) {
       current += line + '\n';
-      if (line.includes('END $$;') || (line.includes('CREATE INDEX') && line.endsWith(';'))) {
+      const trimmed = line.trim();
+      if (trimmed.toUpperCase().startsWith('CREATE TABLE')) inCreateTable = true;
+      // Statement boundary detection
+      const isEnd = trimmed.includes('END $$;')
+        || (inCreateTable && trimmed.endsWith(');'))
+        || (trimmed.toUpperCase().startsWith('CREATE INDEX') && trimmed.endsWith(';'))
+        || (trimmed.toUpperCase().startsWith('ALTER TABLE') && trimmed.endsWith(';'));
+      if (isEnd) {
         combined.push(current.trim());
         current = '';
+        inCreateTable = false;
       }
     }
     for (const stmt of combined) {
-      try { await db.$executeRawUnsafe(stmt); } catch { /* ignore */ }
+      try { await db.$executeRawUnsafe(stmt); } catch { /* ignore individual statement failures */ }
     }
     logger.info('[DB] Auto-repair: schema columns repair completed (PgBouncer fallback)');
     schemaRepaired = true;
