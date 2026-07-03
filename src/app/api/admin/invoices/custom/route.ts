@@ -1,6 +1,6 @@
 // @ts-nocheck — Phase 8: pre-existing TS errors pending migration
 import { NextRequest, NextResponse } from "next/server";
-import { db, safeDbQuery, getDirectPool, resilientDirectQuery } from "@/lib/db";
+import { db, safeDbQuery } from "@/lib/db";
 import { generateInvoiceNumber } from "@/lib/pdf-generator";
 import { getCurrencyForCountry } from "@/lib/currency";
 import { withAuth, isPlatformRole } from "@/lib/auth-middleware";
@@ -9,11 +9,14 @@ import logger from "@/lib/logger";
 
 // ── Proactive schema ensure for Invoice Phase 2 columns ──
 // Runs idempotent ALTER TABLE ADD COLUMN IF NOT EXISTS for every Phase 2 column
-// BEFORE attempting the create. This eliminates the "create fails → auto-repair →
-// retry" round-trip that was causing invoice creation to fail silently.
+// BEFORE attempting the create.
 //
-// Uses resilientDirectQuery which falls back to Prisma's PgBouncer pool if the
-// direct pool DNS fails (ENOTFOUND on db.{ref}.supabase.co from Vercel).
+// IMPORTANT: We use Prisma's $executeRawUnsafe DIRECTLY — NOT the direct pool.
+// Supabase has DEPRECATED direct external connections (db.{ref}.supabase.co)
+// from Vercel — the DNS no longer resolves (ENOTFOUND). Prisma's normal
+// connection goes through the PgBouncer pooler (aws-X-{region}.pooler.supabase.com)
+// which is the supported, reliable path. ALTER TABLE ADD COLUMN IF NOT EXISTS
+// works fine through PgBouncer transaction mode.
 let invoiceSchemaEnsured = false;
 async function ensureInvoicePhase2Columns(): Promise<void> {
   if (invoiceSchemaEnsured) return;
@@ -35,14 +38,17 @@ async function ensureInvoicePhase2Columns(): Promise<void> {
   ];
   let allOk = true;
   for (const [col, type] of cols) {
-    // Use plain ALTER TABLE ... ADD COLUMN IF NOT EXISTS (no DO $$ wrapper).
-    // The IF NOT EXISTS clause is already idempotent in PostgreSQL 9.6+,
-    // so the exception handler is unnecessary. Plain ALTER TABLE is also
-    // more compatible with PgBouncer transaction-mode pooling.
-    const result = await resilientDirectQuery(
-      `ALTER TABLE "Invoice" ADD COLUMN IF NOT EXISTS "${col}" ${type};`
-    );
-    if (!result.ok) allOk = false;
+    try {
+      await db.$executeRawUnsafe(
+        `ALTER TABLE "Invoice" ADD COLUMN IF NOT EXISTS "${col}" ${type};`
+      );
+    } catch (e) {
+      // Column may already exist (race condition) or other minor error — log and continue
+      logger.warn("[Custom Invoice] Schema ensure column failed (continuing)", {
+        col, type, error: String(e).substring(0, 120),
+      });
+      allOk = false;
+    }
   }
   if (allOk) {
     invoiceSchemaEnsured = true;
@@ -228,30 +234,33 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
       }
     }
 
-    // Attempt 2: Direct SQL INSERT fallback (if Prisma fails for any reason)
+    // Attempt 2: Direct SQL INSERT fallback via Prisma's $executeRawUnsafe
+    // (NOT the direct pg pool — Supabase has deprecated direct external
+    // connections from Vercel, causing ENOTFOUND errors. Prisma's normal
+    // PgBouncer connection handles INSERTs reliably.)
     if (!invoice && createErr) {
-      logger.warn("[Custom Invoice Create] Prisma path failed, trying direct SQL fallback", {
+      logger.warn("[Custom Invoice Create] Prisma create failed, trying $executeRawUnsafe INSERT fallback", {
         error: String(createErr).substring(0, 200),
       });
       const invId = `inv_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
       const lineItemsJson = JSON.stringify(lineItems);
-      const insertResult = await resilientDirectQuery(
-        `INSERT INTO "Invoice" (
-          "id", "invoiceNumber", "organizationId", "planName", "amount",
-          "billingCycle", "status", "type", "currencyCode", "currencySymbol",
-          "issuedAt", "dueDate", "notes", "orgName", "orgEmail", "orgAddress",
-          "lineItems", "subtotal", "taxRate", "taxAmount", "discountAmount",
-          "clientName", "clientEmail", "clientAddress", "createdBy",
-          "invoiceTitle", "paymentStatus", "sentAt", "createdAt", "updatedAt"
-        ) VALUES (
-          $1, $2, $3, $4, $5,
-          $6, $7, $8, $9, $10,
-          $11, $12, $13, $14, $15, $16,
-          $17::jsonb, $18, $19, $20, $21,
-          $22, $23, $24, $25,
-          $26, $27, $28, NOW(), NOW()
-        )`,
-        [
+      try {
+        await db.$executeRawUnsafe(
+          `INSERT INTO "Invoice" (
+            "id", "invoiceNumber", "organizationId", "planName", "amount",
+            "billingCycle", "status", "type", "currencyCode", "currencySymbol",
+            "issuedAt", "dueDate", "notes", "orgName", "orgEmail", "orgAddress",
+            "lineItems", "subtotal", "taxRate", "taxAmount", "discountAmount",
+            "clientName", "clientEmail", "clientAddress", "createdBy",
+            "invoiceTitle", "paymentStatus", "sentAt", "createdAt", "updatedAt"
+          ) VALUES (
+            $1, $2, $3, $4, $5,
+            $6, $7, $8, $9, $10,
+            $11, $12, $13, $14, $15, $16,
+            $17::jsonb, $18, $19, $20, $21,
+            $22, $23, $24, $25,
+            $26, $27, $28, NOW(), NOW()
+          )`,
           invId,
           invoiceNumber,
           resolvedOrgId,
@@ -279,19 +288,17 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
           authCtx.userId,
           invoiceTitle || null,
           "unpaid",
-          sendImmediately ? issuedAt : null,
-        ]
-      );
-      if (insertResult.ok) {
+          sendImmediately ? issuedAt : null
+        );
         // Fetch the created invoice to return consistent shape
         const fetchResult = await safeDbQuery(() =>
           db.invoice.findUnique({ where: { id: invId } })
         );
         invoice = fetchResult.data;
-        logger.info("[Custom Invoice Create] Direct SQL fallback succeeded", { invoiceId: invId });
-      } else {
-        const sqlMsg = insertResult.error || "unknown SQL error";
-        logger.error("[Custom Invoice Create] Direct SQL fallback also failed", { error: sqlMsg.substring(0, 200) });
+        logger.info("[Custom Invoice Create] $executeRawUnsafe INSERT fallback succeeded", { invoiceId: invId });
+      } catch (sqlErr: unknown) {
+        const sqlMsg = sqlErr instanceof Error ? sqlErr.message : String(sqlErr);
+        logger.error("[Custom Invoice Create] $executeRawUnsafe INSERT also failed", { error: sqlMsg.substring(0, 200) });
         const errMsg = process.env.NODE_ENV === "production"
           ? `Failed to create invoice. Prisma: ${String(createErr).substring(0, 80)} | SQL: ${sqlMsg.substring(0, 80)}`
           : `Failed to create invoice. Prisma: ${String(createErr).substring(0, 150)} | SQL: ${sqlMsg.substring(0, 150)}`;
