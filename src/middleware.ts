@@ -117,8 +117,12 @@ export function middleware(request: NextRequest) {
       [
         "default-src 'self'",
         `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://va.vercel-scripts.com https://connect.facebook.net https://www.googletagmanager.com`,
-        // Nonce for style-src allows Next.js injected styles + Tailwind
-        `style-src 'self' 'nonce-${nonce}' https://fonts.googleapis.com`,
+        // style-src uses 'unsafe-inline' (NOT nonce) because Next.js 16 + React 19 +
+        // Framer Motion + Tailwind inject inline style attributes and <style> tags that
+        // cannot all carry the nonce. This is the standard Next.js CSP pattern:
+        // nonce for scripts (security-critical), unsafe-inline for styles (low XSS risk).
+        // Using nonce here causes React #418 hydration errors + broken animations.
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
         "font-src 'self' https://fonts.gstatic.com",
         "img-src 'self' data: blob: https: https://www.facebook.com",
         "connect-src 'self' https://va.vercel-scripts.com https://*.supabase.co https://api.cloudinary.com https://api.resend.com https://www.facebook.com https://www.google-analytics.com https://graph.facebook.com",

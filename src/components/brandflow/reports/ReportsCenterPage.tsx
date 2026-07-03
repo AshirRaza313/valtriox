@@ -242,6 +242,10 @@ export function ReportsCenterPage() {
   /* eslint-enable react-hooks/set-state-in-effect */
 
   // ── Build endpoint URL ──
+  // CRITICAL: rt.endpoint may already contain a query string (e.g.
+  // "/api/reports/export?type=sales"). We must append with "&" not "?" in that
+  // case, otherwise we produce a malformed URL like "?type=sales?orgId=..."
+  // which the server parses as type="sales?orgId=..." → 400 "Invalid report type".
   const buildUrl = (rt: ReportType, opts: { period: string; from: string; to: string; customerId: string; dataTypes: string[] }) => {
     const params = new URLSearchParams();
     if (activeOrgId) params.set("orgId", activeOrgId);
@@ -254,7 +258,10 @@ export function ReportsCenterPage() {
       if (opts.to) params.set("to", opts.to);
       params.set("dataTypes", opts.dataTypes.join(","));
     }
-    return `${rt.endpoint}?${params.toString()}`;
+    const qs = params.toString();
+    if (!qs) return rt.endpoint;
+    const sep = rt.endpoint.includes("?") ? "&" : "?";
+    return `${rt.endpoint}${sep}${qs}`;
   };
 
   // ── Open config dialog ──

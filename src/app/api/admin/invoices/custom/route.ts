@@ -1,11 +1,54 @@
 // @ts-nocheck — Phase 8: pre-existing TS errors pending migration
 import { NextRequest, NextResponse } from "next/server";
-import { db, safeDbQuery } from "@/lib/db";
+import { db, safeDbQuery, getDirectPool } from "@/lib/db";
 import { generateInvoiceNumber } from "@/lib/pdf-generator";
 import { getCurrencyForCountry } from "@/lib/currency";
 import { withAuth, isPlatformRole } from "@/lib/auth-middleware";
 import { withRateLimit } from "@/lib/rate-limit";
 import logger from "@/lib/logger";
+
+// ── Proactive schema ensure for Invoice Phase 2 columns ──
+// Runs idempotent ALTER TABLE ADD COLUMN IF NOT EXISTS for every Phase 2 column
+// BEFORE attempting the create. This eliminates the "create fails → auto-repair →
+// retry" round-trip that was causing invoice creation to fail silently.
+let invoiceSchemaEnsured = false;
+async function ensureInvoicePhase2Columns(): Promise<void> {
+  if (invoiceSchemaEnsured) return;
+  try {
+    const pool = getDirectPool();
+    const cols: [string, string][] = [
+      ["lineItems", "JSONB"],
+      ["subtotal", "DECIMAL(12,2)"],
+      ["taxRate", "DECIMAL(5,2)"],
+      ["taxAmount", "DECIMAL(10,2)"],
+      ["discountAmount", "DECIMAL(10,2)"],
+      ["clientEmail", "TEXT"],
+      ["clientName", "TEXT"],
+      ["clientAddress", "TEXT"],
+      ["approvedBy", "TEXT"],
+      ["approvedAt", "TIMESTAMP(3)"],
+      ["sentAt", "TIMESTAMP(3)"],
+      ["createdBy", "TEXT"],
+      ["invoiceTitle", "TEXT"],
+      ["paymentStatus", "TEXT"],
+    ];
+    for (const [col, type] of cols) {
+      try {
+        await pool.query(
+          `DO $$ BEGIN ALTER TABLE "Invoice" ADD COLUMN IF NOT EXISTS "${col}" ${type}; EXCEPTION WHEN OTHERS THEN NULL; END $$;`
+        );
+      } catch {
+        // ignore individual column errors — best effort
+      }
+    }
+    invoiceSchemaEnsured = true;
+    logger.info("[Custom Invoice] Phase 2 columns ensured");
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    logger.warn("[Custom Invoice] Schema ensure failed (non-fatal)", { error: msg.substring(0, 120) });
+    // Don't set invoiceSchemaEnsured — allow retry on next request
+  }
+}
 
 // ── POST /api/admin/invoices/custom ──
 // Body shape:
@@ -32,6 +75,9 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
         { status: 403 }
       );
     }
+
+    // ── Proactively ensure Phase 2 columns exist ──
+    await ensureInvoicePhase2Columns();
 
     const body = await req.json();
     const {
@@ -105,10 +151,27 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
     const issuedAt = new Date();
     const resolvedDueDate = dueDate ? new Date(dueDate) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
-    // ── Persist ──
+    // ── Resolve organizationId (Invoice.organizationId is non-nullable) ──
+    // If the admin didn't pick a client org, fall back to the first org in the DB.
+    let resolvedOrgId = organizationId || "";
+    if (!resolvedOrgId) {
+      const { data: firstOrg } = await safeDbQuery(() =>
+        db.organization.findFirst({ orderBy: { createdAt: "asc" } })
+      );
+      if (firstOrg) {
+        resolvedOrgId = firstOrg.id;
+      } else {
+        return NextResponse.json(
+          { error: "No organization exists in the database. Create an organization first via /api/setup/init." },
+          { status: 400 }
+        );
+      }
+    }
+
+    // ── Persist (Prisma path) ──
     const createData: any = {
       invoiceNumber,
-      organizationId: organizationId || "no-org", // placeholder; will overwrite below if no org
+      organizationId: resolvedOrgId,
       planName: invoiceTitle || "Custom Services",
       amount: total,
       billingCycle: "one_time",
@@ -136,50 +199,100 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
       sentAt: sendImmediately ? issuedAt : null,
     };
 
-    // If no organizationId provided, we need a placeholder org. Since Invoice.organizationId
-    // is non-nullable, we'll use the platform's first org or fail gracefully.
-    if (!organizationId) {
-      const { data: firstOrg } = await safeDbQuery(() =>
-        db.organization.findFirst({ orderBy: { createdAt: "asc" } })
-      );
-      if (firstOrg) {
-        createData.organizationId = firstOrg.id;
-      } else {
-        return NextResponse.json(
-          { error: "No organization exists in the database. Create an organization first." },
-          { status: 400 }
+    let invoice: any = null;
+    let createErr: any = null;
+
+    // Attempt 1: Prisma create
+    const prismaResult = await safeDbQuery(() => db.invoice.create({ data: createData }));
+    invoice = prismaResult.data;
+    createErr = prismaResult.error;
+
+    // Attempt 2: Direct SQL INSERT fallback (if Prisma fails for any reason)
+    if (!invoice && createErr) {
+      logger.warn("[Custom Invoice Create] Prisma path failed, trying direct SQL fallback", {
+        error: String(createErr).substring(0, 200),
+      });
+      try {
+        const pool = getDirectPool();
+        const invId = `inv_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
+        const lineItemsJson = JSON.stringify(lineItems);
+        await pool.query(
+          `INSERT INTO "Invoice" (
+            "id", "invoiceNumber", "organizationId", "planName", "amount",
+            "billingCycle", "status", "type", "currencyCode", "currencySymbol",
+            "issuedAt", "dueDate", "notes", "orgName", "orgEmail", "orgAddress",
+            "lineItems", "subtotal", "taxRate", "taxAmount", "discountAmount",
+            "clientName", "clientEmail", "clientAddress", "createdBy",
+            "invoiceTitle", "paymentStatus", "sentAt", "createdAt", "updatedAt"
+          ) VALUES (
+            $1, $2, $3, $4, $5,
+            $6, $7, $8, $9, $10,
+            $11, $12, $13, $14, $15, $16,
+            $17::jsonb, $18, $19, $20, $21,
+            $22, $23, $24, $25,
+            $26, $27, $28, NOW(), NOW()
+          )`,
+          [
+            invId,
+            invoiceNumber,
+            resolvedOrgId,
+            invoiceTitle || "Custom Services",
+            total,
+            "one_time",
+            sendImmediately ? "sent" : "draft",
+            "custom",
+            resolvedCurrencyCode,
+            resolvedCurrencySymbol,
+            issuedAt,
+            resolvedDueDate,
+            notes || null,
+            clientName,
+            clientEmail || null,
+            clientAddress || null,
+            lineItemsJson,
+            subtotal,
+            tRate || null,
+            taxAmount || null,
+            discount || null,
+            clientName,
+            clientEmail || null,
+            clientAddress || null,
+            authCtx.userId,
+            invoiceTitle || null,
+            "unpaid",
+            sendImmediately ? issuedAt : null,
+          ]
         );
+        // Fetch the created invoice to return consistent shape
+        const fetchResult = await safeDbQuery(() =>
+          db.invoice.findUnique({ where: { id: invId } })
+        );
+        invoice = fetchResult.data;
+        logger.info("[Custom Invoice Create] Direct SQL fallback succeeded", { invoiceId: invId });
+      } catch (sqlErr: unknown) {
+        const sqlMsg = sqlErr instanceof Error ? sqlErr.message : String(sqlErr);
+        logger.error("[Custom Invoice Create] Direct SQL fallback also failed", { error: sqlMsg.substring(0, 200) });
+        // Surface a clear, actionable error to the user
+        const errMsg = process.env.NODE_ENV === "production"
+          ? `Failed to create invoice. Prisma: ${String(createErr).substring(0, 80)} | SQL: ${sqlMsg.substring(0, 80)}`
+          : `Failed to create invoice. Prisma: ${String(createErr).substring(0, 150)} | SQL: ${sqlMsg.substring(0, 150)}`;
+        return NextResponse.json({ error: errMsg }, { status: 503 });
       }
     }
 
-    const { data: invoice, error: createErr } = await safeDbQuery(() =>
-      db.invoice.create({ data: createData })
-    );
-
-    if (createErr) {
-      logger.error("[Custom Invoice Create] DB error", { error: createErr });
-      if (String(createErr).includes("P2002") || String(createErr).includes("Unique constraint")) {
-        return NextResponse.json({ error: "Invoice number conflict. Please retry." }, { status: 409 });
-      }
-      // Surface schema-mismatch as a clear hint
-      if (String(createErr).includes("does not exist") || String(createErr).toLowerCase().includes("schema")) {
-        return NextResponse.json(
-          { error: "Database schema needs updating. The auto-repair has been triggered — please retry in a few seconds." },
-          { status: 503 }
-        );
-      }
-      // In development, surface the actual error so debugging is possible
+    if (!invoice) {
+      // Both paths failed — surface the error
       const errMsg = process.env.NODE_ENV === "production"
-        ? "Failed to create custom invoice (database error)"
-        : `Failed to create custom invoice: ${String(createErr).substring(0, 200)}`;
+        ? `Failed to create invoice: ${String(createErr || "unknown error").substring(0, 100)}`
+        : `Failed to create invoice: ${String(createErr || "unknown error").substring(0, 200)}`;
       return NextResponse.json({ error: errMsg }, { status: 503 });
     }
 
-    // ── Create notification ──
+    // ── Create notification (best-effort) ──
     await safeDbQuery(() =>
       db.notification.create({
         data: {
-          orgId: createData.organizationId,
+          orgId: resolvedOrgId,
           userId: authCtx.userId,
           title: `Custom Invoice ${invoiceNumber} created`,
           message: `Custom invoice for ${clientName} (${resolvedCurrencySymbol} ${total.toLocaleString()}) has been created by ${authCtx.email}.`,
@@ -201,9 +314,8 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error);
     logger.error("[Custom Invoice Create] Unhandled error", msg);
-    // In development, surface the actual error so debugging is possible
     const errMsg = process.env.NODE_ENV === "production"
-      ? "Failed to create custom invoice (server error)"
+      ? `Failed to create custom invoice: ${msg.substring(0, 100)}`
       : `Failed to create custom invoice: ${msg.substring(0, 200)}`;
     return NextResponse.json({ error: errMsg }, { status: 500 });
   }

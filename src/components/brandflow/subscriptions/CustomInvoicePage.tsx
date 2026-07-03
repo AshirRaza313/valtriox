@@ -266,30 +266,31 @@ export function CustomInvoicePage() {
     }
 
     setCreating(true);
-    try {
+    const payload = {
+      organizationId: orgId || undefined,
+      clientName: clientName.trim(),
+      clientEmail: clientEmail.trim() || undefined,
+      clientAddress: clientAddress.trim() || undefined,
+      invoiceTitle: invoiceTitle.trim() || undefined,
+      lineItems: cleanItems.map((li) => ({
+        description: li.description.trim(),
+        qty: Number(li.qty) || 1,
+        rate: Number(li.rate) || 0,
+        amount: Number(li.qty) * Number(li.rate) || 0,
+      })),
+      taxRate: Number(taxRate) || 0,
+      discountAmount: Number(discountAmount) || 0,
+      notes: notes.trim() || undefined,
+      dueDate: dueDate || undefined,
+      sendImmediately,
+    };
+
+    const attemptCreate = async (): Promise<{ ok: boolean; error?: string }> => {
       const res = await fetchWithAuth("/api/admin/invoices/custom", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          organizationId: orgId || undefined,
-          clientName: clientName.trim(),
-          clientEmail: clientEmail.trim() || undefined,
-          clientAddress: clientAddress.trim() || undefined,
-          invoiceTitle: invoiceTitle.trim() || undefined,
-          lineItems: cleanItems.map((li) => ({
-            description: li.description.trim(),
-            qty: Number(li.qty) || 1,
-            rate: Number(li.rate) || 0,
-            amount: Number(li.qty) * Number(li.rate) || 0,
-          })),
-          taxRate: Number(taxRate) || 0,
-          discountAmount: Number(discountAmount) || 0,
-          notes: notes.trim() || undefined,
-          dueDate: dueDate || undefined,
-          sendImmediately,
-        }),
+        body: JSON.stringify(payload),
       });
-
       // Robust error parsing — server may return JSON or plain text
       let data: any = {};
       try {
@@ -298,20 +299,33 @@ export function CustomInvoicePage() {
       } catch {
         data = { error: `Server returned status ${res.status}` };
       }
-      if (res.ok) {
+      if (res.ok) return { ok: true };
+      return { ok: false, error: data.error || `Failed to create invoice (status ${res.status})` };
+    };
+
+    try {
+      let result = await attemptCreate();
+
+      // Auto-retry once after a short delay if the server signals a schema repair
+      // was triggered (the server-side ensureInvoicePhase2Columns runs on every
+      // request, but the first cold-start request may still race).
+      if (!result.ok && result.error && (
+        result.error.toLowerCase().includes("schema") ||
+        result.error.toLowerCase().includes("does not exist") ||
+        result.error.toLowerCase().includes("column")
+      )) {
+        toast.info("Database schema is being prepared. Retrying automatically…", { duration: 4000 });
+        await new Promise((r) => setTimeout(r, 1500));
+        result = await attemptCreate();
+      }
+
+      if (result.ok) {
         toast.success(sendImmediately ? "Invoice created and sent!" : "Invoice saved as draft");
         setCreateOpen(false);
         resetForm();
         await fetchInvoices();
       } else {
-        const errMsg = data.error || `Failed to create invoice (status ${res.status})`;
-        toast.error(errMsg, { duration: 8000 });
-        // If schema needs repair, hint the user to retry
-        if (String(errMsg).includes("schema") || String(errMsg).includes("auto-repair")) {
-          setTimeout(() => {
-            toast.info("Database schema has been auto-repaired. Please click Save again.", { duration: 8000 });
-          }, 1500);
-        }
+        toast.error(result.error || "Failed to create invoice", { duration: 8000 });
       }
     } catch {
       toast.error("Network error — please check your connection and retry");
