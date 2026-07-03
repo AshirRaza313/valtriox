@@ -159,19 +159,40 @@ export async function rateLimit(
 
 // ── withRateLimit HOF ────────────────────────────────────────────────────────
 
-type Handler = (req: NextRequest) => Promise<Response> | Response;
+// Phase 13 FIX: Handler must accept optional `context` so that dynamic route
+// params (e.g. /api/admin/invoices/[id]/pdf) propagate through to withAuth.
+//
+// BUG: Previously `withRateLimit` declared `Handler = (req) => ...` and called
+// `handler(req)` — dropping the second `context` argument Next.js 16 passes to
+// route handlers. Inside `withAuth`, `context` then became `undefined`, falling
+// back to `{ params: Promise.resolve({}) }`, which made every `await ctx.params`
+// return `{}` and every `params.id` resolve to `undefined`. The result: every
+// dynamic route wrapped with `withRateLimit(withAuth(...))` failed at the
+// Prisma `findUnique({ where: { id: undefined } })` call, surfacing as 503.
+//
+// FIX: Type the handler to accept `(req, context?)` and forward `context`
+// when invoking the wrapped handler. This restores params flow for all
+// 124 routes that use the `withRateLimit(withAuth(...))` pattern.
+type RouteContextLike = { params: Promise<Record<string, string>> };
+type Handler = (
+  req: NextRequest,
+  context?: RouteContextLike,
+) => Promise<Response> | Response;
 
 /**
  * withRateLimit - Higher-order function wrapper for rate limiting API routes.
  *
  * Usage:
  *   export const POST = withRateLimit(handler, { maxRequests: 5, windowSeconds: 60 });
+ *
+ * Phase 13: Forwards the optional `context` argument (dynamic route params)
+ * to the wrapped handler so routes like `/api/foo/[id]` keep working.
  */
 export function withRateLimit(
   handler: Handler,
   options: RateLimitOptions = {}
-): (req: NextRequest) => Promise<Response> {
-  return async (req: NextRequest): Promise<Response> => {
+): (req: NextRequest, context?: RouteContextLike) => Promise<Response> {
+  return async (req: NextRequest, context?: RouteContextLike): Promise<Response> => {
     const result = await rateLimit(req, options);
     if (!result.success) {
       const response = NextResponse.json(
@@ -187,7 +208,8 @@ export function withRateLimit(
       return response;
     }
 
-    const response = await handler(req);
+    // Forward BOTH `req` and `context` to the wrapped handler.
+    const response = await handler(req, context);
     if (response instanceof Response) {
       response.headers.set("X-RateLimit-Remaining", String(result.remaining));
       response.headers.set("X-RateLimit-Limit", String(result.limit));
