@@ -103,7 +103,7 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
     const orderId = `VTX-SUB-${orgId.slice(-6).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`;
 
     // ── Build Callback URLs ──
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://valtriox.vercel.app";
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://valtriox.com";
     const redirectUrl = `${appUrl}/subscriptions?payment=pending`;
     const webhookUrl = `${appUrl}/api/subscriptions/paypro/webhook`;
 

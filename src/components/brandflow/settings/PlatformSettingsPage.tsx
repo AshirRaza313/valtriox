@@ -2704,7 +2704,7 @@ export function PlatformSettingsPage() {
                     Invoice Header Text
                   </Label>
                   <Textarea
-                    placeholder="BRANDFLOW - Official Invoice"
+                    placeholder="VALTRIOX - Official Invoice"
                     rows={2}
                     value={settings.invoiceHeaderText}
                     onChange={(e) => setSettings((p) => ({ ...p, invoiceHeaderText: e.target.value }))}

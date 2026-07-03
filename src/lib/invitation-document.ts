@@ -117,7 +117,7 @@ export function getUltraPremiumInviteHtml(data: UltraPremiumInviteData): string 
                     </td>
                     <td align="right" valign="top">
                       <div style="display:inline-block;width:52px;height:52px;text-align:center;line-height:52px;overflow:hidden;">
-                        <img src="https://valtriox.vercel.app/valtriox-logo.png" alt="V" style="width:100%;height:100%;object-fit:contain;">
+                        <img src="https://valtriox.com/valtriox-logo.png" alt="V" style="width:100%;height:100%;object-fit:contain;">
                       </div>
                     </td>
                   </tr>
@@ -652,7 +652,7 @@ export function getPrintableInvitationHtml(data: UltraPremiumInviteData): string
         <div class="brand-name">${data.platformName}</div>
         <div class="brand-sub">COMMAND YOUR BRAND UNIVERSE</div>
       </div>
-      <div class="logo-box"><img src="https://valtriox.vercel.app/valtriox-logo.png" alt="V" style="width:100%;height:100%;object-fit:contain;"></div>
+      <div class="logo-box"><img src="https://valtriox.com/valtriox-logo.png" alt="V" style="width:100%;height:100%;object-fit:contain;"></div>
     </div>
 
     <div class="vip-section">

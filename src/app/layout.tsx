@@ -139,6 +139,19 @@ export default async function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="Valtriox" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        {/*
+          SEO: Resource Hints to reduce TTFB and improve Mobile Speed score.
+          - preconnect: opens early TLS+DNS+TCP connection to third-party origins
+            so the browser can fetch from them instantly when needed.
+          - dns-prefetch: legacy fallback for older browsers (resolves DNS only).
+          These do NOT add requests — they just warm up connections in parallel
+          with HTML parsing, shaving 100-300ms off LCP.
+        */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+        <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
+        <link rel="dns-prefetch" href="https://va.vercel-scripts.com" />
         {/* Meta Pixel - fires fbq('track', 'Lead') on Thank You page */}
         {process.env.NEXT_PUBLIC_META_PIXEL_ID && (
           <>

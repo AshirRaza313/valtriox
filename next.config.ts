@@ -26,6 +26,21 @@ const nextConfig: NextConfig = {
   },
   // Ensure pdfkit is not bundled by webpack (uses native Node.js features)
   serverExternalPackages: ["pdfkit"],
+  // SEO: Optimize package imports to reduce JS bundle size and request count.
+  // Rank Math flagged "22 requests (18 JS)" — these optimizations tree-shake
+  // unused exports from heavy icon/library packages, reducing chunk count and
+  // improving Mobile Speed score.
+  experimental: {
+    optimizePackageImports: [
+      "lucide-react",
+      "@radix-ui/react-icons",
+      "recharts",
+      "framer-motion",
+      "date-fns",
+      "@dnd-kit/core",
+      "@dnd-kit/sortable",
+    ],
+  },
   // Turbopack config (Next.js 16 default bundler)
   turbopack: {},
   // Webpack bundle optimization (used when --webpack flag is passed)

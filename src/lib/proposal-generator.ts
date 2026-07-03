@@ -309,9 +309,9 @@ function getProposalTypeContent(type: string): {
     case "enterprise":
       return {
         sectionTitle: "Enterprise Solution Services",
-        execSummary: "Our Enterprise Solution service delivers a comprehensive, white-glove implementation of the Brandflow platform tailored to your organization's unique requirements. We provide end-to-end support from initial architecture design through deployment, training, and ongoing optimization.",
+        execSummary: "Our Enterprise Solution service delivers a comprehensive, white-glove implementation of the Valtriox platform tailored to your organization's unique requirements. We provide end-to-end support from initial architecture design through deployment, training, and ongoing optimization.",
         scopeItems: [
-          { title: "Full Platform Implementation", description: "End-to-end implementation of the complete Brandflow platform including all modules, custom configurations, and enterprise-grade infrastructure designed for your scale. Includes multi-tenant setup and advanced user hierarchy." },
+          { title: "Full Platform Implementation", description: "End-to-end implementation of the complete Valtriox platform including all modules, custom configurations, and enterprise-grade infrastructure designed for your scale. Includes multi-tenant setup and advanced user hierarchy." },
           { title: "Team Training & Onboarding", description: "Comprehensive training programs for all team members including admin training, user workshops, documentation, and certification programs for platform mastery. Offers both live and self-paced learning pathways." },
           { title: "Dedicated Support & SLA", description: "Priority support with guaranteed response times, dedicated account manager, monthly performance reviews, and quarterly business reviews for continuous optimization. Includes 24/7 critical issue escalation." },
           { title: "Custom Development", description: "Bespoke feature development, custom integrations, API extensions, and advanced reporting tailored specifically to your enterprise requirements and workflows. All custom features follow enterprise coding standards." },

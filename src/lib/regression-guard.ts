@@ -77,7 +77,7 @@ export function validateCriticalPaths(): ValidationCheck[] {
       name: "store-import",
       check: () => canResolve("@/store/brandflow-store"),
       severity: "info",
-      message: "BrandFlow store module must be importable",
+      message: "Valtriox store module must be importable",
     },
   ];
 }
