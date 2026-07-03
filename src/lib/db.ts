@@ -2612,6 +2612,10 @@ export async function safeDbQuery<T>(
 ): Promise<{
   data: T | null;
   error: string | null;
+  /** The original raw error object — preserves Prisma code/message/meta
+   *  even in production. Use this in admin-only routes to build detailed
+   *  error messages for diagnosis. NOT for end-user-facing routes. */
+  rawError: unknown;
   unavailable: boolean;
   schemaError: boolean;
   errorResponse: Response;
@@ -2619,7 +2623,7 @@ export async function safeDbQuery<T>(
   try {
     // ensureDb() is now a no-op - real retry logic is in withRetry()
     const data = await withRetry(queryFn, retries, baseDelay);
-    return { data, error: null, unavailable: false, schemaError: false, errorResponse: new Response(JSON.stringify({}), { status: 200 }) };
+    return { data, error: null, rawError: null, unavailable: false, schemaError: false, errorResponse: new Response(JSON.stringify({}), { status: 200 }) };
   } catch (err: unknown) {
     const { message: msg } = getErrorInfo(err);
     const unavailable = isDbUnavailable(err);
@@ -2632,10 +2636,26 @@ export async function safeDbQuery<T>(
         logger.info('[safeDbQuery] Schema auto-repaired, retrying query');
         try {
           const data = await withRetry(queryFn, 1, 200);
-          return { data, error: null, unavailable: false, schemaError: false, errorResponse: new Response(JSON.stringify({}), { status: 200 }) };
+          return { data, error: null, rawError: null, unavailable: false, schemaError: false, errorResponse: new Response(JSON.stringify({}), { status: 200 }) };
         } catch (retryErr: unknown) {
           logger.error('[safeDbQuery] Query still fails after auto-repair', { error: getErrorInfo(retryErr).message.substring(0, 100) });
-          // Fall through to return error response
+          // Fall through to return error response — use the retry error as the raw error
+          // (it's the most recent and most relevant)
+          return {
+            data: null,
+            error: process.env.NODE_ENV === 'production'
+              ? (isDbUnavailable(retryErr) ? 'Service temporarily unavailable' : 'Database query failed')
+              : getErrorInfo(retryErr).message,
+            rawError: retryErr,
+            unavailable: isDbUnavailable(retryErr),
+            schemaError: isSchemaError(retryErr),
+            errorResponse: NextResponse.json(
+              process.env.NODE_ENV === 'production'
+                ? { error: isDbUnavailable(retryErr) ? 'Service temporarily unavailable' : 'Database query failed' }
+                : { error: isDbUnavailable(retryErr) ? 'Service temporarily unavailable' : 'Database query failed', detail: getErrorInfo(retryErr).message.substring(0, 200) },
+              { status: isDbUnavailable(retryErr) ? 503 : 500 }
+            ),
+          };
         }
       }
     }
@@ -2643,6 +2663,7 @@ export async function safeDbQuery<T>(
     const status = unavailable ? 503 : schemaErr ? 500 : 500;
     // FIX 9: Never expose internal error details to clients in production
     // Matches the pattern already applied to dbErrorResponse()
+    // NOTE: rawError is still preserved above for admin-only routes to introspect.
     const errorObj = process.env.NODE_ENV === 'production'
       ? { error: unavailable ? 'Service temporarily unavailable' : 'Database query failed' }
       : { error: unavailable ? 'Service temporarily unavailable' : 'Database query failed', detail: msg.substring(0, 200) };
@@ -2654,6 +2675,7 @@ export async function safeDbQuery<T>(
       error: process.env.NODE_ENV === 'production'
         ? (unavailable ? 'Service temporarily unavailable' : 'Database query failed')
         : msg,
+      rawError: err,
       unavailable,
       schemaError: schemaErr,
       errorResponse: NextResponse.json(errorObj, { status }),

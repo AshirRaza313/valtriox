@@ -245,7 +245,7 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
       // ── Attempt A: Prisma create ──
       const prismaResult = await safeDbQuery(() => db.invoice.create({ data: createData }));
       invoice = prismaResult.data;
-      createErr = prismaResult.error;
+      createErr = prismaResult.rawError;
 
       if (createErr) {
         // Log the FULL Prisma error object (code, meta, message) for debugging
@@ -276,7 +276,7 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
           await ensureInvoicePhase2Columns();
           const retryResult = await safeDbQuery(() => db.invoice.create({ data: createData }));
           invoice = retryResult.data;
-          createErr = retryResult.error;
+          createErr = retryResult.rawError;
           if (invoice) break;
         }
       }

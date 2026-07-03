@@ -9,18 +9,22 @@ import logger from "@/lib/logger";
 export const maxDuration = 60;
 
 /**
- * Build a detailed error message from a safeDbQuery error.
- * Mirrors the format used by /custom route so the user can see
- * the actual Prisma/SQL error code and message.
+ * Build a detailed error message from a safeDbQuery rawError.
+ * Uses the RAW error object (preserved even in production) so we can
+ * extract the Prisma code, message, and meta for diagnosis.
+ *
+ * IMPORTANT: This route is admin-only (requireRole: ["platform_owner",
+ * "platform_admin"] or org owner). Prisma error codes (P2002, P2022, etc.)
+ * are documented public codes and safe to expose to admins.
  */
-function describeDbError(error: unknown): string {
-  if (!error) return "unknown error";
-  const errObj = error as any;
+function describeDbError(rawError: unknown): string {
+  if (!rawError) return "unknown error";
+  const errObj = rawError as any;
   const prismaCode = errObj?.code || "N/A";
   const prismaMessage = errObj?.message
-    ? String(errObj.message).substring(0, 200)
-    : String(error).substring(0, 200);
-  const prismaMeta = errObj?.meta ? JSON.stringify(errObj.meta).substring(0, 200) : "";
+    ? String(errObj.message).substring(0, 250)
+    : String(rawError).substring(0, 250);
+  const prismaMeta = errObj?.meta ? JSON.stringify(errObj.meta).substring(0, 250) : "";
   return `Prisma[code=${prismaCode}]: ${prismaMessage}${prismaMeta ? ` | meta=${prismaMeta}` : ""}`;
 }
 
@@ -46,7 +50,7 @@ export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx, ctx:
     })
   );
   invoice = r1.data;
-  fetchErr = r1.error;
+  fetchErr = r1.rawError;
 
   // ── Attempt 2: if include fails (likely Organization schema mismatch),
   //     retry WITHOUT the include. We'll fetch the org separately if needed. ──
@@ -59,9 +63,9 @@ export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx, ctx:
       db.invoice.findUnique({ where: { id } })
     );
     invoice = r2.data;
-    if (!invoice && r2.error) {
+    if (!invoice && r2.rawError) {
       // Both paths failed — surface the detailed error
-      const errInfo = describeDbError(r2.error);
+      const errInfo = describeDbError(r2.rawError);
       logger.error("[Invoice PDF] Both findUnique attempts failed", {
         invoiceId: id,
         attempt1Err: describeDbError(fetchErr),
@@ -86,7 +90,7 @@ export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx, ctx:
         logger.warn("[Invoice PDF] Org fetch failed (continuing with invoice-only data)", {
           invoiceId: id,
           orgId: invoice.organizationId,
-          error: orgRes.error ? describeDbError(orgRes.error) : "not found",
+          error: orgRes.rawError ? describeDbError(orgRes.rawError) : "not found",
         });
       }
     }

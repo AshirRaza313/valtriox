@@ -17,16 +17,21 @@ const VALID_TRANSITIONS: Record<string, string[]> = {
 };
 
 /**
- * Build a detailed error message from a safeDbQuery error.
+ * Build a detailed error message from a safeDbQuery rawError.
+ * Uses the RAW error object (preserved even in production) so we can
+ * extract the Prisma code, message, and meta for diagnosis.
+ *
+ * IMPORTANT: This route is admin-only. Prisma error codes are documented
+ * public codes and safe to expose to admins.
  */
-function describeDbError(error: unknown): string {
-  if (!error) return "unknown error";
-  const errObj = error as any;
+function describeDbError(rawError: unknown): string {
+  if (!rawError) return "unknown error";
+  const errObj = rawError as any;
   const prismaCode = errObj?.code || "N/A";
   const prismaMessage = errObj?.message
-    ? String(errObj.message).substring(0, 200)
-    : String(error).substring(0, 200);
-  const prismaMeta = errObj?.meta ? JSON.stringify(errObj.meta).substring(0, 200) : "";
+    ? String(errObj.message).substring(0, 250)
+    : String(rawError).substring(0, 250);
+  const prismaMeta = errObj?.meta ? JSON.stringify(errObj.meta).substring(0, 250) : "";
   return `Prisma[code=${prismaCode}]: ${prismaMessage}${prismaMeta ? ` | meta=${prismaMeta}` : ""}`;
 }
 
@@ -63,7 +68,7 @@ export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx, ctx:
       })
     );
     invoice = r1.data;
-    fetchErr = r1.error;
+    fetchErr = r1.rawError;
 
     // ── Attempt 2: retry WITHOUT the include if attempt 1 failed ──
     if (!invoice && fetchErr) {
@@ -73,8 +78,8 @@ export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx, ctx:
       });
       const r2 = await safeDbQuery(() => db.invoice.findUnique({ where: { id } }));
       invoice = r2.data;
-      if (!invoice && r2.error) {
-        const errInfo = describeDbError(r2.error);
+      if (!invoice && r2.rawError) {
+        const errInfo = describeDbError(r2.rawError);
         logger.error("[Admin Invoice Detail] Both findUnique attempts failed", {
           invoiceId: id,
           attempt1Err: describeDbError(fetchErr),
@@ -173,7 +178,7 @@ export const PUT = withRateLimit(withAuth(async (req: NextRequest, authCtx, ctx:
       })
     );
     existing = r1.data;
-    fetchErr = r1.error;
+    fetchErr = r1.rawError;
 
     // Attempt 2: WITHOUT include (defensive fallback)
     if (!existing && fetchErr) {
@@ -183,8 +188,8 @@ export const PUT = withRateLimit(withAuth(async (req: NextRequest, authCtx, ctx:
       });
       const r2 = await safeDbQuery(() => db.invoice.findUnique({ where: { id } }));
       existing = r2.data;
-      if (!existing && r2.error) {
-        const errInfo = describeDbError(r2.error);
+      if (!existing && r2.rawError) {
+        const errInfo = describeDbError(r2.rawError);
         logger.error("[Admin Invoice Update] Both findUnique attempts failed", {
           invoiceId: id,
           attempt1Err: describeDbError(fetchErr),
@@ -293,7 +298,7 @@ export const PUT = withRateLimit(withAuth(async (req: NextRequest, authCtx, ctx:
       })
     );
     updated = u1.data;
-    updateErr = u1.error;
+    updateErr = u1.rawError;
 
     // Attempt 2: WITHOUT include (defensive fallback)
     if (!updated && updateErr) {
@@ -305,8 +310,8 @@ export const PUT = withRateLimit(withAuth(async (req: NextRequest, authCtx, ctx:
         db.invoice.update({ where: { id }, data: updateData })
       );
       updated = u2.data;
-      if (!updated && u2.error) {
-        const errInfo = describeDbError(u2.error);
+      if (!updated && u2.rawError) {
+        const errInfo = describeDbError(u2.rawError);
         logger.error("[Admin Invoice Update] Both update attempts failed", {
           invoiceId: id,
           attempt1Err: describeDbError(updateErr),
