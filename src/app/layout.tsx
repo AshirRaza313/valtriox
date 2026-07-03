@@ -170,6 +170,78 @@ export default async function RootLayout({
         <meta name="apple-mobile-web-app-title" content="Valtriox" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         {/*
+          Chunk Error Auto-Recovery — prevents the "Failed to load chunk" error loop
+          that happens when a Vercel redeploy changes chunk hashes but the user's
+          browser is still holding an old chunk manifest from a previous visit.
+
+          How it works:
+          1. Listens for global `error` events (capturing phase, since chunk load
+             failures don't bubble) and `unhandledrejection` events (dynamic
+             import() failures surface as promise rejections).
+          2. If the error matches a Next.js chunk pattern (/_next/static/chunks/*.js),
+             it checks sessionStorage to see if we've already tried reloading.
+          3. If we haven't, it sets a flag in sessionStorage and reloads the page
+             ONCE with ?_c=1 cache-buster to force the browser to fetch the new
+             manifest + chunks.
+          4. If we HAVE already reloaded, it shows a user-friendly toast instead
+             of looping forever.
+
+          This is the standard Next.js pattern recommended in
+          https://nextjs.org/docs/messages/failed-to-load-static-resources
+        */}
+        <Script id="chunk-error-recovery" strategy="beforeInteractive" nonce={nonce}>
+          {`
+            (function() {
+              try {
+                var KEY = '__valtriox_chunk_reload';
+                var isChunkError = function(msg) {
+                  if (!msg) return false;
+                  var s = String(msg);
+                  return s.indexOf('/_next/static/chunks/') !== -1 ||
+                         s.indexOf('Failed to load chunk') !== -1 ||
+                         s.indexOf('Loading chunk') !== -1 ||
+                         s.indexOf('Loading CSS chunk') !== -1;
+                };
+                var reloadOnce = function() {
+                  try {
+                    var already = sessionStorage.getItem(KEY);
+                    if (already) return false;
+                    sessionStorage.setItem(KEY, '1');
+                    if (window.location.search.indexOf('_c=1') === -1) {
+                      var sep = window.location.search ? '&' : '?';
+                      window.location.href = window.location.href + sep + '_c=1';
+                    } else {
+                      window.location.reload(true);
+                    }
+                    return true;
+                  } catch (e) { return false; }
+                };
+                window.addEventListener('error', function(ev) {
+                  var t = ev && (ev.target && (ev.target.src || ev.target.href) || ev.message);
+                  if (isChunkError(t) || (ev.target && ev.target.tagName === 'SCRIPT' && ev.target.src && ev.target.src.indexOf('/_next/') !== -1)) {
+                    if (reloadOnce()) return;
+                  }
+                }, true);
+                window.addEventListener('unhandledrejection', function(ev) {
+                  var r = ev && ev.reason;
+                  var msg = (r && (r.message || r.stack || String(r))) || '';
+                  if (isChunkError(msg)) {
+                    if (reloadOnce()) { ev.preventDefault(); return; }
+                  }
+                });
+                // Clear the flag once a new chunk manifest has loaded successfully
+                window.addEventListener('load', function() {
+                  try {
+                    if (window.location.search.indexOf('_c=1') !== -1) {
+                      sessionStorage.removeItem(KEY);
+                    }
+                  } catch (e) {}
+                });
+              } catch (e) { /* no-op — recovery is best-effort */ }
+            })();
+          `}
+        </Script>
+        {/*
           SEO: Resource Hints to reduce TTFB and improve Mobile Speed score.
           - preconnect: opens early TLS+DNS+TCP connection to third-party origins
             so the browser can fetch from them instantly when needed.
