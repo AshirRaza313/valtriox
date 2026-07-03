@@ -165,7 +165,7 @@ export async function POST(req: NextRequest) {
             { name: "JazzCash", accountNumber: "0300-0000000", type: "mobile_wallet", currency: "PKR" },
             { name: "EasyPaisa", accountNumber: "0300-0000000", type: "mobile_wallet", currency: "PKR" },
             { name: "SWIFT (International)", type: "bank_transfer", currency: "USD" },
-            { name: "PayPal", accountNumber: "payments@valtriox.com", type: "online", currency: "USD" },
+            { name: "PayPal", accountNumber: "ashir@valtriox.com", type: "online", currency: "USD" },
           ]),
         },
       });

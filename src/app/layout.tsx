@@ -216,7 +216,7 @@ export default async function RootLayout({
               url: "https://valtriox.com",
               logo: "https://valtriox.com/valtriox-logo.png",
               description: SITE_DESCRIPTION,
-              foundingDate: "2025",
+              foundingDate: "2024",
               founder: {
                 "@type": "Person",
                 name: "Muhammad Ashir Raza",

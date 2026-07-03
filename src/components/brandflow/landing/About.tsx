@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Target, Eye, Heart, Globe, Zap, Award, Users, TrendingUp, Shield, Linkedin, Mail, Code2 } from "lucide-react";
+import { Target, Eye, Heart, Globe, Zap, Award, Users, TrendingUp, Shield, Linkedin, Mail, Code2, Database } from "lucide-react";
 import { usePlatformIdentity } from "@/lib/platform-identity";
 
 export function About() {
@@ -39,8 +39,10 @@ export function About() {
   ];
 
   const milestones = [
-    { year: "2024", event: "Conceptualized as the ultimate brand management platform", icon: Zap },
-    { year: "2026", event: "Officially launched in Pakistan, empowering brands to command their operations", icon: TrendingUp },
+    { year: "2024", event: "Idea born. The problem was clear and the vision for a unified brand OS took shape.", icon: Zap },
+    { year: "2025", event: "Planning and architecture. Database schema, 40+ feature modules, tech stack chosen.", icon: Database },
+    { year: "2026", event: "Built daily for months, then launched in beta in the 2nd half of the year.", icon: TrendingUp },
+    { year: "2027", event: "Next upgrade in planning. Goal: pull ahead of every competitor with easier, smarter management.", icon: Globe },
   ];
 
   return (

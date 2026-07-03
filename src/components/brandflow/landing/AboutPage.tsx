@@ -72,8 +72,8 @@ export function AboutPage() {
   const stats = [
     { value: "100+", label: "Brands Onboarded", icon: Users },
     { value: "Enterprise", label: "Grade Reliability", icon: Shield },
-    { value: "2025", label: "Founded", icon: Zap },
-    { value: "Tiered", label: "Support Plans", icon: Award },
+    { value: "2024", label: "Idea Born", icon: Zap },
+    { value: "2026", label: "Beta Launched", icon: Award },
   ];
 
   // ── Tech stack ──
@@ -101,40 +101,41 @@ export function AboutPage() {
   ];
 
   // ── Journey / Timeline ──
+  // The real story: 2024 idea → 2025 planning → 2026 build + beta → 2027 upgrade
   const milestones = [
     {
-      year: "2024, Late",
-      title: "The Problem Became Clear",
+      year: "2024",
+      title: "The Idea Was Born",
       event:
-        "I was helping a friend run his clothing brand and realized he was juggling WhatsApp for orders, an Excel sheet for inventory, a separate app for customer messages, and a notebook for tracking shipments. That week, three orders got lost. I knew there had to be a better way.",
+        "While helping a friend run his clothing brand, I watched him juggle WhatsApp for orders, an Excel sheet for inventory, a separate app for customer messages, and a notebook for tracking shipments. That week, three orders got lost. The idea for a single, unified brand operating system took root right there.",
       icon: Sparkles,
     },
     {
-      year: "2025, Early",
-      title: "First Lines of Code",
+      year: "2025",
+      title: "Planning & Architecture",
       event:
-        "I started building Valtriox solo. Designed the database schema, wrote the first API routes, and shipped a working dashboard in about ten weeks. No team, no funding, just one person who wanted to fix a real problem.",
+        "Spent the year planning the platform end to end. Designed the multi-tenant database schema, mapped out 40+ feature modules, chose the tech stack (Next.js, Prisma, PostgreSQL), and prototyped the core workflows. No code shipped to production yet, just deep planning and architecture work.",
       icon: Database,
     },
     {
-      year: "2025, Mid",
-      title: "First 20 Brands",
+      year: "2026, Early",
+      title: "Building Every Single Day",
       event:
-        "Invited twenty brands into a closed beta. They broke things, told me what was missing, and shaped the product into something people actually wanted to use. Most of the features that exist today came directly from those conversations.",
+        "Started writing production code. For several months I worked on it daily, often late into the night, building orders, inventory, customers, marketing, analytics, team management, expenses, subscriptions, white-label mode, the PWA, and security hardening. One person, one mission, no shortcuts.",
       icon: Rocket,
     },
     {
-      year: "2025, Late",
-      title: "Public Launch",
+      year: "2026, 2nd Half",
+      title: "Beta Phase Launched",
       event:
-        "Opened Valtriox to the public. Crossed 100 brands across fashion, food, electronics, and services. Shipped multi-currency support, white-label mode, and the mobile PWA so founders could run their brand from their phone.",
+        "Opened Valtriox in beta to real brands across Pakistan. Fashion, food, electronics, and services teams started running their daily operations on it. Their feedback shaped the product. Most features that exist today came directly from those early beta conversations.",
       icon: TrendingUp,
     },
     {
-      year: "2026",
-      title: "What Comes Next",
+      year: "2027 & Beyond",
+      title: "Next Upgrade In Planning",
       event:
-        "Building AI-powered insights, predictive analytics, and expanding across South Asia and the Middle East. The mission stays the same: one platform, every tool a brand needs, and a founder who actually picks up the phone.",
+        "The Valtriox team is actively planning the 2027 upgrade. The goal is simple but ambitious: pull ahead of every competitor in the brand management space by making the platform even easier to use, smarter, and more powerful. AI-powered insights, deeper automation, and expansion across South Asia and the Middle East are all on the roadmap.",
       icon: Globe,
     },
   ];
@@ -190,7 +191,7 @@ export function AboutPage() {
               </span>
             </h1>
             <p className="text-lg sm:text-xl text-slate-400 leading-relaxed max-w-3xl mx-auto">
-              {companyName} started as one person trying to fix a problem that was costing real businesses real money. Today it runs over 100 brands across Pakistan. Built from scratch, founded in 2025, and still run by the guy who wrote the first line of code.
+              {companyName} started with an idea in 2024, was planned through 2025, and built daily for months in 2026 before opening in beta. Today it runs over 100 brands across Pakistan. Still run by the founder who wrote the first line of code, with a 2027 upgrade already in planning to stay ahead of every competitor.
             </p>
             <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
               <a
@@ -415,7 +416,7 @@ export function AboutPage() {
                   </div>
                   <div className="flex items-center gap-2 text-sm text-slate-300">
                     <Rocket className="h-4 w-4 text-amber-400 flex-shrink-0" />
-                    <span>Founder Since 2025</span>
+                    <span>Founder Since 2024</span>
                   </div>
                   <div className="flex items-center gap-2 text-sm text-slate-300">
                     <Globe className="h-4 w-4 text-amber-400 flex-shrink-0" />

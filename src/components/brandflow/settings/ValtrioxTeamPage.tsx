@@ -568,7 +568,7 @@ export function ValtrioxTeamPage() {
                 <label className="text-xs font-medium text-slate-400">Email *</label>
                 <Input
                   type="email"
-                  placeholder="john@valtriox.com"
+                  placeholder="member@yourteam.com"
                   value={inviteEmail}
                   onChange={(e) => setInviteEmail(e.target.value)}
                   className="border-white/10 bg-white/[0.03] text-white placeholder:text-slate-600 rounded-xl h-10"

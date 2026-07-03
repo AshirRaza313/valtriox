@@ -1122,7 +1122,7 @@ export function PlatformSettingsPage() {
                   </Label>
                   <Input
                     type="email"
-                    placeholder="owner@valtriox.com"
+                    placeholder="ashir@valtriox.com"
                     value={personalDetails.email}
                     onChange={(e) => setPersonalDetails((p) => ({ ...p, email: e.target.value }))}
                     className={inputBg}
@@ -1228,7 +1228,7 @@ export function PlatformSettingsPage() {
                     </Label>
                     <Input
                       type="email"
-                      placeholder="support@valtriox.com"
+                      placeholder="ashir@valtriox.com"
                       value={settings.companyEmail}
                       onChange={(e) => setSettings((p) => ({ ...p, companyEmail: e.target.value }))}
                       className={inputBg}
