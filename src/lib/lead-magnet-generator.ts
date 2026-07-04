@@ -63,33 +63,34 @@ export interface LeadMagnetSettings {
   primaryBrandColor?: string;
 }
 
-// ── Colors - Valtriox Official Brand Palette (Strategic Roadmap 2026) ──
+// ── Colors - Valtriox Brand 2026 (Charcoal / Modern Gold / White) ──
 
 const C = {
-  bg: "#ffffff",
-  bg2: "#fafaf9",
-  bg3: "#f5f5f4",
-  gold: "#D4A73A",           // Primary Gold
-  goldBright: "#B8942F",     // Dark Gold
-  goldMid: "#E8BD58",         // Light Gold
+  bg: "#FAFAFA",            // White (per brand spec)
+  bg2: "#F4F4F5",
+  bg3: "#EFEFEF",
+  gold: "#D4A73A",          // Primary Gold (Modern Gold)
+  goldBright: "#B8942F",    // Dark Gold
+  goldMid: "#E8BD58",       // Light Gold
   goldDim: "#A58829",
-  goldBg: "#fffefb",
-  goldBg2: "#fefcf5",
-  goldBg3: "#fdf8e8",
-  goldBorder: "#e8dcc8",
-  goldBorder2: "#d4c5a0",
-  darkPremium: "#161B26",     // Premium Dark
-  deepNavy: "#10151E",         // Deep Navy
-  slate800: "#1e293b",        // Slate-800
-  amberGlow: "#D4A73A",       // Amber Glow
-  lightSurface: "#f5f0e8",     // Light Surface / warm cream
-  textPrimary: "#1e293b",
+  goldBg: "#FFFEFB",
+  goldBg2: "#FEFCF5",
+  goldBg3: "#FDF8E8",
+  goldBorder: "#E8DCC8",
+  goldBorder2: "#D4C5A0",
+  darkPremium: "#161B26",   // Charcoal (primary dark)
+  charcoal: "#161B26",
+  deepNavy: "#10151E",
+  slate800: "#1E293B",
+  amberGlow: "#D4A73A",
+  lightSurface: "#F5F0E8",
+  textPrimary: "#161B26",   // Charcoal — primary text
   textSecondary: "#334155",
-  textMuted: "#64748b",
-  textLight: "#94a3b8",
-  green: "#059669",           // Accent Green
-  greenBg: "#ecfdf5",
-  slate200: "#e2e8f0",
+  textMuted: "#64748B",
+  textLight: "#94A3B8",
+  green: "#059669",
+  greenBg: "#ECFDF5",
+  slate200: "#E2E8F0",
 };
 
 // ── Helpers ──

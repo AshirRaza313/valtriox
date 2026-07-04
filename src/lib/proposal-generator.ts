@@ -74,34 +74,35 @@ export interface ProposalData {
   createdAt: string;
 }
 
-// ── Colors - Valtriox Gold Palette ──
+// ── Colors - Valtriox Brand 2026 (Charcoal / Modern Gold / White) ──
 
 const C = {
-  bg: "#ffffff",
-  bg2: "#fafaf9",
-  bg3: "#f5f5f4",
-  gold: "#D4A73A",
+  bg: "#FAFAFA",            // White (per brand spec)
+  bg2: "#F4F4F5",
+  bg3: "#EFEFEF",
+  gold: "#D4A73A",          // Modern Gold
   goldBright: "#B8942F",
   goldMid: "#E8BD58",
   goldDim: "#A58829",
-  goldBg: "#fffefb",
-  goldBg2: "#fefcf5",
-  goldBg3: "#fdf8e8",
-  goldBorder: "#e8dcc8",
-  goldBorder2: "#d4c5a0",
-  darkPremium: "#161B26",
+  goldBg: "#FFFEFB",
+  goldBg2: "#FEFCF5",
+  goldBg3: "#FDF8E8",
+  goldBorder: "#E8DCC8",
+  goldBorder2: "#D4C5A0",
+  darkPremium: "#161B26",   // Charcoal (primary dark)
+  charcoal: "#161B26",
   deepNavy: "#10151E",
-  slate800: "#1e293b",
+  slate800: "#1E293B",
   amberGlow: "#D4A73A",
-  lightSurface: "#f5f0e8",
-  textPrimary: "#1e293b",
+  lightSurface: "#F5F0E8",
+  textPrimary: "#161B26",   // Charcoal — primary text
   textSecondary: "#334155",
-  textMuted: "#64748b",
-  textLight: "#94a3b8",
+  textMuted: "#64748B",
+  textLight: "#94A3B8",
   green: "#059669",
-  greenBg: "#ecfdf5",
-  slate200: "#e2e8f0",
-  white: "#ffffff",
+  greenBg: "#ECFDF5",
+  slate200: "#E2E8F0",
+  white: "#FAFAFA",         // White (matches bg)
   watermark: "#D4A73A",
 };
 

@@ -11,11 +11,13 @@ import { withRateLimit } from "@/lib/rate-limit";
 // Extend Vercel serverless function timeout to 60s (PDF generation is heavy)
 export const maxDuration = 60;
 
-// ── Chart Color Palettes ──
-const PIE_COLORS = ["#f59e0b", "#E8D48B", "#60a5fa", "#f87171", "#a78bfa", "#fb923c", "#38bdf8", "#4ade80"];
+// ── Chart Color Palettes (Valtriox Brand 2026: Charcoal / Modern Gold / White) ──
+// Primary palette anchored on Modern Gold #D4A73A and Charcoal #161B26,
+// with complementary tones for multi-series charts.
+const PIE_COLORS = ["#D4A73A", "#161B26", "#E8BD58", "#A58829", "#94A3B8", "#334155", "#FDF8E8", "#64748B"];
 const BAR_COLORS = [
-  "#f59e0b", "#fbbf24", "#D4A73A", "#b45309", "#92400e",
-  "#78350f", "#fcd34d", "#fde68a", "#fef3c7", "#E8D48B",
+  "#D4A73A", "#161B26", "#E8BD58", "#A58829", "#B8942F",
+  "#334155", "#FBBF24", "#FDE68A", "#FEF3C7", "#94A3B8",
 ];
 
 // ── Change Calculation Helper ──

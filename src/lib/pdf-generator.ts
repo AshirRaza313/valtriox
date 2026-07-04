@@ -172,43 +172,51 @@ export interface ReportData {
   totalPages?: number;
 }
 
-// ── Color Constants - SOFT LIGHT PREMIUM Theme ──
+// ── Color Constants — Valtriox Brand 2026 (Charcoal / Modern Gold / White) ──
+// Updated palette per brand spec:
+//   Charcoal    #161B26  (primary dark — headers, footers, table headers, primary text)
+//   Modern Gold #D4A73A  (accent — gold lines, titles, badges)
+//   White       #FAFAFA  (page background — slightly off-white for premium feel)
 
 const C = {
   // Page & Card Backgrounds
-  bg: "#ffffff",
-  bg2: "#fafaf9",
-  bg3: "#f5f5f4",
+  bg: "#FAFAFA",          // White (per brand spec)
+  bg2: "#F4F4F5",         // Slightly darker for layered surfaces
+  bg3: "#EFEFEF",         // Cards / panel backgrounds
+  white: "#FAFAFA",       // Explicit alias
+  // Premium Charcoal (primary dark)
+  charcoal: "#161B26",
+  darkPremium: "#161B26",
   // Gold Accent Hierarchy
   goldBright: "#B8942F",
-  gold: "#D4A73A",
+  gold: "#D4A73A",        // Modern Gold
   goldMid: "#D4A73A",
   goldDim: "#A58829",
   goldFaint: "#785e0a",
   goldUltraFaint: "#5c4808",
-  // Card backgrounds (soft cream/warm whites)
-  goldBg: "#fffefb",
-  goldBg2: "#fefcf5",
-  goldBg3: "#fdf8e8",
+  // Card backgrounds (soft cream/warm whites — kept for premium feel)
+  goldBg: "#FFFEFB",
+  goldBg2: "#FEFCF5",
+  goldBg3: "#FDF8E8",
   // Borders (warm grays)
-  goldBorder: "#e8dcc8",
-  goldBorder2: "#d4c5a0",
-  goldLine: "#ddd0b8",
+  goldBorder: "#E8DCC8",
+  goldBorder2: "#D4C5A0",
+  goldLine: "#DDD0B8",
   // Text hierarchy (on light bg)
-  textPrimary: "#1a1a2e",
+  textPrimary: "#161B26",   // Charcoal — primary text
   textSecondary: "#334155",
-  textMuted: "#64748b",
-  textLight: "#94a3b8",
-  textFaint: "#cbd5e1",
+  textMuted: "#64748B",
+  textLight: "#94A3B8",
+  textFaint: "#CBD5E1",
   // Status Colors
   green: "#059669",
-  greenBg: "#ecfdf5",
-  yellow: "#d97706",
-  yellowBg: "#fffbeb",
-  red: "#dc2626",
-  redBg: "#fef2f2",
-  slate: "#64748b",
-  slateBg: "#f1f5f9",
+  greenBg: "#ECFDF5",
+  yellow: "#D97706",
+  yellowBg: "#FFFBEB",
+  red: "#DC2626",
+  redBg: "#FEF2F2",
+  slate: "#64748B",
+  slateBg: "#F1F5F9",
 };
 
 // ── Helpers ──
@@ -1180,8 +1188,8 @@ export async function generateCustomInvoicePDF(invoice: InvoiceData): Promise<Bu
 
       // ── NAVY HEADER BACKGROUND (full-bleed) ──
       doc.save();
-      doc.rect(0, 0, W, 180).fill("#0F1B2D");
-      // Amber accent bar at bottom of navy header
+      doc.rect(0, 0, W, 180).fill(C.charcoal);
+      // Amber accent bar at bottom of charcoal header
       doc.rect(0, 178, W, 3).fill(C.gold);
       doc.restore();
 
@@ -1198,7 +1206,7 @@ export async function generateCustomInvoicePDF(invoice: InvoiceData): Promise<Bu
       doc.restore();
 
       // ── LOGO + BRAND NAME (white text on navy) ──
-      // Since the header is dark navy (#0F1B2D), we use the transparent-background
+      // Since the header is dark charcoal (#161B26), we use the transparent-background
       // inverted logo variant (valtriox-icon-inverted-nobg.png) directly on the
       // navy — no white tile needed. If a custom platform logo is configured,
       // we draw it on a white tile as before (custom logos may not be designed
@@ -1216,7 +1224,7 @@ export async function generateCustomInvoicePDF(invoice: InvoiceData): Promise<Bu
             doc.image(logoBuffer, P + 4, y + 4, { width: 40, height: 40 });
             doc.restore();
           } catch {
-            // Transparent inverted icon on navy (no white tile)
+            // Transparent inverted icon on charcoal (no white tile)
             try {
               const fs = await import("fs");
               const path = await import("path");
@@ -1239,7 +1247,7 @@ export async function generateCustomInvoicePDF(invoice: InvoiceData): Promise<Bu
           }
         }
       } else {
-        // No custom logo → use the transparent inverted icon on the navy header
+        // No custom logo → use the transparent inverted icon on the charcoal header
         try {
           const fs = await import("fs");
           const path = await import("path");
@@ -1354,9 +1362,9 @@ export async function generateCustomInvoicePDF(invoice: InvoiceData): Promise<Bu
 
       // ── LINE ITEMS TABLE (or single-line plan card) ──
       if (hasLineItems) {
-        // Table header (navy bar)
+        // Table header (charcoal bar)
         doc.save();
-        doc.rect(P, y2, CW, 28).fill("#0F1B2D");
+        doc.rect(P, y2, CW, 28).fill(C.charcoal);
         doc.fillColor("#ffffff").font(FONT.bold).fontSize(8.5);
         doc.text("DESCRIPTION", P + 14, y2 + 10, { width: CW * 0.55 });
         doc.text("QTY", P + CW * 0.6, y2 + 10, { width: CW * 0.1, align: "right" });
@@ -1425,7 +1433,7 @@ export async function generateCustomInvoicePDF(invoice: InvoiceData): Promise<Bu
         doc.restore();
         doc.font(FONT.bold).fontSize(10).fillColor(C.textPrimary);
         doc.text("TOTAL DUE", labelX, y2 + 12, { width: totalsW * 0.55 });
-        doc.font(FONT.bold).fontSize(15).fillColor("#0F1B2D");
+        doc.font(FONT.bold).fontSize(15).fillColor(C.charcoal);
         doc.text(formatCurrency(total, invoice.currencySymbol), labelX + totalsW * 0.55, y2 + 9, { width: totalsW * 0.45, align: "right" });
         y2 += 50;
       } else {
@@ -1438,7 +1446,7 @@ export async function generateCustomInvoicePDF(invoice: InvoiceData): Promise<Bu
         doc.text(invoice.invoiceTitle || `${invoice.planName} Plan`, P + 18, y2 + 16, { width: CW - 36 });
         doc.font(FONT.regular).fontSize(9).fillColor(C.textSecondary);
         doc.text(invoice.billingCycle === "annually" ? "Annual Subscription" : "Monthly Subscription", P + 18, y2 + 36, { width: CW - 36 });
-        doc.font(FONT.bold).fontSize(18).fillColor("#0F1B2D");
+        doc.font(FONT.bold).fontSize(18).fillColor(C.charcoal);
         doc.text(formatCurrency(total, invoice.currencySymbol), P + 18, y2 + 52, { width: CW - 36, align: "right" });
         y2 += 100;
       }
@@ -1494,10 +1502,10 @@ export async function generateCustomInvoicePDF(invoice: InvoiceData): Promise<Bu
         doc.restore();
       }
 
-      // ── FOOTER (navy bar at bottom of page) ──
+      // ── FOOTER (charcoal bar at bottom of page) ──
       const footerY = H - 80;
       doc.save();
-      doc.rect(0, footerY, W, 80).fill("#0F1B2D");
+      doc.rect(0, footerY, W, 80).fill(C.charcoal);
       doc.rect(0, footerY, W, 2).fill(C.gold);
       doc.restore();
 
@@ -1618,14 +1626,17 @@ export async function generateReportPDF(report: ReportData): Promise<Buffer> {
       // Top gold bar
       doc.rect(0, 0, W, 3).fill(accentColor);
 
-      // CONFIDENTIAL watermark (single, very subtle — diagonal across center)
-      // Kept faint so it doesn't visually compete with the logo or title.
-      doc.save();
-      doc.font(FONT.bold).fontSize(54).fillColor(C.goldUltraFaint);
-      doc.translate(W / 2, H / 2);
-      doc.rotate(-Math.PI / 7);
-      doc.text("CONFIDENTIAL", -180, -27, { width: 360, align: "center" });
-      doc.restore();
+      // ── CONFIDENTIAL watermark REMOVED from cover page ──
+      // Phase 14 FIX: Previously a large diagonal "CONFIDENTIAL" text was drawn
+      // at the page center (H/2 ≈ 421). The cover content (logo + org name +
+      // title + subtitle + period badge + PLAN BADGE) grows downward from y=130
+      // and the Plan badge frequently lands at y≈440-462 — DIRECTLY ON TOP of
+      // the centered watermark. This caused visible text overlap that made the
+      // document look broken.
+      //
+      // Instead, we now draw a SMALL "CONFIDENTIAL" pill at the bottom-right
+      // of the cover page (above the gold bar) — same approach used by the
+      // proposal generator. Security notice preserved, no overlap.
 
       // ── Cover content (centered vertically) ──
 
@@ -1781,6 +1792,20 @@ export async function generateReportPDF(report: ReportData): Promise<Buffer> {
         doc.text(coverContactParts.join("   |   "), P, coverBottomY + 32, { width: CW, align: "center" });
         doc.restore();
       }
+
+      // ── Small CONFIDENTIAL pill (bottom-right of cover, above gold bar) ──
+      // Replaces the old diagonal watermark that overlapped with the Plan badge.
+      // Same visual pattern used by proposal-generator.ts.
+      const confPillW = 110;
+      const confPillH = 22;
+      const confPillX = W - P - confPillW;
+      const confPillY = H - 18 - confPillH;
+      doc.save();
+      doc.roundedRect(confPillX, confPillY, confPillW, confPillH, 4).fill(C.goldBg3);
+      doc.roundedRect(confPillX, confPillY, confPillW, confPillH, 4).lineWidth(0.5).strokeColor(C.goldBorder);
+      doc.font(FONT.bold).fontSize(8).fillColor(C.goldDim);
+      doc.text("CONFIDENTIAL", confPillX, confPillY + 7, { width: confPillW, align: "center" });
+      doc.restore();
 
       // Bottom gold bar
       doc.rect(0, H - 3, W, 3).fill(accentColor);
