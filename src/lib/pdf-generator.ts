@@ -1796,14 +1796,30 @@ export async function generateReportPDF(report: ReportData): Promise<Buffer> {
       // ── Small CONFIDENTIAL pill (bottom-right of cover, above gold bar) ──
       // Replaces the old diagonal watermark that overlapped with the Plan badge.
       // Same visual pattern used by proposal-generator.ts.
+      //
+      // Phase 15 FIX: Previously drawn as two separate roundedRect() calls
+      // (one .fill(), one .lineWidth().strokeColor() with NO .stroke()).
+      // pdfkit left the second path dangling (no explicit fill/stroke op),
+      // and the NEXT fill operation (the green bottom bar) would silently
+      // fill the dangling pill path with the bottom-bar's color — making
+      // the pill appear GREEN (#059669 when org brandColor is green) instead
+      // of the intended cream (#FDF8E8). The CONFIDENTIAL text was then
+      // invisible (gold-on-green).
+      //
+      // FIX: Draw the pill ONCE using .fillAndStroke(color, strokeColor)
+      // which emits a single 'B' operator (fill + stroke) in the PDF stream.
+      // No dangling path, no color bleed.
       const confPillW = 110;
       const confPillH = 22;
       const confPillX = W - P - confPillW;
       const confPillY = H - 18 - confPillH;
       doc.save();
-      doc.roundedRect(confPillX, confPillY, confPillW, confPillH, 4).fill(C.goldBg3);
-      doc.roundedRect(confPillX, confPillY, confPillW, confPillH, 4).lineWidth(0.5).strokeColor(C.goldBorder);
-      doc.font(FONT.bold).fontSize(8).fillColor(C.goldDim);
+      doc.lineWidth(0.5);
+      doc.roundedRect(confPillX, confPillY, confPillW, confPillH, 4)
+         .fillAndStroke(C.goldBg3, C.goldBorder);
+      // Use charcoal text on cream background for maximum contrast (always
+      // readable regardless of org brandColor).
+      doc.font(FONT.bold).fontSize(8).fillColor(C.charcoal);
       doc.text("CONFIDENTIAL", confPillX, confPillY + 7, { width: confPillW, align: "center" });
       doc.restore();
 

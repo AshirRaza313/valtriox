@@ -69,6 +69,31 @@ export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
     const currency = getCurrencyForCountry(org.country || "PK");
     const sym = currency.symbol;
 
+    // ── Phase 15: Normalize org.logo to a proper data URI for PDF embedding ──
+    // The Organization.logo field is stored as "image/jpeg;base64,/9j/..." (no
+    // "data:" prefix). PDFKit's parseBase64DataUri requires "data:image/...;base64,...".
+    // Without normalization, the org logo is silently dropped and the cover page
+    // falls back to the platform logo or the default VTX icon.
+    //
+    // After normalization, the org logo is passed to generateReportPDF as
+    // `brandLogo`, which is the FIRST priority in the cover logo rendering
+    // chain (brandLogo > platformLogo > verticalLogo > defaultIcon).
+    let orgLogoDataUri: string | undefined = undefined;
+    const rawOrgLogo = (org as any).logo as string | null | undefined;
+    if (rawOrgLogo && typeof rawOrgLogo === "string" && rawOrgLogo.length > 50) {
+      if (rawOrgLogo.startsWith("data:")) {
+        // Already a proper data URI
+        orgLogoDataUri = rawOrgLogo;
+      } else if (rawOrgLogo.startsWith("image/")) {
+        // Missing "data:" prefix — add it
+        orgLogoDataUri = `data:${rawOrgLogo}`;
+      } else if (rawOrgLogo.startsWith("/9j/") || rawOrgLogo.startsWith("iVBOR")) {
+        // Raw base64 without any mime prefix — assume jpeg/png
+        const mime = rawOrgLogo.startsWith("/9j/") ? "image/jpeg" : "image/png";
+        orgLogoDataUri = `data:${mime};base64,${rawOrgLogo}`;
+      }
+    }
+
     // Fetch platform settings for PDF branding (footer, etc.)
     let platformSettings: any = null;
     try {
@@ -93,25 +118,57 @@ export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
 
     let reportData: ReportData;
 
+    // ── Phase 15: Use Asia/Karachi timezone for all date/time display ──
+    // The server runs in UTC, so `new Date().toLocaleString("en-PK")` shows
+    // UTC time, not Pakistan time. PK = UTC+5. The user reported the report
+    // "Generated at" time was wrong. Fix: explicitly use Asia/Karachi tz.
+    const PK_TZ = "Asia/Karachi";
+    function pkNow(): Date {
+      // Get current time in Pakistan tz as a Date object
+      const now = new Date();
+      const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+      return new Date(utc + 5 * 3600000); // PK = UTC+5
+    }
+    function pkDateStr(d: Date): string {
+      return d.toLocaleDateString("en-PK", { timeZone: PK_TZ, year: "numeric", month: "2-digit", day: "2-digit" });
+    }
+    function pkDateTimeStr(d: Date): string {
+      return d.toLocaleString("en-PK", { timeZone: PK_TZ, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true });
+    }
+    function pkDateLabel(d: Date): string {
+      return d.toLocaleDateString("en-PK", { timeZone: PK_TZ, month: "short", day: "numeric" });
+    }
+
     switch (type) {
       // ════════════════════════════════════════════════════════════════════
       // SALES REPORT
       // ════════════════════════════════════════════════════════════════════
       case "sales": {
-        const now = new Date();
+        const now = pkNow();
         const periodLabel = period.charAt(0).toUpperCase() + period.slice(1);
 
         // ── Current Period Date Range ──
+        // Phase 15 FIX: For monthly, the DISPLAY range is the full month
+        // (1st to last day), even if today is mid-month. The DATA query
+        // still uses startDate to now (can't fetch future orders), but the
+        // period label shows the complete month range so users see
+        // "Monthly — 01/07/2026 to 31/07/2026" instead of
+        // "Monthly — 01/07/2026 to 04/07/2026".
         let startDate: Date;
+        let displayEndDate: Date; // for period label only
         switch (period) {
           case "daily":
             startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            displayEndDate = now;
             break;
           case "weekly":
             startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            displayEndDate = now;
             break;
-          default:
+          default: // monthly
             startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            // Last day of current month
+            displayEndDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
         }
 
         // ── Previous Period Date Range (same duration, shifted back) ──
@@ -155,16 +212,30 @@ export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
           : `Total of ${orders.length} orders processed during this period, generating ${sym} ${totalRevenue.toLocaleString()} in revenue.`;
 
         // ── Trend Chart Data: Daily Revenue Breakdown ──
+        // Phase 15 FIX: For monthly reports, the chart now shows daily revenue
+        // with full date labels (e.g. "Jul 1", "Jul 2") instead of day-of-week
+        // labels (e.g. "Mon 1", "Tue 2") which were confusing in a monthly
+        // context. For daily/weekly, keep the day-of-week format.
+        const isMonthly = period === "monthly";
+        const chartFormatDay = (d: Date): string => {
+          if (isMonthly) {
+            // "Jul 5" format — clearer for monthly reports
+            return formatMonthLabel(d).split(" ")[0].slice(0, 3) + " " + d.getDate();
+          }
+          return formatDayLabel(d);
+        };
         const dailyMap = new Map<string, number>();
         const dayIter = new Date(startDate);
-        while (dayIter <= now) {
-          dailyMap.set(formatDayLabel(new Date(dayIter)), 0);
+        // For monthly, iterate up to end of month (or today, whichever is earlier)
+        const trendEnd = isMonthly ? new Date(Math.min(now.getTime(), displayEndDate.getTime())) : now;
+        while (dayIter <= trendEnd) {
+          dailyMap.set(chartFormatDay(new Date(dayIter)), 0);
           dayIter.setDate(dayIter.getDate() + 1);
         }
         orders.forEach((o) => {
           const d = safeDate(o.createdAt);
           if (d) {
-            const label = formatDayLabel(d);
+            const label = chartFormatDay(d);
             dailyMap.set(label, (dailyMap.get(label) || 0) + (Number(o.total) || 0));
           }
         });
@@ -230,12 +301,13 @@ export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
         reportData = {
           title: "Sales Report",
           subtitle: "Sales Analytics Overview",
-          period: `${periodLabel} \u2014 ${startDate.toLocaleDateString("en-PK")} to ${now.toLocaleDateString("en-PK")}`,
-          generatedAt: now.toLocaleString("en-PK"),
+          period: `${periodLabel} \u2014 ${pkDateStr(startDate)} to ${pkDateStr(displayEndDate)}`,
+          generatedAt: pkDateTimeStr(now),
           orgName: org.name,
           orgEmail: org.email || undefined,
           brandName: org.name,
           brandColor: org.brandColor || undefined,
+          brandLogo: orgLogoDataUri,
           plan: org.plan,
           ...platformInfo,
           stats: [
@@ -280,7 +352,7 @@ export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
       // CUSTOMER REPORT
       // ════════════════════════════════════════════════════════════════════
       case "customers": {
-        const now = new Date();
+        const now = pkNow();
         const customers = await withRetry(async () => {
           return await db.customer.findMany({
           where: { organizationId: orgId },
@@ -396,11 +468,12 @@ export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
           title: "Customer Report",
           subtitle: "Customer Analytics Overview",
           period: "All Time",
-          generatedAt: now.toLocaleString("en-PK"),
+          generatedAt: pkDateTimeStr(now),
           orgName: org.name,
           orgEmail: org.email || undefined,
           brandName: org.name,
           brandColor: org.brandColor || undefined,
+          brandLogo: orgLogoDataUri,
           plan: org.plan,
           ...platformInfo,
           stats: [
@@ -442,7 +515,7 @@ export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
       // PRODUCT REPORT
       // ════════════════════════════════════════════════════════════════════
       case "products": {
-        const now = new Date();
+        const now = pkNow();
         const products = await withRetry(async () => {
           return await db.product.findMany({
           where: { organizationId: orgId },
@@ -588,11 +661,12 @@ export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
           title: "Product Report",
           subtitle: "Product Performance Analytics",
           period: "All Time",
-          generatedAt: now.toLocaleString("en-PK"),
+          generatedAt: pkDateTimeStr(now),
           orgName: org.name,
           orgEmail: org.email || undefined,
           brandName: org.name,
           brandColor: org.brandColor || undefined,
+          brandLogo: orgLogoDataUri,
           plan: org.plan,
           ...platformInfo,
           stats: [

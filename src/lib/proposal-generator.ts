@@ -1008,9 +1008,9 @@ export async function generateProposalPDF(
       // Confidential badge
       const confY = H - 130;
       doc.save();
-      doc.roundedRect(W / 2 - 55, confY, 110, 26, 6).fill(C.goldBg3);
-      doc.roundedRect(W / 2 - 55, confY, 110, 26, 6).lineWidth(0.5).strokeColor(C.goldBorder).stroke();
-      doc.font(FONT.bold).fontSize(8).fillColor(C.goldDim);
+      doc.lineWidth(0.5);
+      doc.roundedRect(W / 2 - 55, confY, 110, 26, 6).fillAndStroke(C.goldBg3, C.goldBorder);
+      doc.font(FONT.bold).fontSize(8).fillColor(C.charcoal);
       doc.text("CONFIDENTIAL", W / 2 - 55, confY + 8, { width: 110, align: "center" });
       doc.restore();
 
