@@ -8,6 +8,7 @@
 import PDFDocument from "pdfkit";
 import { FONT_REGULAR, FONT_BOLD, FONT_ITALIC, FONT_BOLD_ITALIC } from "./font-buffers";
 import { safeDate } from "@/lib/utils-extended";
+import { getBrandLogoBuffer, BRAND_LOGO_ASPECT } from "./brand-logo";
 
 // PDFKit.PDFDocument is missing the `arc` method in @types/pdfkit.
 // Cast to this type where arc is needed (donut chart rendering).
@@ -264,35 +265,95 @@ function parseBase64DataUri(dataUri: string): { mimeType: string; base64: string
 
 // Helper: render default Valtriox logo and return right X position
 async function renderDefaultLogo(doc: PDFKit.PDFDocument, x: number, y: number): Promise<number> {
-  try {
-    const fs = await import("fs");
-    const path = await import("path");
-    // Try the inverted-color no-bg icon first (best quality on light cream PDF theme)
-    const logoPaths = [
-      "valtriox-icon-inverted-nobg.png",
-      "valtriox-icon-inverted.png",
-      "valtriox-logo.png",
-    ];
-    for (const fname of logoPaths) {
-      const logoPath = path.join(process.cwd(), "public", fname);
-      if (fs.existsSync(logoPath)) {
-        const logoBuffer = fs.readFileSync(logoPath);
-        doc.save();
-        doc.roundedRect(x, y, 44, 44, 8).fill(C.goldBg2);
-        doc.roundedRect(x, y, 44, 44, 8).lineWidth(0.5).strokeColor(C.goldBorder2).stroke();
-        doc.image(logoBuffer, x + 4, y + 4, { width: 36, height: 36 });
-        doc.restore();
-        return x + 56;
-      }
-    }
-  } catch {}
-  // Fallback: VTX text logo
+  // Phase 15 (rev 2): ALWAYS use the founder-uploaded brand logo with a
+  // SQUARE golden border. This overrides any per-org / per-platform logo
+  // per founder directive: "yeh uploaded logo icon har organizations ki
+  // saari reports aur saari invoices par laga do same as it is".
+  drawBrandLogoSquare(doc, x, y, 44, { bgColor: C.goldBg2 });
+  return x + 56;
+}
+
+// ── Brand Logo Helpers (founder-uploaded icon, SQUARE golden border) ──
+// Per founder directive, this logo is the SOLE brand mark on every PDF
+// (invoices, reports, proposals, lead magnets) regardless of which org
+// the document belongs to. The border is a SOLID SQUARE (not rounded)
+// in Modern Gold #D4A73A.
+
+interface BrandLogoOptions {
+  /** Background fill inside the border. Defaults to C.goldBg2 (cream). */
+  bgColor?: string;
+  /** Border color. Defaults to C.gold (#D4A73A — Modern Gold). */
+  borderColor?: string;
+  /** Border thickness in points. Defaults to 1.2. */
+  borderWidth?: number;
+  /** Inner padding (space between logo and border). Defaults to ~8% of boxSize. */
+  padding?: number;
+}
+
+/**
+ * Render the brand logo with a SQUARE golden border at the given top-left corner.
+ * @returns The width consumed (boxSize) for layout advancement.
+ */
+function drawBrandLogoSquare(
+  doc: PDFKit.PDFDocument,
+  x: number,
+  y: number,
+  boxSize: number,
+  opts?: BrandLogoOptions,
+): number {
+  const bgColor = opts?.bgColor ?? C.goldBg2;
+  const borderColor = opts?.borderColor ?? C.gold;
+  const borderWidth = opts?.borderWidth ?? 1.2;
+  const padding = opts?.padding ?? Math.max(2, boxSize * 0.08);
+  const buffer = getBrandLogoBuffer();
+
   doc.save();
-  doc.roundedRect(x, y, 38, 38, 6).fill(C.gold);
-  doc.fontSize(15).fillColor("#ffffff");
-  doc.font(FONT.bold).text("VTX", x + 5, y + 11, { width: 28, align: "center" });
+  // Square background fill
+  doc.rect(x, y, boxSize, boxSize).fill(bgColor);
+  // Square golden border (drawn on top of background, single op = no dangling path)
+  doc.rect(x, y, boxSize, boxSize).lineWidth(borderWidth).strokeColor(borderColor).stroke();
+
+  if (buffer) {
+    try {
+      // Center the logo inside the box, preserving aspect ratio.
+      // Source aspect ratio h/w = 282/235 ≈ 1.2 (slightly taller than wide).
+      const innerSize = boxSize - padding * 2;
+      let drawW = innerSize;
+      let drawH = innerSize * BRAND_LOGO_ASPECT;
+      if (drawH > innerSize) {
+        drawH = innerSize;
+        drawW = innerSize / BRAND_LOGO_ASPECT;
+      }
+      const imgX = x + (boxSize - drawW) / 2;
+      const imgY = y + (boxSize - drawH) / 2;
+      doc.image(buffer, imgX, imgY, { width: drawW, height: drawH });
+    } catch {
+      // border + bg already drawn; ignore image errors
+    }
+  } else {
+    // Fallback: gold square with VTX text
+    doc.fontSize(boxSize * 0.35).fillColor("#ffffff");
+    doc.font(FONT.bold).text("VTX", x, y + boxSize * 0.3, { width: boxSize, align: "center" });
+  }
   doc.restore();
-  return x + 48;
+  return boxSize;
+}
+
+/**
+ * Render the brand logo centered horizontally with a SQUARE golden border.
+ * Used on cover pages (report / proposal / lead magnet).
+ * @returns The Y position just below the logo (for layout advancement).
+ */
+function drawBrandLogoSquareCentered(
+  doc: PDFKit.PDFDocument,
+  centerX: number,
+  y: number,
+  boxSize: number,
+  opts?: BrandLogoOptions,
+): number {
+  const x = centerX - boxSize / 2;
+  drawBrandLogoSquare(doc, x, y, boxSize, opts);
+  return y + boxSize;
 }
 
 // ── NEW: Empty Data Check ──
@@ -744,26 +805,15 @@ export async function generateInvoicePDF(invoice: InvoiceData): Promise<Buffer> 
       let headerRightStartX = P + 200;
 
       // LEFT: Logo + Company Name
-      if (hasLogo) {
-        const logoParsed = parseBase64DataUri(invoice.platformLogo!);
-        if (logoParsed) {
-          try {
-            const logoBuffer = Buffer.from(logoParsed.base64, "base64");
-            doc.save();
-            doc.roundedRect(P, y, 44, 44, 8).fill(C.goldBg2);
-            doc.roundedRect(P, y, 44, 44, 8).lineWidth(0.5).strokeColor(C.goldBorder2).stroke();
-            doc.image(logoBuffer, P + 4, y + 4, { width: 36, height: 36 });
-            doc.restore();
-            headerRightStartX = P + 56;
-          } catch (imgErr) {
-            headerRightStartX = await renderDefaultLogo(doc, P, y);
-          }
-        } else {
-          headerRightStartX = await renderDefaultLogo(doc, P, y);
-        }
-      } else {
-        headerRightStartX = await renderDefaultLogo(doc, P, y);
-      }
+      // Phase 15 (rev 2): ALWAYS use the founder-uploaded brand logo with
+      // a SQUARE golden border, regardless of any platform logo data.
+      drawBrandLogoSquare(doc, P, y, 44, {
+        bgColor: C.goldBg2,
+        borderColor: C.gold,
+        borderWidth: 1.2,
+        padding: 4,
+      });
+      headerRightStartX = P + 56;
 
       // Company Name - dark text
       doc.font(FONT.bold).fontSize(20).fillColor(C.textPrimary);
@@ -1205,69 +1255,20 @@ export async function generateCustomInvoicePDF(invoice: InvoiceData): Promise<Bu
       doc.opacity(1);
       doc.restore();
 
-      // ── LOGO + BRAND NAME (white text on navy) ──
-      // Since the header is dark charcoal (#161B26), we use the transparent-background
-      // inverted logo variant (valtriox-icon-inverted-nobg.png) directly on the
-      // navy — no white tile needed. If a custom platform logo is configured,
-      // we draw it on a white tile as before (custom logos may not be designed
-      // for dark backgrounds).
+      // ── LOGO + BRAND NAME (white text on charcoal) ──
+      // Phase 15 (rev 2): ALWAYS use the founder-uploaded brand logo. The
+      // custom invoice header is dark charcoal (#161B26), so we draw the
+      // logo on a WHITE background card with a SQUARE golden border to
+      // make the charcoal-and-gold logo visible.
       let y = 36;
       let headerRightStartX = P + 60;
 
-      if (hasLogo) {
-        const logoParsed = parseBase64DataUri(invoice.platformLogo!);
-        if (logoParsed) {
-          try {
-            const logoBuffer = Buffer.from(logoParsed.base64, "base64");
-            doc.save();
-            doc.roundedRect(P, y, 48, 48, 8).fill("#ffffff");
-            doc.image(logoBuffer, P + 4, y + 4, { width: 40, height: 40 });
-            doc.restore();
-          } catch {
-            // Transparent inverted icon on charcoal (no white tile)
-            try {
-              const fs = await import("fs");
-              const path = await import("path");
-              const nobgPath = path.join(process.cwd(), "public", "valtriox-icon-inverted-nobg.png");
-              if (fs.existsSync(nobgPath)) {
-                const nobgBuf = fs.readFileSync(nobgPath);
-                doc.save();
-                doc.image(nobgBuf, P + 4, y + 4, { width: 40, height: 40 });
-                doc.restore();
-              } else {
-                throw new Error("no-bg logo not found");
-              }
-            } catch {
-              // Gold V-tile fallback
-              doc.save();
-              doc.roundedRect(P, y, 48, 48, 8).fill(C.gold);
-              doc.fillColor("#ffffff").font(FONT.bold).fontSize(22).text("V", P, y + 12, { width: 48, align: "center" });
-              doc.restore();
-            }
-          }
-        }
-      } else {
-        // No custom logo → use the transparent inverted icon on the charcoal header
-        try {
-          const fs = await import("fs");
-          const path = await import("path");
-          const nobgPath = path.join(process.cwd(), "public", "valtriox-icon-inverted-nobg.png");
-          if (fs.existsSync(nobgPath)) {
-            const nobgBuf = fs.readFileSync(nobgPath);
-            doc.save();
-            doc.image(nobgBuf, P + 4, y + 4, { width: 40, height: 40 });
-            doc.restore();
-          } else {
-            throw new Error("no-bg logo not found");
-          }
-        } catch {
-          // Gold V-tile fallback
-          doc.save();
-          doc.roundedRect(P, y, 48, 48, 8).fill(C.gold);
-          doc.fillColor("#ffffff").font(FONT.bold).fontSize(22).text("V", P, y + 12, { width: 48, align: "center" });
-          doc.restore();
-        }
-      }
+      drawBrandLogoSquare(doc, P, y, 48, {
+        bgColor: "#FFFFFF", // white card so charcoal logo shows on dark header
+        borderColor: C.gold,
+        borderWidth: 1.4,
+        padding: 4,
+      });
 
       // Brand name (white)
       doc.font(FONT.bold).fontSize(22).fillColor("#ffffff");
@@ -1657,54 +1658,20 @@ export async function generateReportPDF(report: ReportData): Promise<Buffer> {
       doc.rect(-4, -4, 8, 8).fill(accentColor);
       doc.restore();
 
-      // ── LOGO (vertical, large, prominent) ──
-      // Use the new vertical inverted-color logo (with background, since PDF is light theme)
-      // at 140px wide. If a custom brand logo is provided via report.brandLogo, prefer that.
-      // Falls back to renderCoverDefaultLogo (VTX box) if no logo available.
+      // ── LOGO (founder brand icon, large, SQUARE golden border) ──
+      // Phase 15 (rev 2): ALWAYS use the founder-uploaded brand logo with a
+      // SQUARE golden border, regardless of org-specific logo data. Per
+      // founder directive: "yeh uploaded logo icon har organizations ki
+      // saari reports aur saari invoices par laga do same as it is".
       let logoCenterY = topDecoY + 24;
-
-      const drawCustomLogoBox = (logoBuffer: Buffer, size: number) => {
-        doc.save();
-        doc.roundedRect(W / 2 - size / 2 - 4, logoCenterY - 4, size + 8, size + 8, 10).fill(C.goldBg2);
-        doc.roundedRect(W / 2 - size / 2 - 4, logoCenterY - 4, size + 8, size + 8, 10).lineWidth(0.5).strokeColor(C.goldBorder2).stroke();
-        doc.image(logoBuffer, W / 2 - size / 2, logoCenterY, { width: size, height: size });
-        doc.restore();
-      };
-
-      let logoDrawn = false;
-      // Priority 1: custom brand logo (base64) from report data
-      if (hasBrandLogo && safeBrandLogo) {
-        const brandParsed = parseBase64DataUri(safeBrandLogo);
-        if (brandParsed) {
-          try {
-            drawCustomLogoBox(Buffer.from(brandParsed.base64, "base64"), 72);
-            logoCenterY += 72 + 20;
-            logoDrawn = true;
-          } catch {
-            // fall through to platform logo
-          }
-        }
-      }
-      // Priority 2: custom platform logo (base64)
-      if (!logoDrawn && hasLogo && safePlatformLogo) {
-        const logoParsed = parseBase64DataUri(safePlatformLogo);
-        if (logoParsed) {
-          try {
-            drawCustomLogoBox(Buffer.from(logoParsed.base64, "base64"), 72);
-            logoCenterY += 72 + 20;
-            logoDrawn = true;
-          } catch {
-            // fall through to vertical logo
-          }
-        }
-      }
-      // Priority 3: bundled vertical logo (premium default)
-      // Uses the ACTUAL vertical logo (508x733, taller than wide) per founder's
-      // branding spec. Rendered on a gold background card for the light PDF theme.
-      if (!logoDrawn) {
-        logoCenterY = await renderVerticalLogo(doc, W / 2, logoCenterY, 120, "light");
-        logoCenterY += 28;
-      }
+      const coverLogoSize = 96;
+      logoCenterY = drawBrandLogoSquareCentered(doc, W / 2, logoCenterY, coverLogoSize, {
+        bgColor: C.goldBg2,
+        borderColor: C.gold,
+        borderWidth: 1.5,
+        padding: 8,
+      });
+      logoCenterY += 24;
 
       // Organization name — use heightOfString for proper advance (no overlap)
       doc.font(FONT.regular).fontSize(14).fillColor(C.textMuted);
@@ -1846,27 +1813,16 @@ export async function generateReportPDF(report: ReportData): Promise<Buffer> {
       let tableY = P + 6;
 
       // ── CONTENT HEADER ──
+      // Phase 15 (rev 2): Always use the founder brand logo with SQUARE golden
+      // border (per founder directive). Override any org-specific logo.
       let contentLogoRightX = P;
-      if (hasLogo && safePlatformLogo) {
-        const logoParsed = parseBase64DataUri(safePlatformLogo);
-        if (logoParsed) {
-          try {
-            const logoBuffer = Buffer.from(logoParsed.base64, "base64");
-            doc.save();
-            doc.roundedRect(P, tableY, 32, 32, 5).fill(C.goldBg2);
-            doc.roundedRect(P, tableY, 32, 32, 5).lineWidth(0.4).strokeColor(C.goldBorder2).stroke();
-            doc.image(logoBuffer, P + 3, tableY + 3, { width: 26, height: 26 });
-            doc.restore();
-            contentLogoRightX = P + 40;
-          } catch {
-            contentLogoRightX = await renderDefaultLogo(doc, P, tableY);
-          }
-        } else {
-          contentLogoRightX = await renderDefaultLogo(doc, P, tableY);
-        }
-      } else {
-        contentLogoRightX = await renderDefaultLogo(doc, P, tableY);
-      }
+      drawBrandLogoSquare(doc, P, tableY, 32, {
+        bgColor: C.goldBg2,
+        borderColor: C.gold,
+        borderWidth: 0.8,
+        padding: 2.5,
+      });
+      contentLogoRightX = P + 40;
 
       doc.font(FONT.bold).fontSize(14).fillColor(C.gold);
       doc.text(safeTitle, contentLogoRightX, tableY + 2);

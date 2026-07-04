@@ -8,6 +8,7 @@
 
 import PDFDocument from "pdfkit";
 import { FONT_REGULAR, FONT_BOLD, FONT_ITALIC, FONT_BOLD_ITALIC } from "./font-buffers";
+import { getBrandLogoBuffer, BRAND_LOGO_ASPECT } from "./brand-logo";
 
 // ── Font Registration ──
 
@@ -105,6 +106,69 @@ const C = {
   white: "#FAFAFA",         // White (matches bg)
   watermark: "#D4A73A",
 };
+
+// ── Brand Logo Helpers (founder-uploaded icon, SQUARE golden border) ──
+// Per founder directive, this logo is the SOLE brand mark on every PDF
+// (proposals, lead magnets, invoices, reports) regardless of which org
+// the document belongs to. The border is a SOLID SQUARE (not rounded)
+// in Modern Gold #D4A73A.
+
+interface BrandLogoOptions {
+  bgColor?: string;
+  borderColor?: string;
+  borderWidth?: number;
+  padding?: number;
+}
+
+function drawBrandLogoSquare(
+  doc: any,
+  x: number,
+  y: number,
+  boxSize: number,
+  opts?: BrandLogoOptions,
+): number {
+  const bgColor = opts?.bgColor ?? C.goldBg2;
+  const borderColor = opts?.borderColor ?? C.gold;
+  const borderWidth = opts?.borderWidth ?? 1.2;
+  const padding = opts?.padding ?? Math.max(2, boxSize * 0.08);
+  const buffer = getBrandLogoBuffer();
+
+  doc.save();
+  doc.rect(x, y, boxSize, boxSize).fill(bgColor);
+  doc.rect(x, y, boxSize, boxSize).lineWidth(borderWidth).strokeColor(borderColor).stroke();
+
+  if (buffer) {
+    try {
+      const innerSize = boxSize - padding * 2;
+      let drawW = innerSize;
+      let drawH = innerSize * BRAND_LOGO_ASPECT;
+      if (drawH > innerSize) {
+        drawH = innerSize;
+        drawW = innerSize / BRAND_LOGO_ASPECT;
+      }
+      const imgX = x + (boxSize - drawW) / 2;
+      const imgY = y + (boxSize - drawH) / 2;
+      doc.image(buffer, imgX, imgY, { width: drawW, height: drawH });
+    } catch {}
+  } else {
+    doc.fontSize(boxSize * 0.35).fillColor("#ffffff");
+    doc.font(FONT.bold).text("VTX", x, y + boxSize * 0.3, { width: boxSize, align: "center" });
+  }
+  doc.restore();
+  return boxSize;
+}
+
+function drawBrandLogoSquareCentered(
+  doc: any,
+  centerX: number,
+  y: number,
+  boxSize: number,
+  opts?: BrandLogoOptions,
+): number {
+  const x = centerX - boxSize / 2;
+  drawBrandLogoSquare(doc, x, y, boxSize, opts);
+  return y + boxSize;
+}
 
 // ── Proposal Type Content Templates (Ultra-Premium) ──
 
@@ -898,45 +962,14 @@ export async function generateProposalPDF(
       doc.rect(0, 0, W, H * 0.65).fill(coverGrad);
       doc.restore();
 
-      // Logo
-      let logoRendered = false;
-      if (settings.logoUrl) {
-        const parsed = parseBase64DataUri(settings.logoUrl);
-        if (parsed) {
-          try {
-            const logoBuffer = Buffer.from(parsed.base64, "base64");
-            doc.save();
-            doc.roundedRect(W / 2 - 44, 90, 88, 88, 18).fill(C.white);
-            doc.roundedRect(W / 2 - 44, 90, 88, 88, 18).lineWidth(1).strokeColor(C.goldBorder2).stroke();
-            doc.image(logoBuffer, W / 2 - 34, 98, { width: 68, height: 68 });
-            doc.restore();
-            logoRendered = true;
-          } catch {}
-        }
-      }
-      if (!logoRendered) {
-        try {
-          const fs = await import("fs");
-          const path = await import("path");
-          const logoPath = path.join(process.cwd(), "public", "valtriox-logo.png");
-          if (fs.existsSync(logoPath)) {
-            const logoBuffer = fs.readFileSync(logoPath);
-            doc.save();
-            doc.roundedRect(W / 2 - 44, 90, 88, 88, 18).fill(C.white);
-            doc.roundedRect(W / 2 - 44, 90, 88, 88, 18).lineWidth(1).strokeColor(C.goldBorder2).stroke();
-            doc.image(logoBuffer, W / 2 - 34, 98, { width: 68, height: 68 });
-            doc.restore();
-            logoRendered = true;
-          }
-        } catch {}
-      }
-      if (!logoRendered) {
-        doc.save();
-        doc.roundedRect(W / 2 - 38, 96, 76, 76, 16).fill(C.gold);
-        doc.font(FONT.bold).fontSize(30).fillColor(C.white);
-        doc.text("V", W / 2 - 13, 108, { width: 26, align: "center" });
-        doc.restore();
-      }
+      // Logo — Phase 15 (rev 2): ALWAYS use founder-uploaded brand logo
+      // with SQUARE golden border. Override any per-org logoUrl.
+      drawBrandLogoSquareCentered(doc, W / 2, 90, 88, {
+        bgColor: C.white,
+        borderColor: C.gold,
+        borderWidth: 1.4,
+        padding: 8,
+      });
 
       // Company name
       doc.font(FONT.bold).fontSize(38).fillColor(C.textPrimary);

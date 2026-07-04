@@ -148,14 +148,18 @@ export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
         const periodLabel = period.charAt(0).toUpperCase() + period.slice(1);
 
         // ── Current Period Date Range ──
-        // Phase 15 FIX: For monthly, the DISPLAY range is the full month
-        // (1st to last day), even if today is mid-month. The DATA query
-        // still uses startDate to now (can't fetch future orders), but the
-        // period label shows the complete month range so users see
-        // "Monthly — 01/07/2026 to 31/07/2026" instead of
-        // "Monthly — 01/07/2026 to 04/07/2026".
+        // Phase 15 (rev 2): ROLLING PERIOD ending TODAY.
+        // Founder directive: "jaisy aaj men ny report download ki hai toh
+        // aaj ki date last ho is sy peechy agar weekly report ki ho toh
+        // week peechy aur agar monthly ho toh month peechy".
+        //   → End date = today (today is the LAST date in the period)
+        //   → Start date = today minus the period duration
+        // So a monthly report downloaded on 04/07/2026 shows
+        //   "Monthly — 04/06/2026 to 04/07/2026" (one full month ending today)
+        // and a weekly report shows
+        //   "Weekly — 27/06/2026 to 04/07/2026" (one full week ending today).
         let startDate: Date;
-        let displayEndDate: Date; // for period label only
+        let displayEndDate: Date; // = today (end of period)
         switch (period) {
           case "daily":
             startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -165,10 +169,15 @@ export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
             startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
             displayEndDate = now;
             break;
-          default: // monthly
-            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-            // Last day of current month
-            displayEndDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+          default: { // monthly — go back one calendar month from today
+            const m = now.getMonth();
+            const y = now.getFullYear();
+            const d = now.getDate();
+            // new Date(y, m - 1, d) handles year underflow automatically
+            startDate = new Date(y, m - 1, d, now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
+            displayEndDate = now;
+            break;
+          }
         }
 
         // ── Previous Period Date Range (same duration, shifted back) ──
@@ -226,8 +235,9 @@ export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
         };
         const dailyMap = new Map<string, number>();
         const dayIter = new Date(startDate);
-        // For monthly, iterate up to end of month (or today, whichever is earlier)
-        const trendEnd = isMonthly ? new Date(Math.min(now.getTime(), displayEndDate.getTime())) : now;
+        // Phase 15 (rev 2): displayEndDate === now (rolling period ending today),
+        // so iterate from startDate up to today.
+        const trendEnd = now;
         while (dayIter <= trendEnd) {
           dailyMap.set(chartFormatDay(new Date(dayIter)), 0);
           dayIter.setDate(dayIter.getDate() + 1);

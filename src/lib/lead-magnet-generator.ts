@@ -8,6 +8,7 @@
 
 import PDFDocument from "pdfkit";
 import { FONT_REGULAR, FONT_BOLD, FONT_ITALIC, FONT_BOLD_ITALIC } from "./font-buffers";
+import { getBrandLogoBuffer, BRAND_LOGO_ASPECT } from "./brand-logo";
 
 // ── Font Registration ──
 
@@ -92,6 +93,66 @@ const C = {
   greenBg: "#ECFDF5",
   slate200: "#E2E8F0",
 };
+
+// ── Brand Logo Helpers (founder-uploaded icon, SQUARE golden border) ──
+// Per founder directive, this logo is the SOLE brand mark on every PDF.
+
+interface BrandLogoOptions {
+  bgColor?: string;
+  borderColor?: string;
+  borderWidth?: number;
+  padding?: number;
+}
+
+function drawBrandLogoSquare(
+  doc: any,
+  x: number,
+  y: number,
+  boxSize: number,
+  opts?: BrandLogoOptions,
+): number {
+  const bgColor = opts?.bgColor ?? C.goldBg2;
+  const borderColor = opts?.borderColor ?? C.gold;
+  const borderWidth = opts?.borderWidth ?? 1.2;
+  const padding = opts?.padding ?? Math.max(2, boxSize * 0.08);
+  const buffer = getBrandLogoBuffer();
+
+  doc.save();
+  doc.rect(x, y, boxSize, boxSize).fill(bgColor);
+  doc.rect(x, y, boxSize, boxSize).lineWidth(borderWidth).strokeColor(borderColor).stroke();
+
+  if (buffer) {
+    try {
+      const innerSize = boxSize - padding * 2;
+      let drawW = innerSize;
+      let drawH = innerSize * BRAND_LOGO_ASPECT;
+      if (drawH > innerSize) {
+        drawH = innerSize;
+        drawW = innerSize / BRAND_LOGO_ASPECT;
+      }
+      const imgX = x + (boxSize - drawW) / 2;
+      const imgY = y + (boxSize - drawH) / 2;
+      doc.image(buffer, imgX, imgY, { width: drawW, height: drawH });
+    } catch {}
+  } else {
+    doc.fontSize(boxSize * 0.35).fillColor("#ffffff");
+    doc.font(FONT.bold).text("VTX", x, y + boxSize * 0.3, { width: boxSize, align: "center" });
+  }
+  doc.restore();
+  return boxSize;
+}
+
+function drawBrandLogoSquareCentered(
+  doc: any,
+  centerX: number,
+  y: number,
+  boxSize: number,
+  opts?: BrandLogoOptions,
+): number {
+  const x = centerX - boxSize / 2;
+  drawBrandLogoSquare(doc, x, y, boxSize, opts);
+  return y + boxSize;
+}
 
 // ── Helpers ──
 
@@ -259,48 +320,14 @@ export async function generateLeadMagnetPDF(settings: LeadMagnetSettings): Promi
       doc.rect(0, 0, W, H * 0.6).fill(coverGrad);
       doc.restore();
 
-      // Logo - try custom logo first, then fallback to file
-      let logoRendered = false;
-      if (settings.logoUrl) {
-        const parsed = parseBase64DataUri(settings.logoUrl);
-        if (parsed) {
-          try {
-            const logoBuffer = Buffer.from(parsed.base64, "base64");
-            doc.save();
-            doc.roundedRect(W / 2 - 40, 120, 80, 80, 16).fill(C.goldBg);
-            doc.roundedRect(W / 2 - 40, 120, 80, 80, 16).lineWidth(0.8).strokeColor(C.goldBorder2).stroke();
-            doc.image(logoBuffer, W / 2 - 32, 128, { width: 64, height: 64 });
-            doc.restore();
-            logoRendered = true;
-          } catch {}
-        }
-      }
-
-      if (!logoRendered) {
-        try {
-          const fs = await import("fs");
-          const path = await import("path");
-          const logoPath = path.join(process.cwd(), "public", "valtriox-logo.png");
-          if (fs.existsSync(logoPath)) {
-            const logoBuffer = fs.readFileSync(logoPath);
-            doc.save();
-            doc.roundedRect(W / 2 - 40, 120, 80, 80, 16).fill(C.goldBg);
-            doc.roundedRect(W / 2 - 40, 120, 80, 80, 16).lineWidth(0.8).strokeColor(C.goldBorder2).stroke();
-            doc.image(logoBuffer, W / 2 - 32, 128, { width: 64, height: 64 });
-            doc.restore();
-            logoRendered = true;
-          }
-        } catch {}
-      }
-
-      if (!logoRendered) {
-        // Fallback: text logo
-        doc.save();
-        doc.roundedRect(W / 2 - 36, 124, 72, 72, 14).fill(C.gold);
-        doc.font(FONT.bold).fontSize(28).fillColor("#ffffff");
-        doc.text("V", W / 2 - 12, 134, { width: 24, align: "center" });
-        doc.restore();
-      }
+      // Logo — Phase 15 (rev 2): ALWAYS use founder-uploaded brand logo
+      // with SQUARE golden border. Override any per-org logoUrl.
+      drawBrandLogoSquareCentered(doc, W / 2, 120, 80, {
+        bgColor: C.goldBg,
+        borderColor: C.gold,
+        borderWidth: 1.2,
+        padding: 6,
+      });
 
       // Company name
       doc.font(FONT.bold).fontSize(36).fillColor(C.textPrimary);
