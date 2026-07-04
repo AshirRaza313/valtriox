@@ -132,7 +132,15 @@ export function Sidebar() {
     user, logout, brandName, appTheme, sidebarCollapsed, toggleSidebarCollapsed,
     brandTagline, brandConfigured, organization,
   } = useValtrioxStore();
-  const [expandedGroups, setExpandedGroups] = useState<Set<SidebarGroup>>(() => new Set(["main", "guide"]));
+  // Phase 16 rev 2: Auto-expand SYSTEM group for client (non-platform) roles
+  // so they can see "Client Messages" (inbox) and "Billing & Plans" without
+  // having to manually expand. Platform admins keep the original behavior
+  // (only main + guide expanded) because their SYSTEM group is huge.
+  const [expandedGroups, setExpandedGroups] = useState<Set<SidebarGroup>>(() => {
+    const userRole = user?.role || "viewer";
+    const isPlatformUser = isPlatformRole(userRole) || userRole === "valtriox_team";
+    return new Set(isPlatformUser ? ["main", "guide"] : ["main", "guide", "system"]);
+  });
   const [adminLockedFeatures, setAdminLockedFeatures] = useState<Set<string>>(new Set());
   const t = useTranslation();
   const { identity } = usePlatformIdentity();

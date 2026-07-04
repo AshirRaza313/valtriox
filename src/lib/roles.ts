@@ -561,6 +561,19 @@ export function isSectionAccessible(sectionId: string, roleName: string, hiddenS
   // If this section is explicitly hidden for this user (per-member toggle), block it
   if (hiddenSections?.includes(sectionId)) return false;
 
+  // ── Phase 16 rev 2: Client Inbox ──
+  // "Messages from Valtriox" inbox — receives messages sent by admin from
+  // the Communication Center. Every client (brand_owner, brand_admin, and
+  // all their team members: operations_manager, sales_manager, etc.) must
+  // be able to READ admin messages, so the inbox is visible to every
+  // non-platform role. Platform roles (platform_owner, platform_admin) and
+  // valtriox_team use the Communication Center instead — they don't need
+  // the client inbox. This rule applies to BOTH existing clients and new
+  // signups (new signups get brand_owner automatically in /api/auth/register).
+  if (sectionId === "client-inbox") {
+    return !isPlatformRole(roleName) && roleName !== "valtriox_team";
+  }
+
   // Platform-only sections - only visible to platform_owner, platform_admin, owner (first user), and valtriox_team
   if (["admin-dashboard", "client-management", "payment-approvals", "subscription-management", "audit-log", "platform-settings", "integration-management", "valtriox-team", "proposals", "documents", "lead-magnet-manager", "custom-invoices", "reports-center", "invoice-management"].includes(sectionId)) {
     return isPlatformRole(roleName) || roleName === "valtriox_team";

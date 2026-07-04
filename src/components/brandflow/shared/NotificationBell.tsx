@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { isPlatformRole } from "@/lib/roles";
 
 // ── Type Config ──────────────────────────────────────────────────────────────
 
@@ -327,6 +328,18 @@ export function NotificationBell() {
             "products": "products",
             "customers": "customers",
             "dashboard": "dashboard",
+            // ── Phase 16 rev 2: Communication Centre notification routing ──
+            // Admin's send-message API creates notifications with actionUrl
+            // "/communications". For clients, this should open their inbox.
+            // Platform roles have their own Communication Center.
+            "communications": isPlatformRole(user?.role || "")
+              ? "communication-center"
+              : "client-inbox",
+            "communication": isPlatformRole(user?.role || "")
+              ? "communication-center"
+              : "client-inbox",
+            "client-inbox": "client-inbox",
+            "communication-center": "communication-center",
           };
           const matched = sectionMap[stripped] || sectionMap[stripped.toLowerCase()];
           if (matched) {
@@ -345,6 +358,8 @@ export function NotificationBell() {
             "integrations", "wa-business", "ai-tools", "whatsapp-integration",
             "campaigns", "coupons", "events", "returns", "sla-engine",
             "support-tickets", "expenses", "payroll", "attendance",
+            // Phase 16 rev 2: client inbox is a valid section
+            "client-inbox", "communication-center",
           ];
           const section = url.toLowerCase();
           if (validSections.includes(section)) {
@@ -354,7 +369,7 @@ export function NotificationBell() {
         setOpen(false);
       }
     },
-    [markAsRead, setActiveSection]
+    [markAsRead, setActiveSection, user?.role]
   );
 
   const handleMarkAllRead = useCallback(() => {
