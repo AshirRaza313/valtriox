@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
@@ -37,6 +38,7 @@ import {
   MessageCircle,
   RefreshCw,
   AlertTriangle,
+  Upload,
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
@@ -190,6 +192,7 @@ export function SubscriptionPage() {
     paymentMethod: "bank_transfer",
     screenshotUrl: "",
     billingCycle: "monthly",
+    planDetails: "",
   });
   const [submittingPayment, setSubmittingPayment] = useState(false);
   const [upgradePlans, setUpgradePlans] = useState<Plan[]>([]);
@@ -219,10 +222,47 @@ export function SubscriptionPage() {
     fetchInvoices();
   }, [fetchInvoices]);
 
+  // ── Phase 16: Pre-fill payment form when redirected from a Communication
+  // Centre action button. Admin sends a renewal/proof-upload message with an
+  // action button → client clicks the button → we set sessionStorage with the
+  // pre-fill payload → setActiveSection("subscriptions") → this page mounts →
+  // we read the payload, pre-fill the form, and auto-open the upgrade form.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const renewalRaw = sessionStorage.getItem("pendingRenewalPrefill");
+      const uploadRaw = sessionStorage.getItem("pendingPaymentUpload");
+      const prefillRaw = renewalRaw || uploadRaw;
+      if (!prefillRaw) return;
+      const prefill = JSON.parse(prefillRaw);
+      setPaymentForm((prev) => ({
+        ...prev,
+        planId: prefill.planId || prev.planId,
+        amount: prefill.amount != null ? String(prefill.amount) : prev.amount,
+        billingCycle: prefill.billingCycle || prev.billingCycle,
+        planDetails: prefill.planDetails || prev.planDetails,
+      }));
+      setShowUpgradeForm(true);
+      // Clear the one-shot payload so it doesn't re-trigger on next mount
+      sessionStorage.removeItem("pendingRenewalPrefill");
+      sessionStorage.removeItem("pendingPaymentUpload");
+      toast.info("Payment form pre-filled from your message. Upload screenshot & submit.");
+    } catch {}
+  }, []);
+
   // ── Admin: Submit Payment (only platform roles) ──
   const handleSubmitPayment = async () => {
     if (!paymentForm.planId || !paymentForm.amount || !paymentForm.transactionId) {
       toast.error("Please fill in all required fields");
+      return;
+    }
+    // Phase 16: require screenshot + planDetails for verification
+    if (!paymentForm.screenshotUrl) {
+      toast.error("Please upload a payment screenshot / receipt");
+      return;
+    }
+    if (!paymentForm.planDetails || paymentForm.planDetails.trim().length < 5) {
+      toast.error("Please describe the plan / subscription you're paying for (min 5 characters)");
       return;
     }
 
@@ -241,7 +281,7 @@ export function SubscriptionPage() {
       const data = await res.json();
       if (res.ok) {
         toast.success(data.message);
-        setPaymentForm({ planId: "", amount: "", transactionId: "", paymentMethod: "bank_transfer", screenshotUrl: "", billingCycle: "monthly" });
+        setPaymentForm({ planId: "", amount: "", transactionId: "", paymentMethod: "bank_transfer", screenshotUrl: "", billingCycle: "monthly", planDetails: "" });
         setShowUpgradeForm(false);
         queryClient.invalidateQueries({ queryKey: queryKeys.currentSubscription(organization?.id ?? "") });
       } else {
@@ -1213,6 +1253,95 @@ export function SubscriptionPage() {
                         <option value="quarterly">Quarterly</option>
                         <option value="annually">Annually</option>
                       </select>
+                    </div>
+                  </div>
+
+                  {/* Phase 16: Plan / Subscription Details (free-text) */}
+                  <div>
+                    <Label className={cn("text-sm mb-1.5 block", textSecondary)}>
+                      Plan / Subscription Details <span className="text-rose-400">*</span>
+                    </Label>
+                    <Textarea
+                      placeholder="e.g. Renewing Growth plan (monthly) — 1 team member, 100 orders/mo, 50 products. Paid via HBL bank transfer on 04/07/2026."
+                      value={paymentForm.planDetails || ""}
+                      onChange={(e) => setPaymentForm((prev) => ({ ...prev, planDetails: e.target.value }))}
+                      rows={3}
+                      className={cn(isDark ? "border-white/[0.1] bg-white/[0.03] text-slate-300" : "")}
+                    />
+                    <p className={cn("text-[10px] mt-1", textSecondary)}>
+                      Describe which plan you're paying for and any notes for the admin. Required for approval.
+                    </p>
+                  </div>
+
+                  {/* Phase 16: Payment Screenshot Upload (base64) */}
+                  <div>
+                    <Label className={cn("text-sm mb-1.5 block", textSecondary)}>
+                      Payment Screenshot / Receipt <span className="text-rose-400">*</span>
+                    </Label>
+                    <div className="space-y-2">
+                      {paymentForm.screenshotUrl ? (
+                        <div className={cn(
+                          "relative rounded-md overflow-hidden border",
+                          isDark ? "border-white/[0.1]" : "border-slate-200"
+                        )}>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={paymentForm.screenshotUrl}
+                            alt="Payment screenshot"
+                            className="max-h-64 w-auto mx-auto"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setPaymentForm((prev) => ({ ...prev, screenshotUrl: "" }))}
+                            className="absolute top-2 right-2 p-1 rounded bg-black/60 hover:bg-black/80 text-white"
+                            aria-label="Remove screenshot"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ) : (
+                        <label
+                          className={cn(
+                            "flex flex-col items-center justify-center gap-2 px-4 py-8 rounded-md border-2 border-dashed cursor-pointer transition-colors",
+                            isDark
+                              ? "border-white/15 hover:border-amber-500/50 hover:bg-white/[0.02]"
+                              : "border-slate-300 hover:border-amber-500/50 hover:bg-amber-50/50"
+                          )}
+                        >
+                          <Upload className={cn("h-6 w-6", isDark ? "text-slate-400" : "text-slate-500")} />
+                          <span className={cn("text-sm", textPrimary)}>
+                            Click to upload payment screenshot
+                          </span>
+                          <span className={cn("text-[10px]", textSecondary)}>
+                            PNG / JPG / JPEG · Max 5MB · Required for approval
+                          </span>
+                          <input
+                            type="file"
+                            accept="image/png,image/jpeg,image/jpg"
+                            className="hidden"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              if (file.size > 5 * 1024 * 1024) {
+                                toast.error("File too large — max 5MB");
+                                return;
+                              }
+                              try {
+                                const reader = new FileReader();
+                                reader.onload = () => {
+                                  const result = String(reader.result || "");
+                                  setPaymentForm((prev) => ({ ...prev, screenshotUrl: result }));
+                                  toast.success("Screenshot loaded — ready to submit");
+                                };
+                                reader.onerror = () => toast.error("Failed to read file");
+                                reader.readAsDataURL(file);
+                              } catch {
+                                toast.error("Failed to load screenshot");
+                              }
+                            }}
+                          />
+                        </label>
+                      )}
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-3">

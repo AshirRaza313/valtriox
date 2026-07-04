@@ -34,7 +34,7 @@ import {
   RefreshCw, Loader2, Building2, User, Mail, Clock, Paperclip,
   AlertCircle, CheckCircle2, FileText, Calendar, Sparkles,
   TrendingUp, Receipt, Package, Lightbulb, Bell, Tag,
-  ChevronRight, Star, Search, X, Reply,
+  ChevronRight, Star, Search, X, Reply, Shield, MousePointerClick,
 } from "lucide-react";
 
 // ── Types ──
@@ -826,6 +826,31 @@ export function CommunicationCenterPage() {
                                 Deadline: {fmtDateTime(msg.deadlineDate)}
                               </div>
                             )}
+                            {/* Phase 16: Show action buttons (read-only preview for admin) */}
+                            {Array.isArray(msg.actions) && msg.actions.length > 0 && (
+                              <div className="mt-2 flex flex-wrap gap-1.5">
+                                <span className={cn("text-[10px] flex items-center gap-1 mr-1", textSecondary)}>
+                                  <MousePointerClick className="h-3 w-3" /> Action buttons:
+                                </span>
+                                {msg.actions.map((a: any, ai: number) => (
+                                  <span
+                                    key={a.id || ai}
+                                    className={cn(
+                                      "inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded font-semibold",
+                                      a.style === "primary"
+                                        ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                                        : a.style === "secondary"
+                                        ? "bg-amber-500/10 text-amber-300/70 border border-amber-500/20"
+                                        : a.style === "danger"
+                                        ? "bg-rose-500/20 text-rose-300 border border-rose-500/30"
+                                        : "bg-transparent text-slate-400 border border-white/10"
+                                    )}
+                                  >
+                                    {a.label}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </motion.div>
@@ -932,6 +957,167 @@ function ComposeDialog({
   const [attachmentUrl, setAttachmentUrl] = useState("");
   const [attachments, setAttachments] = useState<Array<{ name: string; url: string; size: number; type: string }>>([]);
 
+  // ── Phase 16: Send as SYSTEM + Action buttons + Quick templates ──
+  const [sendAsSystem, setSendAsSystem] = useState(false);
+  const [actionTemplate, setActionTemplate] = useState<string>("");
+  type ComposeAction = {
+    id: string;
+    label: string;
+    type: string;
+    payload: Record<string, any>;
+    style: string;
+  };
+  const [actions, setActions] = useState<ComposeAction[]>([]);
+
+  // Quick-action templates — pre-fill subject/body AND add action buttons
+  // Per founder directive: when admin sends a subscription-renewal nudge,
+  // the client should receive a real button that takes them straight to
+  // the renewal flow (plan page → pay → upload screenshot + txn ID → admin approves).
+  const ACTION_TEMPLATES: Record<string, {
+    label: string;
+    description: string;
+    category: string;
+    subject: string;
+    body: string;
+    actions: ComposeAction[];
+  }> = {
+    renewal_reminder: {
+      label: "Subscription Renewal Reminder",
+      description: "Send a renewal nudge with a 'Renew Now' button that opens the payment flow.",
+      category: "billing",
+      subject: "Action Required: Renew Your Valtriox Subscription",
+      body: `Hi,
+
+Your Valtriox subscription is due for renewal. To avoid any interruption in service, please renew your plan now.
+
+Click the button below to open the renewal page. You'll be able to:
+  1. Confirm your plan and billing cycle
+  2. Make your payment via bank transfer / JazzCash / EasyPaisa / etc.
+  3. Upload the payment screenshot
+  4. Enter your Transaction ID and plan details
+  5. Submit for admin approval
+
+Once approved, your subscription will be reactivated automatically.
+
+Best regards,
+Valtriox System`,
+      actions: [
+        {
+          id: "btn_renew_now",
+          label: "Renew Subscription Now",
+          type: "renew_subscription",
+          payload: {},
+          style: "primary",
+        },
+        {
+          id: "btn_open_billing",
+          label: "Open Billing & Plans",
+          type: "open_billing",
+          payload: {},
+          style: "secondary",
+        },
+      ],
+    },
+    payment_received_request: {
+      label: "Request Payment Proof Upload",
+      description: "Ask the client to upload a payment screenshot + transaction ID for verification.",
+      category: "billing",
+      subject: "Please Upload Your Payment Proof",
+      body: `Hi,
+
+We've received notice that you've made a payment for your Valtriox subscription. To complete the verification process, please upload your payment proof using the button below.
+
+You'll need:
+  - A clear screenshot or photo of your payment receipt
+  - The Transaction ID / Reference number
+  - The plan name and billing cycle you paid for
+
+Once uploaded, our admin team will review and approve your subscription activation within 24 hours.
+
+Best regards,
+Valtriox System`,
+      actions: [
+        {
+          id: "btn_upload_proof",
+          label: "Upload Payment Proof",
+          type: "upload_payment_proof",
+          payload: {},
+          style: "primary",
+        },
+      ],
+    },
+    invoice_ready: {
+      label: "Invoice Ready to View",
+      description: "Notify client that an invoice is ready with a 'View Invoice' button.",
+      category: "invoice",
+      subject: "Your Valtriox Invoice is Ready",
+      body: `Hi,
+
+Your latest Valtriox invoice has been generated and is ready for review. Click below to view, download, or pay the invoice.
+
+If you have any questions about the charges, please reply to this message.
+
+Best regards,
+Valtriox System`,
+      actions: [
+        {
+          id: "btn_view_invoice",
+          label: "View Invoice",
+          type: "view_invoice",
+          payload: {},
+          style: "primary",
+        },
+      ],
+    },
+    report_ready: {
+      label: "Report Ready to View",
+      description: "Notify client that a report has been generated with a 'View Report' button.",
+      category: "report",
+      subject: "Your Valtriox Report is Ready",
+      body: `Hi,
+
+Your requested Valtriox report has been generated. Click below to view and download the PDF.
+
+Best regards,
+Valtriox System`,
+      actions: [
+        {
+          id: "btn_view_report",
+          label: "View Report",
+          type: "view_report",
+          payload: {},
+          style: "primary",
+        },
+      ],
+    },
+    deadline_reminder: {
+      label: "Deadline Reminder (with Dismiss)",
+      description: "Send a deadline reminder with a Dismiss button.",
+      category: "deadline",
+      subject: "Monthly Deadline Reminder",
+      body: `Hi,
+
+This is a friendly reminder that your monthly deadline is approaching.
+
+Deadline: [INSERT DATE]
+Action needed: [INSERT ACTION]
+
+Please let us know if you need any assistance.
+
+Best regards,
+Valtriox System`,
+      actions: [
+        {
+          id: "btn_dismiss",
+          label: "Mark as Acknowledged",
+          type: "dismiss",
+          payload: {},
+          style: "ghost",
+        },
+      ],
+    },
+  };
+
   // Reset on close
   useEffect(() => {
     if (!open) {
@@ -944,12 +1130,29 @@ function ComposeDialog({
       setAttachmentName("");
       setAttachmentUrl("");
       setAttachments([]);
+      setSendAsSystem(false);
+      setActionTemplate("");
+      setActions([]);
     }
   }, [open]);
 
-  // When category changes, prefill subject/body templates
+  // When a quick-action template is selected, populate fields
+  useEffect(() => {
+    if (!open || !actionTemplate) return;
+    const tpl = ACTION_TEMPLATES[actionTemplate];
+    if (!tpl) return;
+    setCategory(tpl.category);
+    setSubject(tpl.subject);
+    setBody(tpl.body);
+    setActions(tpl.actions.map((a) => ({ ...a })));
+    setSendAsSystem(true); // templates default to SYSTEM sender
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [actionTemplate, open]);
+
+  // When category changes (manual), prefill subject/body templates
   useEffect(() => {
     if (!open) return;
+    if (actionTemplate) return; // don't override template
     const cat = CATEGORY_CONFIG[category];
     if (!cat) return;
     if (category === "deadline" && !subject) {
@@ -1010,6 +1213,10 @@ function ComposeDialog({
       priority,
       attachments: attachments.length > 0 ? attachments : undefined,
       deadlineDate: category === "deadline" && deadlineDate ? new Date(deadlineDate).toISOString() : undefined,
+      // Phase 16
+      sendAsSystem,
+      actions: actions.length > 0 ? actions : undefined,
+      metadata: actionTemplate ? { sourceTemplate: actionTemplate } : undefined,
     });
   };
 
@@ -1068,6 +1275,90 @@ function ComposeDialog({
                 )}
               </div>
             )}
+          </div>
+
+          {/* Quick-Action Templates (Phase 16) */}
+          <div>
+            <Label className="text-xs flex items-center gap-1.5 mb-1.5">
+              <Sparkles className="h-3 w-3 text-amber-500" /> Quick Action Templates
+            </Label>
+            <p className={cn("text-[10px] mb-2", textSecondary)}>
+              Pre-built message + action button combos. Pick one to auto-fill the form, then customize as needed. Action buttons appear in the client's inbox and let them jump straight to the right page.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {Object.entries(ACTION_TEMPLATES).map(([key, tpl]) => {
+                const isSelected = actionTemplate === key;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => {
+                      setActionTemplate(isSelected ? "" : key);
+                    }}
+                    className={cn(
+                      "text-left p-2.5 rounded-md border text-xs transition-all",
+                      isSelected
+                        ? "bg-amber-500/15 border-amber-500/50"
+                        : isDark
+                          ? "bg-white/[0.02] border-white/10 hover:border-amber-500/30"
+                          : "bg-white border-slate-200 hover:border-amber-500/30"
+                    )}
+                  >
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <Sparkles className={cn("h-3 w-3", isSelected ? "text-amber-400" : textSecondary)} />
+                      <span className={cn("font-semibold", isSelected ? "text-amber-300" : textPrimary)}>
+                        {tpl.label}
+                      </span>
+                    </div>
+                    <p className={cn("text-[10px] leading-snug", textSecondary)}>
+                      {tpl.description}
+                    </p>
+                    <div className="flex flex-wrap gap-1 mt-1.5">
+                      {tpl.actions.map((a, i) => (
+                        <span
+                          key={i}
+                          className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/20"
+                        >
+                          {a.label}
+                        </span>
+                      ))}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Send as SYSTEM toggle (Phase 16) */}
+          <div className={cn(
+            "p-3 rounded-md border flex items-start justify-between gap-3",
+            isDark ? "bg-white/[0.02] border-white/10" : "bg-slate-50 border-slate-200"
+          )}>
+            <div className="flex-1 min-w-0">
+              <Label className="text-xs flex items-center gap-1.5 mb-0.5">
+                <Shield className="h-3 w-3 text-amber-500" /> Send as "Valtriox System"
+              </Label>
+              <p className={cn("text-[10px] leading-snug", textSecondary)}>
+                When ON, the message appears under the "Valtriox System" sender name (gold system badge, no admin avatar). Use this for automated-style notifications like renewal reminders. Templates default to ON.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSendAsSystem(!sendAsSystem)}
+              className={cn(
+                "shrink-0 relative w-10 h-5 rounded-full transition-colors",
+                sendAsSystem ? "bg-amber-500" : isDark ? "bg-white/10" : "bg-slate-300"
+              )}
+              aria-pressed={sendAsSystem}
+              aria-label="Toggle send as SYSTEM"
+            >
+              <span
+                className={cn(
+                  "absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform",
+                  sendAsSystem && "translate-x-5"
+                )}
+              />
+            </button>
           </div>
 
           {/* Category picker */}
@@ -1165,6 +1456,67 @@ function ComposeDialog({
               Tip: Use line breaks for readability. The message will be displayed as plain text in the client's inbox.
             </p>
           </div>
+
+          {/* Action buttons (Phase 16) */}
+          {actions.length > 0 && (
+            <div className={cn(
+              "rounded-md border p-3 space-y-2",
+              isDark ? "bg-amber-500/[0.04] border-amber-500/20" : "bg-amber-50 border-amber-200"
+            )}>
+              <div className="flex items-center justify-between">
+                <Label className="text-xs flex items-center gap-1.5">
+                  <MousePointerClick className="h-3 w-3 text-amber-500" /> Action Buttons
+                </Label>
+                <button
+                  type="button"
+                  onClick={() => setActions([])}
+                  className="text-[10px] text-red-400 hover:text-red-300"
+                >
+                  Clear all
+                </button>
+              </div>
+              <p className={cn("text-[10px]", textSecondary)}>
+                These buttons will appear in the client's inbox below your message. The client can click to jump straight to the right page (renewal, payment upload, invoice view, etc.).
+              </p>
+              <div className="space-y-1.5">
+                {actions.map((a, i) => (
+                  <div
+                    key={a.id || i}
+                    className={cn(
+                      "flex items-center justify-between p-2 rounded text-xs",
+                      isDark ? "bg-white/[0.03]" : "bg-white"
+                    )}
+                  >
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <span className={cn(
+                        "inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold",
+                        a.style === "primary"
+                          ? "bg-amber-500 text-charcoal"
+                          : a.style === "secondary"
+                          ? "bg-amber-500/15 text-amber-300 border border-amber-500/30"
+                          : a.style === "danger"
+                          ? "bg-rose-500 text-white"
+                          : "bg-transparent text-slate-400 border border-white/10"
+                      )}>
+                        {a.label}
+                      </span>
+                      <span className={cn("text-[10px]", textSecondary)}>
+                        type: <code className="text-amber-400">{a.type}</code>
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setActions((prev) => prev.filter((_, idx) => idx !== i))}
+                      className="text-red-400 hover:text-red-300 shrink-0 ml-2"
+                      aria-label="Remove action button"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Attachments (links) */}
           <div>

@@ -482,6 +482,25 @@ model ClientMessage {
   attachments     Json?    // [{ name, url, size, type }] — file metadata
   priority        String   @default("normal") // low | normal | high | urgent
 
+  // ── Phase 16: Action Buttons & Message Metadata ──
+  // actions: array of { id, label, type, payload, style }
+  //   type ∈ renew_subscription | upload_payment_proof | view_invoice |
+  //         view_report | open_billing | dismiss | custom_url
+  //   payload: { planId?, amount?, billingCycle?, invoiceId?, url? }
+  //   style: primary | secondary | danger | ghost (default: primary)
+  // Example:
+  //   [{ id:"btn_renew", label:"Renew Subscription Now",
+  //      type:"renew_subscription", payload:{ planId:"growth", amount:4999, billingCycle:"monthly" },
+  //      style:"primary" }]
+  actions         Json?
+  // metadata: free-form key/value pairs for analytics & state tracking
+  //   e.g. { sourceTemplate:"renewal_reminder_v1", actionState:"pending|clicked|completed" }
+  metadata        Json?
+  // isSystemMessage: marks messages sent by "Valtriox System" (senderUserId=null,
+  // senderName="Valtriox System", senderRole="system"). Visually distinct in UI
+  // (gold system badge, no admin avatar). Default false.
+  isSystemMessage Boolean  @default(false)
+
   // ── Status ──
   isReadByAdmin   Boolean  @default(false)
   isReadByClient  Boolean  @default(false)
@@ -525,6 +544,10 @@ model PaymentProof {
   screenshotUrl  String?
   status         String            @default("pending")
   adminNote      String?
+  // Phase 16: client-submitted plan details (free text). Required by the
+  // new Communication-Centre action-button payment flow. Admin sees this in
+  // the payment approval panel to verify the client paid for the right plan.
+  clientNote     String?
   reviewedBy     String?
   reviewedAt     DateTime?
   createdAt      DateTime          @default(now())

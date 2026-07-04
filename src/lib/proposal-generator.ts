@@ -962,13 +962,12 @@ export async function generateProposalPDF(
       doc.rect(0, 0, W, H * 0.65).fill(coverGrad);
       doc.restore();
 
-      // Logo — Phase 15 (rev 2): ALWAYS use founder-uploaded brand logo
-      // with SQUARE golden border. Override any per-org logoUrl.
+      // Logo — Phase 15 (rev 3): founder brand logo, SQUARE golden border, padding=0.
       drawBrandLogoSquareCentered(doc, W / 2, 90, 88, {
         bgColor: C.white,
         borderColor: C.gold,
         borderWidth: 1.4,
-        padding: 8,
+        padding: 0,
       });
 
       // Company name

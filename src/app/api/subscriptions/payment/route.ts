@@ -16,9 +16,15 @@ const paymentProofSchema = z.object({
   planId: z.string().min(1).max(50),
   amount: z.number().positive(),
   transactionId: z.string().min(4).max(50).regex(/^[\w\-]{4,50}$/, "Invalid transaction ID format"),
-  paymentMethod: z.enum(["bank_transfer", "jazzcash", "easypaisa", "payoneer", "other"]),
+  paymentMethod: z.enum([
+    "bank_transfer", "jazzcash", "easypaisa", "payoneer", "other",
+    // Phase 16: widen to match the form's <select> options
+    "paypro", "swift", "paypal", "wise",
+  ]),
   screenshotUrl: z.string().max(100000).optional(),
   billingCycle: z.enum(["monthly", "quarterly", "annually"]).default("monthly"),
+  // Phase 16: free-text plan details submitted by client
+  planDetails: z.string().max(2000).optional(),
 });
 
 // POST /api/subscriptions/payment - Submit payment proof
@@ -28,7 +34,7 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
     logger.info("[Subscriptions Payment] POST request", { userId: authCtx.userId });
     const bodyResult = await validateBody(req, paymentProofSchema);
     if (!bodyResult.success) return bodyResult.response;
-    const { orgId, userId, planId, amount, transactionId, paymentMethod, screenshotUrl, billingCycle } = bodyResult.data;
+    const { orgId, userId, planId, amount, transactionId, paymentMethod, screenshotUrl, billingCycle, planDetails } = bodyResult.data;
 
     // Security: verify orgId and userId match auth context
     if (orgId !== authCtx.organizationId) {
@@ -201,6 +207,8 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
           transactionId,
           paymentMethod,
           screenshotUrl: validatedScreenshot,
+          // Phase 16: store client-submitted plan details for admin review
+          clientNote: planDetails || null,
         },
       });
 

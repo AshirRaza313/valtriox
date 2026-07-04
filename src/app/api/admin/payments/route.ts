@@ -85,6 +85,8 @@ export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
     screenshotUrl: p.screenshotUrl,
     status: p.status,
     adminNote: p.adminNote,
+    // Phase 16: client-submitted plan details
+    clientNote: p.clientNote,
     reviewedBy: p.reviewedBy,
     reviewedAt: p.reviewedAt,
     createdAt: p.createdAt,

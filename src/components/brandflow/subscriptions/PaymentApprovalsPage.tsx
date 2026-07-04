@@ -52,6 +52,8 @@ interface PaymentItem {
   status: string;
   billingCycle: string;
   adminNote?: string;
+  // Phase 16: client-submitted plan details (free text)
+  clientNote?: string;
   reviewedBy?: string;
   reviewedAt?: string;
   createdAt: string;
@@ -422,6 +424,21 @@ export function PaymentApprovalsPage() {
                                   className="max-h-48 object-contain"
                                 />
                               </div>
+                            </div>
+                          )}
+
+                          {/* Phase 16: Client-submitted plan details */}
+                          {payment.clientNote && (
+                            <div className={cn(
+                              "rounded-md border p-3",
+                              isDark ? "bg-amber-500/[0.04] border-amber-500/20" : "bg-amber-50 border-amber-200"
+                            )}>
+                              <p className={cn("text-xs font-medium mb-1 flex items-center gap-1.5", textSecondary)}>
+                                <FileText className="h-3 w-3 text-amber-500" /> Plan / Subscription Details (from client)
+                              </p>
+                              <p className={cn("text-sm whitespace-pre-wrap", textPrimary)}>
+                                {payment.clientNote}
+                              </p>
                             </div>
                           )}
 

@@ -26,10 +26,18 @@ import {
   RefreshCw, Loader2, Building2, User, Mail, Clock, Paperclip,
   CheckCircle2, FileText, Calendar, Sparkles,
   TrendingUp, Receipt, Lightbulb, Bell, Tag,
-  Search, X,
+  Search, X, Upload, CreditCard, ExternalLink,
 } from "lucide-react";
 
 // ── Types ──
+
+interface MessageAction {
+  id: string;
+  label: string;
+  type: "renew_subscription" | "upload_payment_proof" | "view_invoice" | "view_report" | "open_billing" | "dismiss" | "custom_url";
+  payload?: Record<string, any>;
+  style?: "primary" | "secondary" | "danger" | "ghost";
+}
 
 interface Message {
   id: string;
@@ -50,6 +58,10 @@ interface Message {
   sentAt: string;
   readAt: string | null;
   deadlineDate: string | null;
+  // Phase 16
+  actions?: MessageAction[] | null;
+  metadata?: Record<string, any> | null;
+  isSystemMessage?: boolean;
 }
 
 interface Thread {
@@ -193,6 +205,93 @@ export function ClientInboxPage() {
       toast.error("Failed to load thread");
     } finally {
       setLoadingThread(false);
+    }
+  };
+
+  // ── Phase 16: Handle action button click on a message ──
+  // Routes the action to the right surface (navigation, modal, or external URL).
+  const handleMessageAction = async (msg: Message, action: MessageAction) => {
+    if (!action || !action.type) return;
+    const payload = action.payload || {};
+    switch (action.type) {
+      case "open_billing": {
+        // Navigate to the Billing & Plans page (subscriptions)
+        const { setActiveSection } = useValtrioxStore.getState();
+        setActiveSection("subscriptions");
+        toast.success("Opening Billing & Plans…");
+        break;
+      }
+      case "renew_subscription": {
+        // Navigate to subscriptions and pre-fill the renewal form
+        const { setActiveSection } = useValtrioxStore.getState();
+        setActiveSection("subscriptions");
+        // Stash the pre-fill payload in sessionStorage so the subscriptions
+        // page can pick it up after the route switch.
+        try {
+          sessionStorage.setItem(
+            "pendingRenewalPrefill",
+            JSON.stringify({
+              planId: payload.planId,
+              amount: payload.amount,
+              billingCycle: payload.billingCycle,
+              sourceMessageId: msg.id,
+              sourceThreadId: msg.threadId,
+            })
+          );
+        } catch {}
+        toast.success("Opening subscription renewal form…");
+        break;
+      }
+      case "upload_payment_proof": {
+        const { setActiveSection } = useValtrioxStore.getState();
+        setActiveSection("subscriptions");
+        try {
+          sessionStorage.setItem(
+            "pendingPaymentUpload",
+            JSON.stringify({
+              planId: payload.planId,
+              amount: payload.amount,
+              billingCycle: payload.billingCycle,
+              invoiceId: payload.invoiceId,
+              sourceMessageId: msg.id,
+              sourceThreadId: msg.threadId,
+            })
+          );
+        } catch {}
+        toast.success("Opening payment upload form…");
+        break;
+      }
+      case "view_invoice": {
+        const { setActiveSection } = useValtrioxStore.getState();
+        setActiveSection("invoice-management");
+        try {
+          sessionStorage.setItem("pendingInvoiceId", String(payload.invoiceId || ""));
+        } catch {}
+        toast.success("Opening invoice…");
+        break;
+      }
+      case "view_report": {
+        const { setActiveSection } = useValtrioxStore.getState();
+        setActiveSection("reports");
+        try {
+          sessionStorage.setItem("pendingReportId", String(payload.reportId || ""));
+        } catch {}
+        toast.success("Opening report…");
+        break;
+      }
+      case "custom_url": {
+        if (payload.url) {
+          window.open(String(payload.url), "_blank", "noopener,noreferrer");
+        }
+        break;
+      }
+      case "dismiss": {
+        // No-op: just visually dismiss the action row by marking it
+        toast.info("Action dismissed");
+        break;
+      }
+      default:
+        toast.error(`Unknown action: ${action.type}`);
     }
   };
 
@@ -539,6 +638,44 @@ export function ClientInboxPage() {
                               <div className="mt-2 flex items-center gap-1.5 text-xs text-rose-300 bg-rose-500/10 border border-rose-500/20 rounded p-1.5">
                                 <Calendar className="h-3 w-3" />
                                 Deadline: {fmtDateTime(msg.deadlineDate)}
+                              </div>
+                            )}
+                            {/* Phase 16: Action buttons */}
+                            {Array.isArray(msg.actions) && msg.actions.length > 0 && (
+                              <div className="mt-3 flex flex-wrap gap-2">
+                                {msg.actions.map((action: MessageAction, ai: number) => {
+                                  const style = action.style || "primary";
+                                  const baseBtn =
+                                    "inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md transition-all hover:scale-[1.02] active:scale-[0.98]";
+                                  const styleCls =
+                                    style === "primary"
+                                      ? "bg-amber-500 hover:bg-amber-400 text-charcoal"
+                                      : style === "secondary"
+                                      ? "bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30"
+                                      : style === "danger"
+                                      ? "bg-rose-500 hover:bg-rose-400 text-white"
+                                      : "bg-transparent hover:bg-white/5 text-slate-400 border border-white/10";
+                                  const iconFor = (t: string) => {
+                                    if (t === "renew_subscription") return <RefreshCw className="h-3 w-3" />;
+                                    if (t === "upload_payment_proof") return <Upload className="h-3 w-3" />;
+                                    if (t === "view_invoice") return <Receipt className="h-3 w-3" />;
+                                    if (t === "view_report") return <FileText className="h-3 w-3" />;
+                                    if (t === "open_billing") return <CreditCard className="h-3 w-3" />;
+                                    if (t === "custom_url") return <ExternalLink className="h-3 w-3" />;
+                                    return <Sparkles className="h-3 w-3" />;
+                                  };
+                                  return (
+                                    <button
+                                      key={action.id || ai}
+                                      type="button"
+                                      onClick={() => handleMessageAction(msg, action)}
+                                      className={cn(baseBtn, styleCls)}
+                                    >
+                                      {iconFor(action.type)}
+                                      {action.label}
+                                    </button>
+                                  );
+                                })}
                               </div>
                             )}
                           </div>

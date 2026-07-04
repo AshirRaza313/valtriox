@@ -320,13 +320,12 @@ export async function generateLeadMagnetPDF(settings: LeadMagnetSettings): Promi
       doc.rect(0, 0, W, H * 0.6).fill(coverGrad);
       doc.restore();
 
-      // Logo — Phase 15 (rev 2): ALWAYS use founder-uploaded brand logo
-      // with SQUARE golden border. Override any per-org logoUrl.
+      // Logo — Phase 15 (rev 3): founder brand logo, SQUARE golden border, padding=0.
       drawBrandLogoSquareCentered(doc, W / 2, 120, 80, {
         bgColor: C.goldBg,
         borderColor: C.gold,
         borderWidth: 1.2,
-        padding: 6,
+        padding: 0,
       });
 
       // Company name

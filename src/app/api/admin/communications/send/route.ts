@@ -22,6 +22,20 @@ import logger from "@/lib/logger";
 //   threadId?: string,             // existing thread ID if replying
 //   relatedInvoiceId?: string,
 //   relatedReportId?: string,
+//
+//   // ── Phase 16: Action buttons & SYSTEM sender ──
+//   sendAsSystem?: boolean,        // if true, sender fields become "Valtriox System"
+//                                  // (platform_owner only)
+//   actions?: Array<{              // action buttons rendered in client inbox
+//     id: string,                  // unique button id (e.g. "btn_renew")
+//     label: string,               // button label (e.g. "Renew Subscription Now")
+//     type: string,                // renew_subscription | upload_payment_proof |
+//                                  // view_invoice | view_report | open_billing |
+//                                  // dismiss | custom_url
+//     payload?: Record<string, any>, // type-specific data
+//     style?: string,              // primary | secondary | danger | ghost
+//   }>,
+//   metadata?: Record<string, any>, // free-form analytics/state data
 // }
 export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
   try {
@@ -46,6 +60,9 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
       threadId: providedThreadId,
       relatedInvoiceId,
       relatedReportId,
+      sendAsSystem,
+      actions,
+      metadata,
     } = body;
 
     // ── Validation ──
@@ -72,6 +89,38 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
     const validPriorities = ["low", "normal", "high", "urgent"];
     const resolvedPriority = validPriorities.includes(priority) ? priority : "normal";
 
+    // ── Validate actions array (Phase 16) ──
+    const validActionTypes = [
+      "renew_subscription", "upload_payment_proof", "view_invoice",
+      "view_report", "open_billing", "dismiss", "custom_url",
+    ];
+    let sanitizedActions: any[] | null = null;
+    if (Array.isArray(actions) && actions.length > 0) {
+      sanitizedActions = actions.map((a: any, idx: number) => {
+        if (!a || typeof a !== "object") {
+          throw new Error(`Action ${idx} is not an object`);
+        }
+        const label = String(a.label || "").trim();
+        if (label.length < 2) {
+          throw new Error(`Action ${idx} label must be at least 2 chars`);
+        }
+        const type = String(a.type || "");
+        if (!validActionTypes.includes(type)) {
+          throw new Error(`Action ${idx} type "${type}" is invalid. Must be one of: ${validActionTypes.join(", ")}`);
+        }
+        return {
+          id: String(a.id || `btn_${idx + 1}_${Date.now()}`),
+          label,
+          type,
+          payload: a.payload && typeof a.payload === "object" ? a.payload : {},
+          style: ["primary", "secondary", "danger", "ghost"].includes(a.style) ? a.style : "primary",
+        };
+      });
+    }
+
+    // ── Validate sendAsSystem (platform_owner only) ──
+    const wantsSystem = !!sendAsSystem && authCtx.role === "platform_owner";
+
     // ── Verify org exists ──
     const { data: org, error: orgErr } = await safeDbQuery(() =>
       db.organization.findUnique({
@@ -90,15 +139,20 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
     const threadId = providedThreadId || `thread_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 
     // ── Build create payload ──
+    // Phase 16: when sendAsSystem=true, override sender fields to "Valtriox System"
+    const senderName = wantsSystem ? "Valtriox System" : (authCtx.name || authCtx.email || "Valtriox Admin");
+    const senderEmail = wantsSystem ? "system@valtriox.com" : authCtx.email;
+    const senderRole = wantsSystem ? "system" : authCtx.role;
+
     const createData: any = {
       organizationId,
       threadId,
       parentMessageId: parentMessageId || null,
       direction: "admin_to_client",
-      senderUserId: authCtx.userId,
-      senderName: authCtx.name || authCtx.email || "Valtriox Admin",
-      senderEmail: authCtx.email,
-      senderRole: authCtx.role,
+      senderUserId: wantsSystem ? null : authCtx.userId,
+      senderName,
+      senderEmail,
+      senderRole,
       category,
       subject: subject.trim(),
       body: messageBody,
@@ -113,6 +167,10 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
       deadlineDate: deadlineDate ? new Date(deadlineDate) : null,
       relatedInvoiceId: relatedInvoiceId || null,
       relatedReportId: relatedReportId || null,
+      // Phase 16 fields:
+      actions: sanitizedActions,
+      metadata: metadata && typeof metadata === "object" ? metadata : null,
+      isSystemMessage: wantsSystem,
     };
 
     const { data: message, error: createErr } = await safeDbQuery(() =>
@@ -137,13 +195,15 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
       billing: "Billing Notification",
     };
 
+    const notifSenderLabel = wantsSystem ? "Valtriox System" : (authCtx.name || authCtx.email);
+
     await safeDbQuery(() =>
       db.notification.create({
         data: {
           orgId: organizationId,
           title: `${categoryLabels[category] || "New Message"}: ${subject.trim().slice(0, 60)}`,
-          message: `You have a new message from Valtriox (${authCtx.name || authCtx.email}). Check your Communication Center inbox.`,
-          type: "info",
+          message: `You have a new message from ${notifSenderLabel}. Check your Communication Center inbox.${sanitizedActions && sanitizedActions.length > 0 ? " Action required." : ""}`,
+          type: sanitizedActions && sanitizedActions.length > 0 ? "warning" : "info",
           actionUrl: `/communications`,
           icon: "MessageSquare",
         },
@@ -156,6 +216,8 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
       organizationId,
       category,
       userId: authCtx.userId,
+      sendAsSystem: wantsSystem,
+      actionCount: sanitizedActions ? sanitizedActions.length : 0,
     });
 
     return NextResponse.json({
@@ -166,7 +228,7 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error);
     logger.error("[Communication Send] Unhandled error", msg);
-    return NextResponse.json({ error: "Failed to send communication" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to send communication", detail: msg }, { status: 500 });
   }
 }, { requireRole: ["platform_owner", "platform_admin", "admin", "owner"], requireOrg: false }), { maxRequests: 60, windowSeconds: 60 });
 

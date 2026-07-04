@@ -265,11 +265,9 @@ function parseBase64DataUri(dataUri: string): { mimeType: string; base64: string
 
 // Helper: render default Valtriox logo and return right X position
 async function renderDefaultLogo(doc: PDFKit.PDFDocument, x: number, y: number): Promise<number> {
-  // Phase 15 (rev 2): ALWAYS use the founder-uploaded brand logo with a
-  // SQUARE golden border. This overrides any per-org / per-platform logo
-  // per founder directive: "yeh uploaded logo icon har organizations ki
-  // saari reports aur saari invoices par laga do same as it is".
-  drawBrandLogoSquare(doc, x, y, 44, { bgColor: C.goldBg2 });
+  // Phase 15 (rev 3): ALWAYS use the founder-uploaded brand logo with a
+  // SQUARE golden border, padding=0 (no white space inside border).
+  drawBrandLogoSquare(doc, x, y, 44, { bgColor: C.goldBg2, padding: 0 });
   return x + 56;
 }
 
@@ -805,13 +803,12 @@ export async function generateInvoicePDF(invoice: InvoiceData): Promise<Buffer> 
       let headerRightStartX = P + 200;
 
       // LEFT: Logo + Company Name
-      // Phase 15 (rev 2): ALWAYS use the founder-uploaded brand logo with
-      // a SQUARE golden border, regardless of any platform logo data.
+      // Phase 15 (rev 3): padding=0 so logo fills the square edge-to-edge.
       drawBrandLogoSquare(doc, P, y, 44, {
         bgColor: C.goldBg2,
         borderColor: C.gold,
         borderWidth: 1.2,
-        padding: 4,
+        padding: 0,
       });
       headerRightStartX = P + 56;
 
@@ -1256,10 +1253,7 @@ export async function generateCustomInvoicePDF(invoice: InvoiceData): Promise<Bu
       doc.restore();
 
       // ── LOGO + BRAND NAME (white text on charcoal) ──
-      // Phase 15 (rev 2): ALWAYS use the founder-uploaded brand logo. The
-      // custom invoice header is dark charcoal (#161B26), so we draw the
-      // logo on a WHITE background card with a SQUARE golden border to
-      // make the charcoal-and-gold logo visible.
+      // Phase 15 (rev 3): padding=0 so logo fills the square edge-to-edge.
       let y = 36;
       let headerRightStartX = P + 60;
 
@@ -1267,7 +1261,7 @@ export async function generateCustomInvoicePDF(invoice: InvoiceData): Promise<Bu
         bgColor: "#FFFFFF", // white card so charcoal logo shows on dark header
         borderColor: C.gold,
         borderWidth: 1.4,
-        padding: 4,
+        padding: 0,
       });
 
       // Brand name (white)
@@ -1659,17 +1653,15 @@ export async function generateReportPDF(report: ReportData): Promise<Buffer> {
       doc.restore();
 
       // ── LOGO (founder brand icon, large, SQUARE golden border) ──
-      // Phase 15 (rev 2): ALWAYS use the founder-uploaded brand logo with a
-      // SQUARE golden border, regardless of org-specific logo data. Per
-      // founder directive: "yeh uploaded logo icon har organizations ki
-      // saari reports aur saari invoices par laga do same as it is".
+      // Phase 15 (rev 3): Founder directive — remove the white space inside
+      // the golden border. Logo now fills the square edge-to-edge (padding=0).
       let logoCenterY = topDecoY + 24;
       const coverLogoSize = 96;
       logoCenterY = drawBrandLogoSquareCentered(doc, W / 2, logoCenterY, coverLogoSize, {
         bgColor: C.goldBg2,
         borderColor: C.gold,
         borderWidth: 1.5,
-        padding: 8,
+        padding: 0,
       });
       logoCenterY += 24;
 
@@ -1813,14 +1805,13 @@ export async function generateReportPDF(report: ReportData): Promise<Buffer> {
       let tableY = P + 6;
 
       // ── CONTENT HEADER ──
-      // Phase 15 (rev 2): Always use the founder brand logo with SQUARE golden
-      // border (per founder directive). Override any org-specific logo.
+      // Phase 15 (rev 3): padding=0 so logo fills the square edge-to-edge.
       let contentLogoRightX = P;
       drawBrandLogoSquare(doc, P, tableY, 32, {
         bgColor: C.goldBg2,
         borderColor: C.gold,
         borderWidth: 0.8,
-        padding: 2.5,
+        padding: 0,
       });
       contentLogoRightX = P + 40;
 
