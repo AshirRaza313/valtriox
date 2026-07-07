@@ -148,7 +148,8 @@ export function useSubscriptionSync() {
         };
       });
 
-      // CRITICAL: Sync organization.plan in Zustand store + localStorage
+      // CRITICAL: Sync organization.plan in the Zustand store (in-memory only,
+      // per Phase 17 PII purge — no localStorage write).
       // Skip for platform roles (their plan is always "enterprise" regardless of DB subscription)
       if (sub.plan?.name && userRole !== "platform_owner" && userRole !== "platform_admin" && userRole !== "valtriox_team") {
         const { organization: currentOrg } = useValtrioxStore.getState();

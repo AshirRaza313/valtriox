@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
+import { useValtrioxStore } from "@/store/brandflow-store";
 import { motion } from "framer-motion";
 
 // ============================================================================
@@ -238,16 +239,17 @@ export function UserGuidePage() {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
 
-  // Load theme & role from localStorage
+  // Load theme & role from store (in-memory auth state hydrated by initializeAuth)
   const [initDone, setInitDone] = useState(false);
 
   if (!initDone && typeof window !== "undefined") {
     try {
       const stored = localStorage.getItem("valtriox-appTheme");
       if (stored) setAppTheme(stored);
-      const userData = localStorage.getItem("valtriox-user");
-      if (userData) {
-        const u = JSON.parse(userData);
+      // SECURITY (Phase 17): role comes from in-memory store (hydrated from
+      // /api/auth/me via signed cookies) — NOT from localStorage anymore.
+      const u = useValtrioxStore.getState().user;
+      if (u) {
         setUserRole(u.role || null);
         setIsAdmin(["platform_owner", "platform_admin", "owner"].includes(u.role));
       }
@@ -285,8 +287,8 @@ export function UserGuidePage() {
   const saveGuide = async () => {
     setSaving(true);
     try {
-      const userData = localStorage.getItem("valtriox-user");
-      const userId = userData ? JSON.parse(userData)?.id : null;
+      // SECURITY (Phase 17): user id comes from in-memory store, not localStorage.
+      const userId = useValtrioxStore.getState().user?.id ?? null;
       const r = await fetchWithAuth("/api/admin/guide", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },

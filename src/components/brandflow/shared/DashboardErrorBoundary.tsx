@@ -34,8 +34,9 @@ export class DashboardErrorBoundary extends Component<Props, State> {
 
   handleLogout = () => {
     try {
-      localStorage.removeItem("valtriox-user");
-      localStorage.removeItem("valtriox-org");
+      // SECURITY (Phase 17): No PII in localStorage anymore — just the
+      // session flag + non-sensitive branding prefs.
+      localStorage.removeItem("valtriox-session-active");
       localStorage.removeItem("valtriox-brandname");
       localStorage.removeItem("valtriox-logo");
       localStorage.removeItem("valtriox-tagline");

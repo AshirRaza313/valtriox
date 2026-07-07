@@ -25,8 +25,9 @@ export default function GlobalError({
   // Clear broken state and redirect to landing page
   const handleReset = () => {
     try {
-      localStorage.removeItem("valtriox-user");
-      localStorage.removeItem("valtriox-org");
+      // SECURITY (Phase 17): No PII in localStorage anymore — only the
+      // session-active flag + non-sensitive branding prefs.
+      localStorage.removeItem("valtriox-session-active");
       localStorage.removeItem("valtriox-brandname");
       localStorage.removeItem("valtriox-logo");
       localStorage.removeItem("valtriox-tagline");

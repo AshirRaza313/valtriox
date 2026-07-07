@@ -540,28 +540,18 @@ export function SettingsPage() {
   const {
     brandColor, setBrandColor, brandGradient, setBrandGradient, organization,
     setBrandName, setBrandLogo, setSelectedCountry, setSelectedReligion, setOrganization,
-    appTheme, setAppTheme, brandName, setBrandTagline, setBrandConfigured, setUser,
+    appTheme, setAppTheme, brandName, setBrandTagline, setBrandConfigured,
   } = useValtrioxStore();
   const user = useValtrioxStore((s) => s.user);
   const [mounted, setMounted] = useState(false);
 
-  // ── Ensure user data is loaded (fixes SSR hydration timing issue) ──
+  // ── Ensure user data is loaded ──
+  // SECURITY (Phase 17): User data is no longer in localStorage. The store is
+  // hydrated from `/api/auth/me` by the global `initializeAuth()` call in
+  // src/app/page.tsx on app mount. Here we just gate `mounted` for hydration
+  // safety (prevents React #418 from SSR/client role mismatch).
   useEffect(() => {
     setMounted(true);
-    // If user is null after mount, try reading from localStorage directly
-    // This handles the case where the Zustand store initialized before
-    // localStorage was available (e.g., SSR → client hydration race)
-    if (!user) {
-      try {
-        const saved = localStorage.getItem('valtriox-user');
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (parsed?.id) {
-            setUser(parsed);
-          }
-        }
-      } catch { /* silent */ }
-    }
   }, []);
 
   // During SSR, user is null → isAdmin=false → BASE_SUBTABS.

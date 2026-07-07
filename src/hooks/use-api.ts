@@ -826,8 +826,8 @@ export const queryKeys = {
 
 /**
  * Helper for making typed fetch requests to the API.
- * Uses fetchWithAuth on the client to automatically inject auth headers
- * from localStorage. Falls back to plain fetch on the server.
+ * Uses fetchWithAuth on the client (auth flows via httpOnly cookies —
+ * see Phase 17 PII purge). Falls back to plain fetch on the server.
  * Throws on non-2xx responses with the error message from the server.
  */
 

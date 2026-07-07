@@ -646,29 +646,45 @@ function saveThemeToStorage(theme: "light" | "dark" | "premium-dark") {
   } catch {}
 }
 
-// Persist auth state to localStorage
+// ---------------------------------------------------------------------------
+// SECURITY (Phase 17 — localStorage PII purge)
+// ---------------------------------------------------------------------------
+// User & Organization objects (which contain email, role, orgId, userId) are
+// NO LONGER persisted to localStorage. They are kept in-memory only and
+// hydrated from `/api/auth/me` (which reads httpOnly + HMAC-signed cookies)
+// on app mount via `initializeAuth()`.
+//
+// To preserve the UX of "refresh keeps you on dashboard instead of landing",
+// we persist a single boolean flag `valtriox-session-active`. This flag
+// carries ZERO PII — it just signals "a session probably exists, hydrate
+// from server ASAP". If the server says no session, we fall back to landing.
+// ---------------------------------------------------------------------------
 function getSavedUser(): any {
-  try {
-    const saved = typeof window !== 'undefined' ? localStorage.getItem('valtriox-user') : null;
-    return saved ? JSON.parse(saved) : null;
-  } catch (err) {
-    if (process.env.NODE_ENV === 'development') console.warn('[Store] Error reading saved user:', err);
-    return null;
-  }
+  // SECURITY: Always returns null. User data lives in-memory only.
+  return null;
 }
 function getSavedOrg(): any {
+  // SECURITY: Always returns null. Org data lives in-memory only.
+  return null;
+}
+function getSessionActive(): boolean {
   try {
-    const saved = typeof window !== 'undefined' ? localStorage.getItem('valtriox-org') : null;
-    return saved ? JSON.parse(saved) : null;
-  } catch (err) {
-    if (process.env.NODE_ENV === 'development') console.warn('[Store] Error reading saved org:', err);
-    return null;
-  }
+    return typeof window !== 'undefined' ? localStorage.getItem('valtriox-session-active') === 'true' : false;
+  } catch { return false; }
+}
+function setSessionActive(v: boolean) {
+  try {
+    if (typeof window !== 'undefined') {
+      if (v) localStorage.setItem('valtriox-session-active', 'true');
+      else localStorage.removeItem('valtriox-session-active');
+    }
+  } catch {}
 }
 
 // NOTE: Auth cookies are now httpOnly + HMAC-signed, so they cannot be read or
-// set from client-side JS. The store initializes from localStorage for fast UI
-// hydration, then syncs with the server via /api/auth/me to validate/refresh.
+// set from client-side JS. The store initializes from a boolean session flag
+// (no PII) for fast view selection, then syncs with the server via
+// /api/auth/me to validate/refresh.
 function getSavedBrandName(): string {
   try {
     return typeof window !== 'undefined' ? localStorage.getItem('valtriox-brandname') || '' : '';
@@ -691,7 +707,9 @@ function getSavedBrandConfigured(): boolean {
 }
 
 export const useValtrioxStore = create<ValtrioxStore>((set, get) => ({
-  view: getSavedUser() ? "dashboard" : "landing",
+  // Initial view: dashboard only if the session-active flag is set.
+  // Real auth state is hydrated from /api/auth/me in initializeAuth().
+  view: getSessionActive() ? "dashboard" : "landing",
   setView: (view) => set({ view }),
   activeSection: "dashboard",
   setActiveSection: (section) => set({ activeSection: section, sidebarOpen: false }),
@@ -779,19 +797,17 @@ export const useValtrioxStore = create<ValtrioxStore>((set, get) => ({
       brandBgColor: theme.brandBgColor ?? s.brandBgColor,
     })),
 
-  // User & Org - persisted to localStorage
+  // User & Org - in-memory ONLY (never persisted to localStorage — see Phase 17 PII purge)
   user: getSavedUser(),
   setUser: (user) => {
-    try { localStorage.setItem('valtriox-user', JSON.stringify(user)); } catch (err) {
-      if (process.env.NODE_ENV === 'development') console.warn('[Store] Error saving user to localStorage:', err);
-    }
+    // SECURITY: Only update in-memory state. Set the boolean session flag
+    // for view-selection on next refresh — no PII hits localStorage.
+    setSessionActive(!!user);
     set({ user, view: user ? 'dashboard' : 'landing' });
   },
   organization: getSavedOrg(),
   setOrganization: (org) => {
-    try { localStorage.setItem('valtriox-org', JSON.stringify(org)); } catch (err) {
-      if (process.env.NODE_ENV === 'development') console.warn('[Store] Error saving org to localStorage:', err);
-    }
+    // SECURITY: Org data (including id) stays in-memory only.
     set({ organization: org });
   },
 
@@ -846,11 +862,11 @@ export const useValtrioxStore = create<ValtrioxStore>((set, get) => ({
   authModalMode: null as "login" | "signup" | "forgot-password" | null,
   setAuthModalMode: (mode) => set({ authModalMode: mode, authModalOpen: mode !== null }),
 
-  // Logout - clear persisted auth, clear httpOnly cookies via API
+  // Logout - clear persisted state, clear httpOnly cookies via API
   logout: async () => {
     try {
-      localStorage.removeItem('valtriox-user');
-      localStorage.removeItem('valtriox-org');
+      // SECURITY: No PII to clear anymore — just the boolean flag + branding prefs.
+      localStorage.removeItem('valtriox-session-active');
       localStorage.removeItem('valtriox-brandname');
       localStorage.removeItem('valtriox-logo');
       localStorage.removeItem('valtriox-tagline');

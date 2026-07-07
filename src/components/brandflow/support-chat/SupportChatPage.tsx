@@ -1103,25 +1103,12 @@ export function SupportChatPage() {
   const currentConversationId = isAdmin ? activeClientOrgId : orgId;
   const currentMessages = currentConversationId ? (messagesMap[currentConversationId] || []) : [];
 
-  // ── Helper: build auth headers directly from localStorage ──
+  // ── Helper: auth headers ──
+  // SECURITY (Phase 17): Auth flows through httpOnly cookies — no manual
+  // header injection needed. Stub retained to minimise call-site churn.
   // Must be declared BEFORE all callbacks that reference it (TDZ fix).
   const getDirectAuthHeaders = useCallback((): Record<string, string> => {
-    try {
-      const userStr = localStorage.getItem("valtriox-user");
-      const orgStr = localStorage.getItem("valtriox-org");
-      if (!userStr) return {};
-      const user = JSON.parse(userStr);
-      const org = orgStr ? JSON.parse(orgStr) : null;
-      if (!user?.id) return {};
-      return {
-        "x-user-id": user.id,
-        "x-user-email": user.email || "",
-        "x-user-role": user.role || "member",
-        "x-org-id": org?.id || "",
-      };
-    } catch {
-      return {};
-    }
+    return {};
   }, []);
 
   // ── Fetch conversations (admin only) ──

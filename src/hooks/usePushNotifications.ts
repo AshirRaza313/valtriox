@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useValtrioxStore } from "@/store/brandflow-store";
 
 // ── Types ──
 
@@ -126,14 +127,16 @@ export function usePushNotifications(): UsePushNotificationsReturn {
         userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "",
       };
 
-      // Try to get user/org from localStorage
+      // SECURITY (Phase 17): Pull user/org ids from in-memory store (hydrated
+      // from /api/auth/me via signed cookies) — NOT from localStorage.
       try {
-        const user = JSON.parse(localStorage.getItem("valtriox-user") || "{}");
-        const org = JSON.parse(localStorage.getItem("valtriox-org") || "{}");
+        const state = useValtrioxStore.getState();
+        const user = state.user;
+        const org = state.organization;
         if (user?.id) subBody.userId = user.id;
         if (org?.id) subBody.orgId = org.id;
       } catch {
-        // Ignore localStorage parse errors
+        // Ignore store read errors
       }
 
       const res = await fetch("/api/push/subscribe", {
