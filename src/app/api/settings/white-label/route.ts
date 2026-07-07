@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { db, isDbUnavailable, withRetry } from "@/lib/db";
 import { withAuth } from "@/lib/auth-middleware";
 import logger from "@/lib/logger";
@@ -169,36 +169,3 @@ export const PUT = withRateLimit(withAuth(async (req, authCtx) => {
     return NextResponse.json({ error: "Failed to save white-label settings" }, { status: 500 });
   }
 }), { maxRequests: 30, windowSeconds: 60 });
-
-// ============================================================================
-// GET /api/settings/white-label/all - Fetch all orgs' white-label settings (Platform Owner only)
-// ============================================================================
-
-export const ALL = withRateLimit(async (req: NextRequest) => {
-  try {
-    const authHeader = req.headers.get("x-user-role");
-    if (!authHeader || !["platform_owner", "platform_admin", "owner", "admin"].includes(authHeader)) {
-      return NextResponse.json({ error: "Access denied. Platform owner only." }, { status: 403 });
-    }
-    const result = await withRetry(async () => {
-      const allSettings = await db.systemSetting.findMany({
-        where: { category: "white_label" },
-      });
-
-      const orgSettings = allSettings.map((s) => {
-        try {
-          return { key: s.key, settings: JSON.parse(s.value) };
-        } catch {
-          return { key: s.key, settings: DEFAULT_SETTINGS };
-        }
-      });
-
-      return orgSettings;
-    }, 2, 500);
-
-    return NextResponse.json({ organizations: result });
-  } catch (error: unknown) {
-    logger.error("WhiteLabel ALL error", error);
-    return NextResponse.json({ error: "Failed to fetch all white-label settings" }, { status: 500 });
-  }
-}, { maxRequests: 30, windowSeconds: 60 });
