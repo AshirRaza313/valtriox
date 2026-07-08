@@ -923,6 +923,8 @@ Respond in this exact JSON format (no markdown fences):
       retrievedMemory: memoryDtos,
       traceId,
       llmPowered: llmRes.powered,
+      llmProvider: llmRes.provider,
+      llmError: llmRes.lastError || null,
     };
   },
 

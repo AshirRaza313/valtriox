@@ -153,6 +153,8 @@ interface AskResponse {
   reasoning: string;
   recommendedActions: Array<{ type: string; description: string; requiresApproval: boolean }>;
   llmPowered: boolean;
+  llmProvider?: string;
+  llmError?: string | null;
   traceId: string;
 }
 
@@ -404,6 +406,37 @@ export function AiTeamDashboard() {
             )}
           </p>
         </div>
+        <div className="flex gap-2">
+          <button
+            onClick={async () => {
+              try {
+                const res = await fetchWithAuth("/api/ai-team/health");
+                const data = await res.json();
+                if (data.actualCallSucceeded) {
+                  toast({
+                    title: "✅ LLM Connected",
+                    description: `${data.providerName} (${data.model || "?"}) responded in ${data.latencyMs}ms. Sample: "${data.responseSample?.slice(0, 80) || ""}"`,
+                  });
+                } else {
+                  toast({
+                    title: "❌ LLM Connection Failed",
+                    description: data.errorMessage || "Unknown error",
+                    variant: "destructive",
+                  });
+                }
+              } catch (err: any) {
+                toast({
+                  title: "Health check failed",
+                  description: err.message,
+                  variant: "destructive",
+                });
+              }
+            }}
+            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 text-sm transition-colors border border-amber-500/20"
+          >
+            <Activity className="h-4 w-4" />
+            Test LLM
+          </button>
         <button
           onClick={loadAll}
           className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 text-sm transition-colors"
@@ -411,6 +444,7 @@ export function AiTeamDashboard() {
           <RefreshCw className="h-4 w-4" />
           Refresh
         </button>
+        </div>
       </div>
 
       {/* ── Stats Strip ── */}
@@ -463,6 +497,18 @@ export function AiTeamDashboard() {
               </span>
               <span className="text-[10px] text-slate-500 font-mono">{askResponse.traceId}</span>
             </div>
+            {!askResponse.llmPowered && askResponse.llmError && (
+              <div className="mb-2 p-2 rounded-lg bg-red-500/10 border border-red-500/30">
+                <p className="text-xs text-red-300 font-mono">
+                  ⚠️ LLM Error: {askResponse.llmError}
+                </p>
+                <p className="text-[10px] text-red-400/70 mt-1">
+                  Check: (1) GEMINI_API_KEY is valid, (2) model name is correct
+                  (default: gemini-2.0-flash), (3) API quota not exceeded.
+                  Click "Test LLM" button above for full diagnostics.
+                </p>
+              </div>
+            )}
             <p className="text-sm text-slate-200 whitespace-pre-wrap">{askResponse.response}</p>
             {askResponse.recommendedActions.length > 0 && (
               <div className="mt-3 pt-3 border-t border-slate-700">

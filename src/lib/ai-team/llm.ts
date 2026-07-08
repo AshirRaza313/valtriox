@@ -49,6 +49,9 @@ export interface LLMResponse {
   latencyMs: number;
   // Display name of the active provider (for dashboard UI)
   provider: string;
+  // If the real LLM failed and fell back to stub, the error message.
+  // Useful for debugging — surfaced in the UI and health check endpoint.
+  lastError?: string;
 }
 
 export interface LLMProvider {
@@ -113,7 +116,10 @@ class GeminiLLM implements LLMProvider {
   constructor() {
     // Support both GEMINI_API_KEY (preferred) and GOOGLE_API_KEY (alias)
     this.apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "";
-    this.model = process.env.GEMINI_MODEL || "gemini-2.0-flash-001";
+    // Default model: gemini-2.0-flash (stable, fast, supports JSON mode).
+    // Override with GEMINI_MODEL env var if you want a different model
+    // (e.g. gemini-1.5-flash, gemini-2.5-flash, gemini-2.0-flash-exp).
+    this.model = process.env.GEMINI_MODEL || "gemini-2.0-flash";
     this.isAvailable = !!this.apiKey;
   }
 
@@ -177,12 +183,20 @@ class GeminiLLM implements LLMProvider {
       };
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      logger.error("[GeminiLLM] Generation failed, falling back to stub", { error: msg });
-      // Fall back to stub — never crash the agent
+      logger.error("[GeminiLLM] Generation failed, falling back to stub", { error: msg, model: this.model });
+      // Fall back to stub — never crash the agent. But include the error in the
+      // response so the user can see WHY Gemini failed (wrong model name, invalid
+      // API key, quota exceeded, etc.) instead of silently getting a stub.
       const stub = new StubLLM();
       const res = await stub.generate(req);
-      // Preserve the fact that we tried Gemini first (for debugging)
-      return { ...res, provider: `stub (gemini-failed: ${msg.slice(0, 80)})` };
+      // Prepend the error to the stub response so the user sees it
+      const errorHint = `[Gemini Error: ${msg.slice(0, 200)}] \n\n`;
+      return {
+        ...res,
+        content: errorHint + res.content,
+        provider: `stub (gemini-failed: ${msg.slice(0, 80)})`,
+        lastError: msg,
+      };
     }
   }
 }
@@ -280,4 +294,76 @@ export function isLLMPowered(): boolean {
 // Returns a human-readable label for the dashboard UI
 export function getLLMProviderLabel(): string {
   return getLLMProvider().name;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Health Check — tests if the LLM provider ACTUALLY works (not just if the
+// env var is set). Returns detailed diagnostics so the Owner can see exactly
+// why Gemini/Z.ai is failing. Used by /api/ai-team/health.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface LLMHealthCheck {
+  configured: boolean;        // env var is set
+  providerName: string;       // "gemini" | "zai" | "stub"
+  model?: string;             // which model is being used
+  apiKeyPresent: boolean;     // is the key non-empty?
+  apiKeyPrefix?: string;      // first 4 chars (safe to log, helps diagnose format issues)
+  actualCallSucceeded: boolean; // did a real generate() call return powered=true?
+  errorMessage?: string;      // if failed, the error
+  latencyMs?: number;         // how long the test call took
+  responseSample?: string;    // first 200 chars of the test response
+}
+
+export async function checkLLMHealth(): Promise<LLMHealthCheck> {
+  const provider = getLLMProvider();
+  const hasGeminiKey = !!(process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY);
+  const hasZaiKey = !!process.env.ZAI_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.ZAI_API_KEY || "";
+
+  const base: LLMHealthCheck = {
+    configured: provider.name !== "stub",
+    providerName: provider.name,
+    model: provider.name === "gemini" ? (process.env.GEMINI_MODEL || "gemini-2.0-flash") : undefined,
+    apiKeyPresent: !!apiKey,
+    apiKeyPrefix: apiKey ? apiKey.slice(0, 4) + "..." : undefined,
+    actualCallSucceeded: false,
+  };
+
+  if (provider.name === "stub") {
+    return {
+      ...base,
+      errorMessage: hasGeminiKey
+        ? "GEMINI_API_KEY is set but provider resolved to stub — check server logs"
+        : hasZaiKey
+        ? "ZAI_API_KEY is set but provider resolved to stub — check server logs"
+        : "No LLM API key configured. Set GEMINI_API_KEY or ZAI_API_KEY in Vercel env vars.",
+    };
+  }
+
+  // Run an actual test call
+  try {
+    const start = Date.now();
+    const res = await provider.generate({
+      messages: [
+        { role: "system", content: "You are a test bot. Reply with exactly: OK" },
+        { role: "user", content: "Reply with exactly one word: OK" },
+      ],
+      temperature: 0,
+      maxTokens: 10,
+    });
+
+    return {
+      ...base,
+      actualCallSucceeded: res.powered,
+      latencyMs: Date.now() - start,
+      responseSample: res.content.slice(0, 200),
+      errorMessage: res.powered ? undefined : res.lastError || "LLM returned powered=false (fell back to stub)",
+    };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return {
+      ...base,
+      errorMessage: `Health check threw: ${msg}`,
+    };
+  }
 }
