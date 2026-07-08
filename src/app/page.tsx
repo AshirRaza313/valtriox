@@ -5,7 +5,7 @@ import { useEffect, useState, useCallback, useRef, Component, ReactNode } from "
 import dynamic from "next/dynamic";
 import { useValtrioxStore } from "@/store/brandflow-store";
 import { useAuth, useUI, useOrganization, useUIActions } from "@/hooks/useStoreSelectors";
-import { fetchWithAuth } from "@/lib/fetch-with-auth";
+import { fetchWithAuth, onAuthExpired } from "@/lib/fetch-with-auth";
 import { useSubscriptionSync } from "@/hooks/useSubscriptionSync";
 
 // ── Lazy-Loaded Page Components (code-split for performance) ──
@@ -169,6 +169,7 @@ export default function Home() {
   const { setView, setAppTheme, setAuthModalOpen, setAuthModalMode } = useUIActions();
   // Single-action selectors don't need useShallow — zustand returns stable function references
   const initializeAuth = useValtrioxStore((state) => state.initializeAuth);
+  const logout = useValtrioxStore((state) => state.logout);
   const [legalPage, setLegalPage] = useState<string | null>(null);
   const [adminLockedFeatures, setAdminLockedFeatures] = useState<Set<string>>(new Set());
 
@@ -176,6 +177,25 @@ export default function Home() {
   useEffect(() => {
     initializeAuth();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Auto-Logout on 401 (session expired) ──────────────────────────────────
+  // fetchWithAuth dispatches a "valtriox:auth-expired" event whenever ANY API
+  // route returns 401. This happens when the NextAuth JWT or signed cookies
+  // expire (default 30 days, but can be sooner if NEXTAUTH_SECRET rotates or
+  // cookies are cleared). Without this handler, useSubscriptionSync (60s),
+  // useDbNotifications (30s), and other polling hooks would keep firing 401
+  // requests forever, flooding the console with errors.
+  //
+  // On auth-expired: trigger a full logout (clears in-memory state + cookies),
+  // which automatically switches view back to "landing" so the user sees the
+  // login screen instead of a broken dashboard.
+  useEffect(() => {
+    const unsubscribe = onAuthExpired(() => {
+      console.warn("[Auth] Session expired — auto-logging out");
+      logout();
+    });
+    return unsubscribe;
+  }, [logout]);
 
   // ── Suppress known benign React errors from third-party scripts / Vercel runtime ──
   useEffect(() => {

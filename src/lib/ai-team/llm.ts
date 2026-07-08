@@ -129,75 +129,136 @@ class GeminiLLM implements LLMProvider {
       throw new Error("GEMINI_API_KEY not configured");
     }
 
-    try {
-      // Dynamic import so the SDK is only loaded when actually needed
-      const GoogleGenAI = await import("@google/generative-ai").catch(() => null);
-      if (!GoogleGenAI || !GoogleGenAI.GoogleGenerativeAI) {
-        throw new Error("@google/generative-ai not installed");
+    // ── 429 Retry with exponential backoff ──────────────────────────────────
+    // Gemini's free tier has aggressive rate limits (e.g. 15 RPM, 1500/day).
+    // When we hit a 429, Google's response includes a "retryDelay" hint
+    // (e.g. "49s"). We honor that hint when present, otherwise we use
+    // exponential backoff: 2s, 4s, 8s. Max 3 retries.
+    const MAX_RETRIES = 3;
+    const BASE_BACKOFF_MS = 2_000;
+
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        // Dynamic import so the SDK is only loaded when actually needed
+        const GoogleGenAI = await import("@google/generative-ai").catch(() => null);
+        if (!GoogleGenAI || !GoogleGenAI.GoogleGenerativeAI) {
+          throw new Error("@google/generative-ai not installed");
+        }
+
+        const genAI = new GoogleGenAI.GoogleGenerativeAI(this.apiKey);
+        const model = genAI.getGenerativeModel({
+          model: this.model,
+          generationConfig: {
+            temperature: req.temperature ?? 0.4,
+            maxOutputTokens: req.maxTokens ?? 800,
+            ...(req.responseFormat === "json"
+              ? { responseMimeType: "application/json" as const }
+              : {}),
+          },
+        });
+
+        // Convert LLMMessage[] → Gemini format
+        const systemMsgs = req.messages.filter((m) => m.role === "system");
+        const conversationMsgs = req.messages.filter((m) => m.role !== "system");
+        const systemInstruction = systemMsgs.map((m) => m.content).join("\n\n") || undefined;
+        const contents = conversationMsgs.map((m) => ({
+          role: m.role === "assistant" ? "model" : "user",
+          parts: [{ text: m.content }],
+        }));
+
+        const result = await (model as any).generateContent({
+          contents,
+          ...(systemInstruction ? { systemInstruction } : {}),
+        });
+
+        const content =
+          result?.response?.text?.() ||
+          result?.response?.candidates?.[0]?.content?.parts?.map((p: any) => p.text).join("") ||
+          "I couldn't generate a response. Please try again.";
+
+        const tokensUsed =
+          result?.response?.usageMetadata?.totalTokenCount ?? undefined;
+
+        return {
+          content,
+          powered: true,
+          tokensUsed,
+          latencyMs: Date.now() - start,
+          provider: `gemini (${this.model})`,
+        };
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+
+        // ── Detect 429 (quota exceeded) ─────────────────────────────────────
+        // Gemini's 429 response looks like:
+        //   [GoogleGenerativeAI Error]: Error fetching from ... [429 Too Many Requests]
+        //   You exceeded your current quota ... Please retry in 49.462559532s.
+        const is429 = /429|too many requests|quota|rate.?limit/i.test(msg);
+
+        if (is429 && attempt < MAX_RETRIES) {
+          // Parse Google's retryDelay hint (e.g. "Please retry in 49s" or
+          // "retryDelay":"49s"). Default to exponential backoff if not found.
+          let delayMs = BASE_BACKOFF_MS * Math.pow(2, attempt);
+          const delayMatch = msg.match(/retry[^0-9]*?(\d+(?:\.\d+)?)\s*s/i);
+          if (delayMatch) {
+            const parsedSeconds = parseFloat(delayMatch[1]);
+            if (!isNaN(parsedSeconds) && parsedSeconds > 0 && parsedSeconds < 120) {
+              delayMs = Math.min(parsedSeconds * 1000, 60_000);
+            }
+          }
+          logger.warn(`[GeminiLLM] 429 quota hit — retry ${attempt + 1}/${MAX_RETRIES} in ${Math.round(delayMs / 1000)}s`);
+          await new Promise((r) => setTimeout(r, delayMs));
+          continue; // Retry
+        }
+
+        // ── Terminal error — give a friendly, actionable message ────────────
+        logger.error("[GeminiLLM] Generation failed, falling back to stub", { error: msg, model: this.model });
+
+        // Translate raw Google API errors into user-friendly hints
+        let friendlyError = msg;
+        if (is429) {
+          friendlyError =
+            "Gemini API quota exceeded. Your free-tier daily/minute limit is reached. " +
+            "Options: (1) wait ~1 minute and try again, (2) upgrade your Google AI Studio " +
+            "plan to a paid tier at https://aistudio.google.com/pricing, or (3) set a " +
+            "different LLM provider (ZAI_API_KEY).";
+        } else if (/api key not valid|invalid_api_key/i.test(msg)) {
+          friendlyError =
+            "GEMINI_API_KEY is invalid. Generate a new key at " +
+            "https://aistudio.google.com/app/apikey and update Vercel env vars.";
+        } else if (/model.*not found|not supported/i.test(msg)) {
+          friendlyError =
+            `Model "${this.model}" not found. Set GEMINI_MODEL env var to a valid name ` +
+            "(e.g. gemini-2.0-flash, gemini-1.5-flash, gemini-2.5-flash).";
+        } else if (/permission|forbidden|403/i.test(msg)) {
+          friendlyError =
+            "Gemini API returned 403 Forbidden. Your API key may not have access to " +
+            "the requested model, or your Google Cloud project may not have the " +
+            "Generative Language API enabled.";
+        }
+
+        // Fall back to stub — never crash the agent. But include the friendly
+        // error in the response so the user can see WHY Gemini failed.
+        const stub = new StubLLM();
+        const res = await stub.generate(req);
+        const errorHint = `[Gemini Error: ${friendlyError.slice(0, 300)}] \n\n`;
+        return {
+          ...res,
+          content: errorHint + res.content,
+          provider: `stub (gemini-failed: ${friendlyError.slice(0, 80)})`,
+          lastError: friendlyError,
+        };
       }
-
-      const genAI = new GoogleGenAI.GoogleGenerativeAI(this.apiKey);
-      const model = genAI.getGenerativeModel({
-        model: this.model,
-        generationConfig: {
-          temperature: req.temperature ?? 0.4,
-          maxOutputTokens: req.maxTokens ?? 800,
-          ...(req.responseFormat === "json"
-            ? { responseMimeType: "application/json" as const }
-            : {}),
-        },
-      });
-
-      // Convert LLMMessage[] → Gemini format
-      // Gemini uses a separate systemInstruction field + contents[] for the
-      // conversation. We split accordingly.
-      const systemMsgs = req.messages.filter((m) => m.role === "system");
-      const conversationMsgs = req.messages.filter((m) => m.role !== "system");
-
-      const systemInstruction = systemMsgs.map((m) => m.content).join("\n\n") || undefined;
-
-      const contents = conversationMsgs.map((m) => ({
-        role: m.role === "assistant" ? "model" : "user",
-        parts: [{ text: m.content }],
-      }));
-
-      const result = await (model as any).generateContent({
-        contents,
-        ...(systemInstruction ? { systemInstruction } : {}),
-      });
-
-      const content =
-        result?.response?.text?.() ||
-        result?.response?.candidates?.[0]?.content?.parts?.map((p: any) => p.text).join("") ||
-        "I couldn't generate a response. Please try again.";
-
-      const tokensUsed =
-        result?.response?.usageMetadata?.totalTokenCount ?? undefined;
-
-      return {
-        content,
-        powered: true,
-        tokensUsed,
-        latencyMs: Date.now() - start,
-        provider: `gemini (${this.model})`,
-      };
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      logger.error("[GeminiLLM] Generation failed, falling back to stub", { error: msg, model: this.model });
-      // Fall back to stub — never crash the agent. But include the error in the
-      // response so the user can see WHY Gemini failed (wrong model name, invalid
-      // API key, quota exceeded, etc.) instead of silently getting a stub.
-      const stub = new StubLLM();
-      const res = await stub.generate(req);
-      // Prepend the error to the stub response so the user sees it
-      const errorHint = `[Gemini Error: ${msg.slice(0, 200)}] \n\n`;
-      return {
-        ...res,
-        content: errorHint + res.content,
-        provider: `stub (gemini-failed: ${msg.slice(0, 80)})`,
-        lastError: msg,
-      };
     }
+
+    // Should never reach here — loop either returns or throws+catches
+    const stub = new StubLLM();
+    const res = await stub.generate(req);
+    return {
+      ...res,
+      provider: `stub (gemini-unreachable)`,
+      lastError: "Gemini retries exhausted without throwing",
+    };
   }
 }
 

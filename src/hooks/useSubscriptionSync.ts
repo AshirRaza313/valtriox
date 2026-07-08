@@ -85,7 +85,14 @@ export function useSubscriptionSync() {
     try {
       const res = await fetchWithAuth(`/api/subscriptions/current?orgId=${orgId}`);
       if (!res.ok) {
-        retryCountRef.current = Math.min(retryCountRef.current + 1, MAX_RETRY_ATTEMPTS);
+        // 401 = session expired. fetchWithAuth already dispatched the
+        // auth-expired event which triggers a global logout. We just need
+        // to bail out here WITHOUT incrementing the retry counter (which
+        // would cause backoff scheduling — pointless for an auth failure).
+        // 403/404/500 etc. are real errors → increment retry counter for backoff.
+        if (res.status !== 401) {
+          retryCountRef.current = Math.min(retryCountRef.current + 1, MAX_RETRY_ATTEMPTS);
+        }
         return;
       }
 
