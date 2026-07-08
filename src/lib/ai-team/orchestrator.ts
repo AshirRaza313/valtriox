@@ -844,7 +844,7 @@ ${req.context ? `ADDITIONAL CONTEXT: ${JSON.stringify(req.context, null, 2)}` : 
 
 Please provide:
 1. Your response to the Owner
-2. Recommended actions (with `requiresApproval: true` for sensitive ones)
+2. Recommended actions (with "requiresApproval": true for sensitive ones)
 3. Your reasoning
 
 Respond in this exact JSON format (no markdown fences):
