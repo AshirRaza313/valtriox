@@ -142,6 +142,7 @@ interface Stats {
   workflows: { runningNow: number; completedToday: number; failedToday: number };
   messages: { sentToday: number; unprocessed: number };
   llmPowered: boolean;
+  llmProvider?: string;
 }
 
 interface AskResponse {
@@ -198,62 +199,40 @@ export function AiTeamDashboard() {
   const refreshTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ── Load everything ──
+  // Phase 18 rev 4: bundled initial load via /api/ai-team/init (1 HTTP round-trip
+  // instead of 6). Subsequent refreshes use the same endpoint. Tab switches no
+  // longer trigger any refetch (state already in memory).
   const loadAll = useCallback(async () => {
     try {
-      const [agentsRes, statsRes] = await Promise.all([
-        fetchWithAuth("/api/ai-team/agents"),
-        fetchWithAuth("/api/ai-team/dashboard"),
-      ]);
-
-      if (agentsRes.ok) {
-        const data = await agentsRes.json();
+      const res = await fetchWithAuth("/api/ai-team/init");
+      if (res.ok) {
+        const data = await res.json();
         setAgents(data.agents || []);
-        if ((data.agents || []).length === 0) {
-          setSeeded(false);
-        } else {
-          setSeeded(true);
-        }
-      }
-      if (statsRes.ok) {
-        const data = await statsRes.json();
-        setStats(data.stats);
-      }
-
-      // Load other resources only if seeded
-      if (agents.length > 0 || seeded) {
-        const [tasksRes, messagesRes, approvalsRes, logsRes, workflowsRes] = await Promise.all([
-          fetchWithAuth("/api/ai-team/tasks?limit=30"),
-          fetchWithAuth("/api/ai-team/messages?limit=30"),
-          fetchWithAuth("/api/ai-team/approvals?status=pending"),
-          fetchWithAuth("/api/ai-team/logs?limit=50"),
-          fetchWithAuth("/api/ai-team/workflows"),
-        ]);
-
-        if (tasksRes.ok) setTasks((await tasksRes.json()).tasks || []);
-        if (messagesRes.ok) setMessages((await messagesRes.json()).messages || []);
-        if (approvalsRes.ok) setApprovals((await approvalsRes.json()).approvals || []);
-        if (logsRes.ok) setLogs((await logsRes.json()).logs || []);
-        if (workflowsRes.ok) {
-          const wData = await workflowsRes.json();
-          setWorkflows(wData.workflows || []);
-          setExecutions(wData.executions || []);
-        }
+        setTasks(data.tasks || []);
+        setMessages(data.messages || []);
+        setApprovals(data.approvals || []);
+        setLogs(data.logs || []);
+        setWorkflows(data.workflows || []);
+        setExecutions(data.executions || []);
+        setStats(data.stats || null);
+        setSeeded(!!data.seeded);
       }
     } catch (err) {
       // Silent — toast only on first load
     } finally {
       setLoading(false);
     }
-  }, [agents.length, seeded]);
+  }, []);
 
   useEffect(() => {
     loadAll();
-    refreshTimer.current = setInterval(loadAll, 30_000);
+    // Phase 18 rev 4: 60s refresh interval (was 30s) — reduces server load by 50%
+    // and matches the actual data-change frequency for an AI Workforce dashboard.
+    refreshTimer.current = setInterval(loadAll, 60_000);
     return () => {
       if (refreshTimer.current) clearInterval(refreshTimer.current);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [loadAll]);
 
   // ── Seed the AI Team for this org ──
   const handleSeed = async () => {
@@ -415,12 +394,12 @@ export function AiTeamDashboard() {
             {stats?.llmPowered ? (
               <span className="inline-flex items-center gap-1 text-emerald-400">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                LLM-powered
+                Connected — {stats?.llmProvider || "LLM"} powered
               </span>
             ) : (
               <span className="inline-flex items-center gap-1 text-amber-400">
                 <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
-                Stub mode — set ZAI_API_KEY to enable real AI
+                Stub mode — set GEMINI_API_KEY or ZAI_API_KEY to enable real AI
               </span>
             )}
           </p>

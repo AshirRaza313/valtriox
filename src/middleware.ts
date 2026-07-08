@@ -79,6 +79,36 @@ export function middleware(request: NextRequest) {
     },
   });
 
+  // ── CACHE-BUSTING: Never cache authenticated/dynamic HTML ────────────────
+  // Phase 18 rev 4: Without this header, Vercel's edge + browser HTTP cache
+  // could serve stale HTML on subsequent visits, causing users to see the
+  // old build's UI even after a deploy. Combined with the SW v11 fix (which
+  // bypasses SW cache for navigations), this guarantees fresh HTML on every
+  // page load. Static chunks (_next/static/*) have hashed filenames and are
+  // still cached normally by the SW + CDN — only HTML is no-store.
+  //
+  // EXCEPTION: Public marketing pages (/about, /privacy, /terms, /cookies,
+  // /refund, /contact) are explicitly edge-cached in next.config.ts for SEO
+  // and performance — we MUST NOT override their Cache-Control here.
+  const reqUrl = request.nextUrl;
+  const PUBLIC_CACHED_PATHS = new Set([
+    "/about", "/contact", "/privacy", "/terms", "/cookies", "/refund",
+  ]);
+  const isPublicCachedPage = PUBLIC_CACHED_PATHS.has(reqUrl.pathname);
+  const isHtmlNavigation =
+    request.headers.get("accept")?.includes("text/html") &&
+    !reqUrl.pathname.startsWith("/_next/") &&
+    !reqUrl.pathname.match(/\.(js|css|png|jpg|jpeg|svg|gif|ico|woff2?|ttf|eot)$/) &&
+    !isPublicCachedPage;
+  if (isHtmlNavigation) {
+    response.headers.set(
+      "Cache-Control",
+      "no-store, no-cache, must-revalidate, proxy-revalidate"
+    );
+    response.headers.set("Pragma", "no-cache");
+    response.headers.set("Expires", "0");
+  }
+
   // Set CORS headers for allowed origins
   if (origin && ALLOWED_ORIGINS.includes(origin)) {
     response.headers.set("Access-Control-Allow-Origin", origin);

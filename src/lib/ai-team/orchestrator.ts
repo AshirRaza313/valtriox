@@ -15,7 +15,7 @@
 
 import { db, safeDbQuery } from "@/lib/db";
 import logger from "@/lib/logger";
-import { getLLMProvider, isLLMPowered } from "./llm";
+import { getLLMProvider, isLLMPowered, getLLMProviderLabel } from "./llm";
 import { getTemplate } from "./agents";
 import {
   type AgentKey,
@@ -889,7 +889,7 @@ Respond in this exact JSON format (no markdown fences):
       // LLM didn't return valid JSON — wrap the content as the response
       parsed = {
         response: llmRes.content,
-        reasoning: "Stub-mode response — set ZAI_API_KEY for structured recommendations",
+        reasoning: "Stub-mode response — set GEMINI_API_KEY or ZAI_API_KEY for structured recommendations",
         recommendedActions: [],
       };
     }
@@ -994,6 +994,54 @@ Respond in this exact JSON format (no markdown fences):
         unprocessed: unprocessedMessages,
       },
       llmPowered: isLLMPowered(),
+      llmProvider: getLLMProviderLabel(),
+    };
+  },
+
+  // ── Bundled initial-load payload (avoids 6 parallel HTTP round-trips on
+  //    dashboard mount). Single DB connection, single HTTP request. ──
+  async getInitData(organizationId: string): Promise<{
+    agents: AgentDTO[];
+    stats: any;
+    tasks: TaskDTO[];
+    messages: MessageDTO[];
+    approvals: ApprovalRequestDTO[];
+    logs: ActionLogDTO[];
+    seeded: boolean;
+  }> {
+    // First: check if org is seeded (cheap query)
+    const agentCount = await db.aiAgent.count({ where: { organizationId } });
+    if (agentCount === 0) {
+      const stats = await this.getDashboardStats(organizationId);
+      return {
+        agents: [],
+        stats,
+        tasks: [],
+        messages: [],
+        approvals: [],
+        logs: [],
+        seeded: false,
+      };
+    }
+
+    // Parallel: all reads in one Promise.all (single event-loop tick)
+    const [agents, stats, tasks, messages, approvals, logs] = await Promise.all([
+      this.getAgents(organizationId),
+      this.getDashboardStats(organizationId),
+      this.getTasks(organizationId, { limit: 30 }),
+      this.getMessages(organizationId, { limit: 30 }),
+      this.getApprovals(organizationId, "pending"),
+      this.getLogs(organizationId, { limit: 50 }),
+    ]);
+
+    return {
+      agents,
+      stats,
+      tasks,
+      messages,
+      approvals,
+      logs,
+      seeded: true,
     };
   },
 };

@@ -1,15 +1,22 @@
 // ============================================================================
 // AI Workforce Module — Pluggable LLM Interface
 // ============================================================================
-// The AI Workforce can run with two LLM backends:
+// The AI Workforce can run with multiple LLM backends:
 //
-//   1. StubLLM  — rule-based responses, requires NO API key. Used for testing
-//                 and for orgs that haven't configured an LLM provider yet.
-//                 Every agent returns a deterministic, contextual response.
+//   1. StubLLM     — rule-based responses, requires NO API key. Used for testing
+//                    and for orgs that haven't configured an LLM provider yet.
+//                    Every agent returns a deterministic, contextual response.
 //
-//   2. ZaiLLM   — uses z-ai-web-dev-sdk (the same SDK used by other Valtriox
-//                 AI features). Activated when ZAI_API_KEY is set in env.
-//                 Falls back to StubLLM on any error.
+//   2. GeminiLLM   — uses @google/generative-ai (Google Gemini). Activated when
+//                    GEMINI_API_KEY (or GOOGLE_API_KEY) is set in env.
+//                    Models default to gemini-2.0-flash-001 (override with
+//                    GEMINI_MODEL env var). Falls back to StubLLM on any error.
+//
+//   3. ZaiLLM      — uses z-ai-web-dev-sdk (the same SDK used by other Valtriox
+//                    AI features). Activated when ZAI_API_KEY is set in env.
+//                    Falls back to StubLLM on any error.
+//
+// Provider priority: Gemini > Z.ai > Stub
 //
 // To add a new provider (OpenAI, Anthropic, etc.), implement the LLMProvider
 // interface and add a branch in getLLMProvider().
@@ -40,6 +47,8 @@ export interface LLMResponse {
   tokensUsed?: number;
   // Latency in ms
   latencyMs: number;
+  // Display name of the active provider (for dashboard UI)
+  provider: string;
 }
 
 export interface LLMProvider {
@@ -71,22 +80,110 @@ class StubLLM implements LLMProvider {
     let response: string;
 
     if (lower.includes("summary") || lower.includes("brief") || lower.includes("status")) {
-      response = `**${agentName} Agent — Stub Mode Report**\n\nI'm operating in stub mode (no LLM API key configured). Here's what I'd normally do:\n\n1. Retrieve relevant memory entries from the knowledge store\n2. Query the live business database for current metrics\n3. Synthesize a ${agentName.toLowerCase()}-focused summary\n4. Recommend 2-3 actions for your review\n\nTo enable real AI responses, set the \`ZAI_API_KEY\` environment variable in your Vercel project settings. Once set, I'll provide intelligent, context-aware responses.\n\nIn the meantime, all my workflows, tasks, and message-bus communications are fully functional — only the natural-language reasoning is stubbed.`;
+      response = `**${agentName} Agent — Stub Mode Report**\n\nI'm operating in stub mode (no LLM API key configured). Here's what I'd normally do:\n\n1. Retrieve relevant memory entries from the knowledge store\n2. Query the live business database for current metrics\n3. Synthesize a ${agentName.toLowerCase()}-focused summary\n4. Recommend 2-3 actions for your review\n\nTo enable real AI responses, set the GEMINI_API_KEY environment variable in your Vercel project settings. Once set, I'll provide intelligent, context-aware responses.\n\nIn the meantime, all my workflows, tasks, and message-bus communications are fully functional — only the natural-language reasoning is stubbed.`;
     } else if (lower.includes("revenue") || lower.includes("finance") || lower.includes("money")) {
-      response = `**${agentName} Agent — Financial Stub Response**\n\nTo provide real revenue insights, I need:\n- A connected LLM provider (set \`ZAI_API_KEY\`)\n- Access to your orders/invoices database (already configured)\n\nOnce LLM is enabled, I'll analyze today's revenue, compare to 7-day average, identify trends, and flag anomalies. For now, please check the Analytics dashboard for live numbers.`;
+      response = `**${agentName} Agent — Financial Stub Response**\n\nTo provide real revenue insights, I need:\n- A connected LLM provider (set GEMINI_API_KEY)\n- Access to your orders/invoices database (already configured)\n\nOnce LLM is enabled, I'll analyze today's revenue, compare to 7-day average, identify trends, and flag anomalies. For now, please check the Analytics dashboard for live numbers.`;
     } else if (lower.includes("approv") || lower.includes("decision")) {
-      response = `**${agentName} Agent — Decision Stub Response**\n\nAny action requiring your approval will appear in the Approval Queue panel. I cannot execute sensitive actions (financial transfers, record deletions, config changes) without your explicit approval. In stub mode, I will:\n\n1. Flag decisions that exceed my spending limits\n2. Create approval requests with full reasoning\n3. Wait for your decision before proceeding\n\nEnable LLM via \`ZAI_API_KEY\` for richer decision reasoning.`;
+      response = `**${agentName} Agent — Decision Stub Response**\n\nAny action requiring your approval will appear in the Approval Queue panel. I cannot execute sensitive actions (financial transfers, record deletions, config changes) without your explicit approval. In stub mode, I will:\n\n1. Flag decisions that exceed my spending limits\n2. Create approval requests with full reasoning\n3. Wait for your decision before proceeding\n\nEnable LLM via GEMINI_API_KEY for richer decision reasoning.`;
     } else if (lower.includes("hello") || lower.includes("hi ") || lower === "hi" || lower.includes("salam")) {
-      response = `Hello! I'm the ${agentName} Agent, currently in stub mode. I'm ready to handle tasks, participate in workflows, and communicate with other agents. Ask me about company status, financials, or anything else — or set \`ZAI_API_KEY\` to unlock my full reasoning capabilities.`;
+      response = `Hello! I'm the ${agentName} Agent, currently in stub mode. I'm ready to handle tasks, participate in workflows, and communicate with other agents. Ask me about company status, financials, or anything else — or set GEMINI_API_KEY to unlock my full reasoning capabilities.`;
     } else {
-      response = `**${agentName} Agent — Stub Response**\n\nI received your query: "${userContent.slice(0, 200)}${userContent.length > 200 ? "..." : ""}"\n\nIn stub mode (no LLM key configured), I can't generate intelligent natural-language responses, but I have:\n- Created a task in my queue to track this\n- Logged the interaction to the audit trail\n- Notified the relevant agents via the message bus\n\nTo enable real AI reasoning, set \`ZAI_API_KEY\` in your Vercel environment variables. Until then, all my operational capabilities (task tracking, workflow execution, memory retrieval, approval routing) work normally.`;
+      response = `**${agentName} Agent — Stub Response**\n\nI received your query: "${userContent.slice(0, 200)}${userContent.length > 200 ? "..." : ""}"\n\nIn stub mode (no LLM key configured), I can't generate intelligent natural-language responses, but I have:\n- Created a task in my queue to track this\n- Logged the interaction to the audit trail\n- Notified the relevant agents via the message bus\n\nTo enable real AI reasoning, set GEMINI_API_KEY in your Vercel environment variables. Until then, all my operational capabilities (task tracking, workflow execution, memory retrieval, approval routing) work normally.`;
     }
 
     return {
       content: response,
       powered: false,
       latencyMs: Date.now() - start,
+      provider: "stub",
     };
+  }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Gemini LLM — uses @google/generative-ai
+// ────────────────────────────────────────────────────────────────────────────
+
+class GeminiLLM implements LLMProvider {
+  name = "gemini";
+  isAvailable: boolean;
+  private apiKey: string;
+  private model: string;
+
+  constructor() {
+    // Support both GEMINI_API_KEY (preferred) and GOOGLE_API_KEY (alias)
+    this.apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "";
+    this.model = process.env.GEMINI_MODEL || "gemini-2.0-flash-001";
+    this.isAvailable = !!this.apiKey;
+  }
+
+  async generate(req: LLMRequest): Promise<LLMResponse> {
+    const start = Date.now();
+    if (!this.isAvailable) {
+      throw new Error("GEMINI_API_KEY not configured");
+    }
+
+    try {
+      // Dynamic import so the SDK is only loaded when actually needed
+      const GoogleGenAI = await import("@google/generative-ai").catch(() => null);
+      if (!GoogleGenAI || !GoogleGenAI.GoogleGenerativeAI) {
+        throw new Error("@google/generative-ai not installed");
+      }
+
+      const genAI = new GoogleGenAI.GoogleGenerativeAI(this.apiKey);
+      const model = genAI.getGenerativeModel({
+        model: this.model,
+        generationConfig: {
+          temperature: req.temperature ?? 0.4,
+          maxOutputTokens: req.maxTokens ?? 800,
+          ...(req.responseFormat === "json"
+            ? { responseMimeType: "application/json" as const }
+            : {}),
+        },
+      });
+
+      // Convert LLMMessage[] → Gemini format
+      // Gemini uses a separate systemInstruction field + contents[] for the
+      // conversation. We split accordingly.
+      const systemMsgs = req.messages.filter((m) => m.role === "system");
+      const conversationMsgs = req.messages.filter((m) => m.role !== "system");
+
+      const systemInstruction = systemMsgs.map((m) => m.content).join("\n\n") || undefined;
+
+      const contents = conversationMsgs.map((m) => ({
+        role: m.role === "assistant" ? "model" : "user",
+        parts: [{ text: m.content }],
+      }));
+
+      const result = await (model as any).generateContent({
+        contents,
+        ...(systemInstruction ? { systemInstruction } : {}),
+      });
+
+      const content =
+        result?.response?.text?.() ||
+        result?.response?.candidates?.[0]?.content?.parts?.map((p: any) => p.text).join("") ||
+        "I couldn't generate a response. Please try again.";
+
+      const tokensUsed =
+        result?.response?.usageMetadata?.totalTokenCount ?? undefined;
+
+      return {
+        content,
+        powered: true,
+        tokensUsed,
+        latencyMs: Date.now() - start,
+        provider: `gemini (${this.model})`,
+      };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      logger.error("[GeminiLLM] Generation failed, falling back to stub", { error: msg });
+      // Fall back to stub — never crash the agent
+      const stub = new StubLLM();
+      const res = await stub.generate(req);
+      // Preserve the fact that we tried Gemini first (for debugging)
+      return { ...res, provider: `stub (gemini-failed: ${msg.slice(0, 80)})` };
+    }
   }
 }
 
@@ -132,13 +229,15 @@ class ZaiLLM implements LLMProvider {
         powered: true,
         tokensUsed: completion.usage?.total_tokens,
         latencyMs: Date.now() - start,
+        provider: "zai",
       };
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       logger.error("[ZaiLLM] Generation failed, falling back to stub", { error: msg });
       // Fall back to stub — never crash the agent
       const stub = new StubLLM();
-      return stub.generate(req);
+      const res = await stub.generate(req);
+      return { ...res, provider: `stub (zai-failed: ${msg.slice(0, 80)})` };
     }
   }
 }
@@ -152,7 +251,15 @@ let _provider: LLMProvider | null = null;
 export function getLLMProvider(): LLMProvider {
   if (_provider) return _provider;
 
-  // Priority: ZAI > Stub
+  // Priority: Gemini > Z.ai > Stub
+  if (process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY) {
+    _provider = new GeminiLLM();
+    if (_provider.isAvailable) {
+      logger.info("[AI Team] Using Gemini LLM provider");
+      return _provider;
+    }
+  }
+
   if (process.env.ZAI_API_KEY) {
     _provider = new ZaiLLM();
     if (_provider.isAvailable) {
@@ -162,10 +269,15 @@ export function getLLMProvider(): LLMProvider {
   }
 
   _provider = new StubLLM();
-  logger.warn("[AI Team] Using stub LLM provider — set ZAI_API_KEY for real AI responses");
+  logger.warn("[AI Team] Using stub LLM provider — set GEMINI_API_KEY or ZAI_API_KEY for real AI responses");
   return _provider;
 }
 
 export function isLLMPowered(): boolean {
   return getLLMProvider().name !== "stub" && getLLMProvider().isAvailable;
+}
+
+// Returns a human-readable label for the dashboard UI
+export function getLLMProviderLabel(): string {
+  return getLLMProvider().name;
 }

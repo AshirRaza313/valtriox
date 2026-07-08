@@ -1,13 +1,36 @@
-// ── Valtriox Service Worker v2 ──
-// Handles push notifications, offline caching, background sync, and app shell precaching.
+// ── Valtriox Service Worker v11 ──
+// Phase 18 rev 4: Fixed stale-page caching bug.
+//
+// PREVIOUS BUG (v10): The SW precached '/' (the authenticated dashboard SSR
+// page) with a cache-first strategy. After every deploy, returning users got
+// STALE HTML pointing to OLD JS chunk hashes (e.g. main-abc123.js) that no
+// longer existed on the server → broken page. Required Ctrl+Shift+R to bypass
+// the SW and fetch fresh HTML.
+//
+// FIX (v11):
+//   1. Removed ALL HTML pages from the precache list — HTML is always fetched
+//      network-first and never cached.
+//   2. Added an HTML-detection guard at the top of the fetch handler that
+//      BYPASSES the SW entirely for navigation requests. The browser handles
+//      HTML with its native HTTP cache + ETag revalidation, which correctly
+//      invalidates on deploy.
+//   3. Only static assets (JS/CSS/images with hashed filenames) and API
+//      responses are cached. Hashed filenames mean old caches are automatically
+//      safe — a new deploy produces new hashes, so the SW never serves stale
+//      chunks.
+//   4. Bumped cache version v10 → v11 to invalidate ALL old caches on activate.
+//
+// Handles: push notifications, offline API fallback, static asset caching.
 
-const CACHE_NAME = 'valtriox-v10';
-const STATIC_CACHE = 'valtriox-static-v10';
-const API_CACHE = 'valtriox-api-v10';
+const CACHE_VERSION = 'v11';
+const CACHE_NAME = `valtriox-${CACHE_VERSION}`;
+const STATIC_CACHE = `valtriox-static-${CACHE_VERSION}`;
+const API_CACHE = `valtriox-api-${CACHE_VERSION}`;
 
-// ── App Shell: critical pages and assets to precache ──
+// ── App Shell: ONLY truly static assets (never HTML) ──
+// HTML pages are deliberately excluded — they change per-deploy and per-user
+// (SSR), so caching them causes stale-page bugs.
 const APP_SHELL = [
-  '/',
   '/manifest.json',
   '/valtriox-logo.png',
   '/valtriox-icon-192.png',
@@ -23,36 +46,50 @@ const API_CACHE_PATTERNS = [
   /\/api\/customers/,
 ];
 
+// NEVER cache these — auth-sensitive, per-user, or real-time
+const NEVER_CACHE_PATTERNS = [
+  /\/api\/auth/,
+  /\/api\/ai-team\/ask/,
+  /\/api\/ai-team\/tasks\/.*\/execute/,
+  /\/api\/ai-team\/seed/,
+  /\/api\/communications/,
+  /\/api\/admin\/communications/,
+  /\/api\/subscriptions\/payment/,
+];
+
 // ── Cache size limits ──
 const MAX_API_CACHE_ENTRIES = 50;
 const MAX_STATIC_CACHE_ENTRIES = 100;
 
-// ── Install: precache app shell ──
+// ── Install: precache ONLY static assets (no HTML) ──
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(STATIC_CACHE).then((cache) => {
-      console.log('[SW] Pre-caching app shell');
-      return cache.addAll(APP_SHELL);
+      console.log('[SW v11] Pre-caching static shell (no HTML)');
+      return cache.addAll(APP_SHELL).catch((err) => {
+        // Don't fail install if a single asset is missing
+        console.warn('[SW v11] Some shell assets failed to precache:', err);
+      });
     })
   );
-  self.skipWaiting();
+  self.skipWaiting(); // Activate new SW immediately on next load
 });
 
-// ── Activate: clean up old caches ──
+// ── Activate: clean up ALL old caches (v10 and earlier) ──
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
       Promise.all(
         keys
-          .filter((k) => k !== STATIC_CACHE && k !== API_CACHE && k !== CACHE_NAME)
+          .filter((k) => !k.endsWith(CACHE_VERSION))
           .map((k) => {
-            console.log('[SW] Deleting old cache:', k);
+            console.log('[SW v11] Deleting old cache:', k);
             return caches.delete(k);
           })
       )
     )
   );
-  self.clients.claim();
+  self.clients.claim(); // Take control of open tabs immediately
 });
 
 // ── Push: show notification when server sends a push message ──
@@ -130,47 +167,60 @@ self.addEventListener('fetch', (event) => {
   // Skip chrome-extension and other non-http(s) requests
   if (!url.protocol.startsWith('http')) return;
 
-  // Strategy 1: API routes — Network First with API cache fallback
-  if (url.pathname.startsWith('/api/')) {
-    event.respondWith(networkFirstWithApiCache(request));
+  // ── CRITICAL: Bypass SW entirely for HTML navigations ──
+  // HTML pages must NEVER be served from SW cache — they change per-deploy
+  // (new JS chunk hashes) and per-user (SSR auth context). Let the browser's
+  // native HTTP cache + ETag revalidation handle them. This is the fix for
+  // the "stale page on every deploy" bug.
+  if (request.mode === 'navigate' || request.destination === 'document') {
+    return; // Don't call event.respondWith — let browser handle it
+  }
+
+  // Skip requests that should NEVER be cached
+  if (NEVER_CACHE_PATTERNS.some((pattern) => pattern.test(url.pathname))) {
     return;
   }
 
-  // Strategy 2: Static assets (JS, CSS, images, fonts) — Network First (prevents stale chunk errors)
+  // Strategy 1: API routes — Network First with API cache fallback
+  if (url.pathname.startsWith('/api/')) {
+    if (API_CACHE_PATTERNS.some((pattern) => pattern.test(url.pathname))) {
+      event.respondWith(networkFirstWithApiCache(request));
+    }
+    return;
+  }
+
+  // Strategy 2: Static assets with hashed filenames (JS/CSS chunks, images)
+  // — Stale-While-Revalidate. These are safe to cache indefinitely because
+  // the filename hash changes on every deploy.
   if (
     url.pathname.match(/\.(js|css|png|jpg|jpeg|svg|gif|ico|woff2?|ttf|eot)$/) ||
     url.pathname.includes('/_next/static/') ||
     url.pathname.includes('/_next/image/')
   ) {
-    event.respondWith(networkFirst(request));
+    event.respondWith(staleWhileRevalidate(request));
     return;
   }
 
-  // Strategy 3: App Shell pages — Cache First
-  if (APP_SHELL.some((path) => url.pathname === path)) {
-    event.respondWith(cacheFirst(request));
-    return;
-  }
-
-  // Strategy 4: Everything else — Network with cache fallback
+  // Strategy 3: Everything else (rare) — Network First, no HTML
   event.respondWith(networkFirst(request));
 });
 
-// ── Cache First: serve from cache, fallback to network ──
-async function cacheFirst(request) {
-  const cached = await caches.match(request);
-  if (cached) return cached;
+// ── Stale While Revalidate: serve cache immediately, update in background ──
+async function staleWhileRevalidate(request) {
+  const cache = await caches.open(STATIC_CACHE);
+  const cached = await cache.match(request);
 
-  try {
-    const response = await fetch(request);
-    if (response && response.status === 200) {
-      const cache = await caches.open(STATIC_CACHE);
-      cache.put(request, response.clone());
-    }
-    return response;
-  } catch {
-    return new Response('Offline', { status: 503, statusText: 'Service Unavailable' });
-  }
+  const fetchPromise = fetch(request)
+    .then((response) => {
+      if (response && response.status === 200) {
+        cache.put(request, response.clone());
+        trimCache(STATIC_CACHE, MAX_STATIC_CACHE_ENTRIES);
+      }
+      return response;
+    })
+    .catch(() => cached);
+
+  return cached || fetchPromise;
 }
 
 // ── Network First: try network, fallback to cache ──
@@ -213,28 +263,16 @@ async function networkFirstWithApiCache(request) {
   }
 }
 
-// ── Stale While Revalidate: serve cache immediately, update in background ──
-async function staleWhileRevalidate(request) {
-  const cache = await caches.open(STATIC_CACHE);
-  const cached = await cache.match(request);
-
-  const fetchPromise = fetch(request)
-    .then((response) => {
-      if (response && response.status === 200) {
-        cache.put(request, response.clone());
-        trimCache(STATIC_CACHE, MAX_STATIC_CACHE_ENTRIES);
-      }
-      return response;
-    })
-    .catch(() => cached);
-
-  return cached || fetchPromise;
-}
-
 // ── Background Sync: sync pending requests when back online ──
 self.addEventListener('sync', (event) => {
   if (event.tag === 'valtriox-sync') {
-    console.log('[SW] Background sync triggered');
-    // Can be extended to replay failed API calls
+    console.log('[SW v11] Background sync triggered');
+  }
+});
+
+// ── Message handler: allow page to trigger SW update ──
+self.addEventListener('message', (event) => {
+  if (event.data === 'SKIP_WAITING') {
+    self.skipWaiting();
   }
 });
