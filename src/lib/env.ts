@@ -51,6 +51,11 @@ const envSchema = z.object({
   // ── Phase 8: Support email addresses (server + client) ──
   SUPPORT_EMAIL: z.string().email().optional().or(z.literal("")),
   NEXT_PUBLIC_SUPPORT_EMAIL: z.string().email().optional().or(z.literal("")),
+
+  // ── Phase 18: AI Workforce — LLM provider key ──
+  // When set, AI agents use Z.ai for real reasoning. Without it, agents run
+  // in stub mode (rule-based responses). See src/lib/ai-team/llm.ts.
+  ZAI_API_KEY: z.string().min(1).optional(),
 });
 
 type EnvSchema = z.infer<typeof envSchema>;
@@ -88,6 +93,7 @@ export function validateEnv(): EnvSchema {
     SMTP_FROM: process.env.SMTP_FROM,
     SUPPORT_EMAIL: process.env.SUPPORT_EMAIL,
     NEXT_PUBLIC_SUPPORT_EMAIL: process.env.NEXT_PUBLIC_SUPPORT_EMAIL,
+    ZAI_API_KEY: process.env.ZAI_API_KEY,
   });
 
   if (!result.success) {

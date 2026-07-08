@@ -575,7 +575,7 @@ export function isSectionAccessible(sectionId: string, roleName: string, hiddenS
   }
 
   // Platform-only sections - only visible to platform_owner, platform_admin, owner (first user), and valtriox_team
-  if (["admin-dashboard", "client-management", "payment-approvals", "subscription-management", "audit-log", "platform-settings", "integration-management", "valtriox-team", "proposals", "documents", "lead-magnet-manager", "custom-invoices", "reports-center", "invoice-management"].includes(sectionId)) {
+  if (["admin-dashboard", "client-management", "payment-approvals", "subscription-management", "audit-log", "platform-settings", "integration-management", "valtriox-team", "proposals", "documents", "lead-magnet-manager", "custom-invoices", "reports-center", "invoice-management", "ai-team"].includes(sectionId)) {
     return isPlatformRole(roleName) || roleName === "valtriox_team";
   }
 

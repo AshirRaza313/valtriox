@@ -33,6 +33,7 @@ import {
   ProposalsPage,
   DocumentsPage,
   BetaInvitesPage,
+  AiTeamDashboard,
 } from "@/components/brandflow/lazy-pages";
 
 // ── Auth & Layout Components ──
@@ -554,6 +555,7 @@ export default function Home() {
       case "integration-management": return <SafeRender name="Integration Management"><IntegrationManagementPage /></SafeRender>;
       case "valtriox-team": return <SafeRender name="Valtriox Team"><ValtrioxTeamPage /></SafeRender>;
       case "beta-invites": return <SafeRender name="Beta Invites"><BetaInvitesPage /></SafeRender>;
+      case "ai-team": return <SafeRender name="AI Workforce"><AiTeamDashboard /></SafeRender>;
 
       default: return <SafeRender name="Dashboard"><DashboardHome /></SafeRender>;
     }

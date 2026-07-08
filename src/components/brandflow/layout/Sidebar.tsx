@@ -101,6 +101,7 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   "reports-center": <BarChart3 className="h-4 w-4" />,
   "communication-center": <MessageSquare className="h-4 w-4" />,
   "client-inbox": <Inbox className="h-4 w-4" />,
+  "ai-team": <Bot className="h-4 w-4" />,
   "audit-log": <FileText className="h-4 w-4" />,
   "integration-management": <Plug className="h-4 w-4" />,
   "feature-toggles": <Shield className="h-4 w-4" />,
@@ -247,7 +248,7 @@ export function Sidebar() {
       if (groupId === "system") {
         return groupDef.items.some((item) => {
           // Admin-only items: only for platform roles
-          if (["admin-dashboard", "client-management", "payment-approvals", "invoice-management", "custom-invoices", "reports-center", "communication-center", "audit-log", "platform-settings", "integration-management", "beta-invites"].includes(item.id)) {
+          if (["admin-dashboard", "client-management", "payment-approvals", "invoice-management", "custom-invoices", "reports-center", "communication-center", "audit-log", "platform-settings", "integration-management", "beta-invites", "ai-team"].includes(item.id)) {
             return isPlatformRole(userRole) || userRole === "valtriox_team";
           }
           return isSectionAccessible(item.id, userRole, hiddenSections);

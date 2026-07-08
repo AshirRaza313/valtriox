@@ -47,6 +47,9 @@
     },
     "src/app/api/analytics/route.ts": {
       "maxDuration": 15
+    },
+    "src/app/api/ai-team/**/*.ts": {
+      "maxDuration": 30
     }
   }
 }

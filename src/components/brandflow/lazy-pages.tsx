@@ -158,3 +158,6 @@ export const CalendlySettingsPage = lazyPage(() => import("@/components/brandflo
 export const ProposalsPage = lazyPage(() => import("@/components/brandflow/settings/ProposalsPage"), "Proposals");
 export const DocumentsPage = lazyPage(() => import("@/components/brandflow/settings/DocumentsPage"), "Documents");
 export const BetaInvitesPage = lazyPage(() => import("@/components/brandflow/settings/BetaInviteManager").then(m => ({ default: m.BetaInviteManager })), "Beta Invites");
+
+// ── AI WORKFORCE (Phase 18) ──
+export const AiTeamDashboard = lazyPage(() => import("@/components/brandflow/ai-team/AiTeamDashboard"), "AI Workforce");

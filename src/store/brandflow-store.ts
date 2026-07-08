@@ -111,6 +111,7 @@ export type Feature =
   | "customer-reports"
   | "product-reports"
   | "ai-assistant"
+  | "ai-team"
   | "api-integrations"
   | "team"
   | "settings"
@@ -211,6 +212,7 @@ export const SECTION_GROUP_MAP: Record<SidebarSection, SidebarGroup> = {
   "reports-center": "system",
   "communication-center": "system",
   "client-inbox": "system",
+  "ai-team": "system",
   "platform-settings": "system",
   "integration-management": "system",
   "valtriox-team": "system",
@@ -366,6 +368,7 @@ export const SIDEBAR_STRUCTURE: Record<SidebarGroup, { label: string; emoji: str
       { id: "reports-center", label: "Reports Center" },
       { id: "communication-center", label: "Communication Center" },
       { id: "client-inbox", label: "Client Messages" },
+      { id: "ai-team", label: "AI Workforce" },
       { id: "subscription-management", label: "Subscription Management" },
       { id: "audit-log", label: "Audit Log" },
       { id: "leads-management", label: "Leads Management" },
