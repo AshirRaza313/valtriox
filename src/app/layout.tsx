@@ -270,6 +270,109 @@ export default async function RootLayout({
           `}
         </Script>
         {/*
+          Unused-Preload Cleanup — suppresses the Chrome console warning:
+          "The resource X was preloaded using link preload but not used
+          within a few seconds from the window's load event."
+
+          WHY THIS EXISTS:
+          Next.js's `next/dynamic` calls ReactDOM.preinit() for every
+          dynamically-imported component's chunk. These <link rel="preload"
+          as="script"> tags are emitted in the SSR HTML.
+
+          On this app, page.tsx is a single-route SPA that switches between
+          landing/auth/dashboard based on client-side state. SSR renders the
+          landing page (initial view), so all landing component chunks
+          (Navbar, Hero, Features, About, HowItWorks, Pricing, Testimonials,
+          FAQ, CTASection) get preloaded.
+
+          After hydration, an authenticated user's view switches to
+          "dashboard" → the landing chunks are never rendered → the browser
+          fires the "preloaded but not used" warning for each one.
+
+          TWO-LAYER FIX:
+          1. 2.5s after window.load (just under Chrome's ~3s warning
+             threshold), remove every <link rel="preload" as="script">
+             whose href isn't present in a <script> tag in the document.
+             This stops the browser from tracking the preload as "unused".
+          2. Wrap console.warn/error to filter out the specific preload
+             warning text, so even if Chrome fires it before our cleanup
+             runs, it won't clutter the DevTools console.
+
+          The preloaded chunks remain in the browser's HTTP cache — if the
+          user does navigate to the landing page, React.lazy / next/dynamic
+          will fetch them on-demand (cache-hit, no network request).
+        */}
+        <Script id="unused-preload-cleanup" strategy="beforeInteractive" nonce={nonce}>
+          {`
+            (function() {
+              try {
+                // ── Layer 1: Filter the specific preload warning from console ──
+                // We do this FIRST so it's active before any warnings fire.
+                var PRELOAD_WARN_PATTERN = /was preloaded using link preload but not used/i;
+                var origWarn = console.warn;
+                var origError = console.error;
+                var wrap = function(orig) {
+                  return function() {
+                    try {
+                      for (var i = 0; i < arguments.length; i++) {
+                        var a = arguments[i];
+                        if (typeof a === 'string' && PRELOAD_WARN_PATTERN.test(a)) {
+                          // Drop this specific warning — it's a known cosmetic
+                          // issue caused by Next.js's aggressive preloading of
+                          // dynamic-import chunks. See Layer 2 below for the
+                          // DOM-level cleanup.
+                          return;
+                        }
+                      }
+                    } catch (e) {}
+                    return orig.apply(console, arguments);
+                  };
+                };
+                console.warn = wrap(origWarn);
+                console.error = wrap(origError);
+
+                // ── Layer 2: DOM cleanup of unused preload links ──
+                var CLEANUP_DELAY_MS = 2500; // before Chrome's ~3s warning
+                function cleanupUnusedPreloads() {
+                  var loadedScripts = {};
+                  document.querySelectorAll('script[src]').forEach(function(s) {
+                    var src = s.getAttribute('src');
+                    if (src) {
+                      loadedScripts[src] = true;
+                      try {
+                        var u = new URL(src, location.origin);
+                        loadedScripts[u.href] = true;
+                        loadedScripts[u.pathname] = true;
+                      } catch (e) {}
+                    }
+                  });
+                  document.querySelectorAll('link[rel="preload"][as="script"]').forEach(function(link) {
+                    var href = link.getAttribute('href');
+                    if (!href) return;
+                    var variants = [href];
+                    try {
+                      var u = new URL(href, location.origin);
+                      variants.push(u.href);
+                      variants.push(u.pathname);
+                    } catch (e) {}
+                    var isLoaded = variants.some(function(v) { return loadedScripts[v]; });
+                    if (!isLoaded) {
+                      link.remove();
+                    }
+                  });
+                }
+                if (document.readyState === 'complete') {
+                  setTimeout(cleanupUnusedPreloads, CLEANUP_DELAY_MS);
+                } else {
+                  window.addEventListener('load', function() {
+                    setTimeout(cleanupUnusedPreloads, CLEANUP_DELAY_MS);
+                  });
+                }
+              } catch (e) { /* no-op — cleanup is best-effort */ }
+            })();
+          `}
+        </Script>
+        {/*
           SEO: Resource Hints to reduce TTFB and improve Mobile Speed score.
           - preconnect: opens early TLS+DNS+TCP connection to third-party origins
             so the browser can fetch from them instantly when needed.
