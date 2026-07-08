@@ -93,7 +93,7 @@ function mapTask(t: any): TaskDTO {
     priority: t.priority,
     impactScore: t.impactScore,
     reasoning: t.reasoning,
-    approvalRequestId: t.approvalRequestId,
+    approvalRequestId: t.approvalRequest?.id ?? null,
     deadlineAt: t.deadlineAt?.toISOString() ?? null,
     startedAt: t.startedAt?.toISOString() ?? null,
     completedAt: t.completedAt?.toISOString() ?? null,
@@ -370,7 +370,7 @@ export const Orchestrator = {
   async executeTask(organizationId: string, taskId: string): Promise<TaskDTO | null> {
     const task = await db.aiTask.findFirst({
       where: { id: taskId, organizationId },
-      include: { agent: true },
+      include: { agent: true, approvalRequest: true },
     });
     if (!task || !task.agent) return null;
     if (task.status !== "pending" && task.status !== "blocked") {
@@ -507,7 +507,7 @@ export const Orchestrator = {
 
     const tasks = await db.aiTask.findMany({
       where,
-      include: { agent: true },
+      include: { agent: true, approvalRequest: true },
       orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
       take: filters.limit ?? 50,
     });

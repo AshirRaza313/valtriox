@@ -412,7 +412,7 @@ export const WorkflowEngine = {
       where: { id: executionId, organizationId },
       include: {
         workflow: true,
-        tasks: { include: { agent: true }, orderBy: { createdAt: "asc" } },
+        tasks: { include: { agent: true, approvalRequest: true }, orderBy: { createdAt: "asc" } },
       },
     });
     if (!execution) return null;
@@ -449,7 +449,7 @@ export const WorkflowEngine = {
         priority: t.priority,
         impactScore: t.impactScore,
         reasoning: t.reasoning,
-        approvalRequestId: t.approvalRequestId,
+        approvalRequestId: t.approvalRequest?.id ?? null,
         deadlineAt: t.deadlineAt?.toISOString() ?? null,
         startedAt: t.startedAt?.toISOString() ?? null,
         completedAt: t.completedAt?.toISOString() ?? null,

@@ -1080,8 +1080,6 @@ model AiTask {
   impactScore     Int       @default(50)
   // Reasoning/justification logged by the agent for auditability
   reasoning       String    @default("") @db.Text
-  // If the task requires Owner approval, link to the approval request
-  approvalRequestId String?
   // Auto-escalate to Owner if not completed by this time
   deadlineAt      DateTime?
   startedAt       DateTime?
@@ -1092,9 +1090,11 @@ model AiTask {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  agent           AiAgent   @relation(fields: [agentId], references: [id], onDelete: Cascade)
-  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  approvalRequest AiApprovalRequest? @relation("ApprovalForTask", fields: [approvalRequestId], references: [id], onDelete: SetNull)
+  agent             AiAgent             @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  organization      Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  workflowExecution AiWorkflowExecution? @relation(fields: [workflowExecutionId], references: [id], onDelete: SetNull)
+  // Virtual reverse of AiApprovalRequest.task (FK lives on AiApprovalRequest.taskId)
+  approvalRequest   AiApprovalRequest?  @relation("ApprovalForTask")
 
   @@index([organizationId, status])
   @@index([agentId, status])
@@ -1333,8 +1333,9 @@ model AiApprovalRequest {
   executedAt      DateTime?
   executionResult String?   @db.Text
   errorMessage    String?   @db.Text
-  // Optional link to a task that triggered this approval
-  taskId          String?
+  // Optional one-to-one link to the task that triggered this approval.
+  // FK lives on this side (an approval request is FOR a task).
+  taskId          String?   @unique
   createdAt       DateTime  @default(now())
 
   requestedByAgent AiAgent  @relation("ApprovalRequestedBy", fields: [requestedByAgentId], references: [id], onDelete: Cascade)
