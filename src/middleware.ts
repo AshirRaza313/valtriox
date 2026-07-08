@@ -166,9 +166,19 @@ export function middleware(request: NextRequest) {
   }
 
   // SECURITY: Permissions-Policy — restrict browser features
+  // ── geolocation=(self) ────────────────────────────────────────────────────
+  // Phase 18 rev 7: TimezoneSetupModal calls navigator.geolocation.getCurrentPosition()
+  // for accurate timezone + country detection on first login. Blocking geolocation
+  // entirely (geolocation=()) caused a console violation warning on every dashboard
+  // load. Allowing (self) means same-origin pages can request geolocation — the
+  // browser still prompts the user, so privacy is preserved. The modal's try/catch
+  // gracefully falls back to Intl.DateTimeFormat() if the user denies.
+  // ── camera/microphone/payment ─────────────────────────────────────────────
+  // Still fully blocked — Valtriox has no features that use them, and blocking
+  // prevents malicious scripts from enabling them silently.
   response.headers.set(
     "Permissions-Policy",
-    "camera=(), microphone=(), geolocation=(), payment=()"
+    "camera=(), microphone=(), geolocation=(self), payment=()"
   );
 
   return response;
