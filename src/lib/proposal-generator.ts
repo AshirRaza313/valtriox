@@ -118,6 +118,13 @@ interface BrandLogoOptions {
   borderColor?: string;
   borderWidth?: number;
   padding?: number;
+  /**
+   * Box height in points. Defaults to boxSize (square).
+   * Phase 15 (rev 4): Set to `Math.round(boxSize * BRAND_LOGO_ASPECT)` to
+   * match the founder logo's source aspect (282/235 ≈ 1.2) and eliminate
+   * horizontal whitespace inside the golden border.
+   */
+  boxHeight?: number;
 }
 
 function drawBrandLogoSquare(
@@ -131,31 +138,37 @@ function drawBrandLogoSquare(
   const borderColor = opts?.borderColor ?? C.gold;
   const borderWidth = opts?.borderWidth ?? 1.2;
   const padding = opts?.padding ?? Math.max(2, boxSize * 0.08);
+  // Phase 15 (rev 4): boxHeight defaults to boxSize (square) for backwards compat.
+  const boxW = boxSize;
+  const boxH = opts?.boxHeight ?? boxSize;
   const buffer = getBrandLogoBuffer();
 
   doc.save();
-  doc.rect(x, y, boxSize, boxSize).fill(bgColor);
-  doc.rect(x, y, boxSize, boxSize).lineWidth(borderWidth).strokeColor(borderColor).stroke();
+  doc.rect(x, y, boxW, boxH).fill(bgColor);
+  doc.rect(x, y, boxW, boxH).lineWidth(borderWidth).strokeColor(borderColor).stroke();
 
   if (buffer) {
     try {
-      const innerSize = boxSize - padding * 2;
-      let drawW = innerSize;
-      let drawH = innerSize * BRAND_LOGO_ASPECT;
-      if (drawH > innerSize) {
-        drawH = innerSize;
-        drawW = innerSize / BRAND_LOGO_ASPECT;
+      // Fit logo inside box, preserving aspect ratio.
+      // When boxH/boxW ≈ BRAND_LOGO_ASPECT, the logo fills edge-to-edge.
+      const innerW = boxW - padding * 2;
+      const innerH = boxH - padding * 2;
+      let drawW = innerW;
+      let drawH = innerW * BRAND_LOGO_ASPECT;
+      if (drawH > innerH) {
+        drawH = innerH;
+        drawW = innerH / BRAND_LOGO_ASPECT;
       }
-      const imgX = x + (boxSize - drawW) / 2;
-      const imgY = y + (boxSize - drawH) / 2;
+      const imgX = x + (boxW - drawW) / 2;
+      const imgY = y + (boxH - drawH) / 2;
       doc.image(buffer, imgX, imgY, { width: drawW, height: drawH });
     } catch {}
   } else {
-    doc.fontSize(boxSize * 0.35).fillColor("#ffffff");
-    doc.font(FONT.bold).text("VTX", x, y + boxSize * 0.3, { width: boxSize, align: "center" });
+    doc.fontSize(boxW * 0.35).fillColor("#ffffff");
+    doc.font(FONT.bold).text("VTX", x, y + boxH * 0.3, { width: boxW, align: "center" });
   }
   doc.restore();
-  return boxSize;
+  return boxW;
 }
 
 function drawBrandLogoSquareCentered(
@@ -165,9 +178,11 @@ function drawBrandLogoSquareCentered(
   boxSize: number,
   opts?: BrandLogoOptions,
 ): number {
+  // Phase 15 (rev 4): advance y by the actual box height (not boxSize).
+  const boxH = opts?.boxHeight ?? boxSize;
   const x = centerX - boxSize / 2;
   drawBrandLogoSquare(doc, x, y, boxSize, opts);
-  return y + boxSize;
+  return y + boxH;
 }
 
 // ── Proposal Type Content Templates (Ultra-Premium) ──
@@ -962,12 +977,16 @@ export async function generateProposalPDF(
       doc.rect(0, 0, W, H * 0.65).fill(coverGrad);
       doc.restore();
 
-      // Logo — Phase 15 (rev 3): founder brand logo, SQUARE golden border, padding=0.
+      // Logo — Phase 15 (rev 4): boxHeight matches logo aspect (282/235 ≈ 1.2)
+      // so the logo fills the box edge-to-edge with ZERO horizontal whitespace.
+      // (rev 3 attempted this with padding=0 alone, but aspect mismatch still
+      // left ~7pt horizontal gap on a 44pt box.)
       drawBrandLogoSquareCentered(doc, W / 2, 90, 88, {
         bgColor: C.white,
         borderColor: C.gold,
         borderWidth: 1.4,
         padding: 0,
+        boxHeight: Math.round(88 * BRAND_LOGO_ASPECT),
       });
 
       // Company name

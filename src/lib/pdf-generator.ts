@@ -267,7 +267,9 @@ function parseBase64DataUri(dataUri: string): { mimeType: string; base64: string
 async function renderDefaultLogo(doc: PDFKit.PDFDocument, x: number, y: number): Promise<number> {
   // Phase 15 (rev 3): ALWAYS use the founder-uploaded brand logo with a
   // SQUARE golden border, padding=0 (no white space inside border).
-  drawBrandLogoSquare(doc, x, y, 44, { bgColor: C.goldBg2, padding: 0 });
+  // Phase 15 (rev 4): boxHeight matches logo aspect (282/235 ≈ 1.2) so the
+  // logo fills the box edge-to-edge with zero horizontal whitespace.
+  drawBrandLogoSquare(doc, x, y, 44, { bgColor: C.goldBg2, padding: 0, boxHeight: Math.round(44 * BRAND_LOGO_ASPECT) });
   return x + 56;
 }
 
@@ -286,6 +288,14 @@ interface BrandLogoOptions {
   borderWidth?: number;
   /** Inner padding (space between logo and border). Defaults to ~8% of boxSize. */
   padding?: number;
+  /**
+   * Box height in points. Defaults to boxSize (square).
+   * Phase 15 (rev 4): Set to `Math.round(boxSize * BRAND_LOGO_ASPECT)` to
+   * match the founder logo's source aspect (282/235 ≈ 1.2) and eliminate
+   * the horizontal whitespace inside the golden border. The box becomes
+   * slightly taller-than-wide, mirroring the logo's natural shape.
+   */
+  boxHeight?: number;
 }
 
 /**
@@ -303,38 +313,48 @@ function drawBrandLogoSquare(
   const borderColor = opts?.borderColor ?? C.gold;
   const borderWidth = opts?.borderWidth ?? 1.2;
   const padding = opts?.padding ?? Math.max(2, boxSize * 0.08);
+  // Phase 15 (rev 4): boxHeight defaults to boxSize (square) for backwards
+  // compatibility. Pass `boxHeight: Math.round(boxSize * BRAND_LOGO_ASPECT)`
+  // to make the box match the logo's source aspect and eliminate horizontal
+  // whitespace inside the golden border.
+  const boxW = boxSize;
+  const boxH = opts?.boxHeight ?? boxSize;
   const buffer = getBrandLogoBuffer();
 
   doc.save();
-  // Square background fill
-  doc.rect(x, y, boxSize, boxSize).fill(bgColor);
-  // Square golden border (drawn on top of background, single op = no dangling path)
-  doc.rect(x, y, boxSize, boxSize).lineWidth(borderWidth).strokeColor(borderColor).stroke();
+  // Background fill (rectangular if boxHeight is provided)
+  doc.rect(x, y, boxW, boxH).fill(bgColor);
+  // Golden border (matches box dimensions)
+  doc.rect(x, y, boxW, boxH).lineWidth(borderWidth).strokeColor(borderColor).stroke();
 
   if (buffer) {
     try {
-      // Center the logo inside the box, preserving aspect ratio.
+      // Fit logo inside the box, preserving aspect ratio.
       // Source aspect ratio h/w = 282/235 ≈ 1.2 (slightly taller than wide).
-      const innerSize = boxSize - padding * 2;
-      let drawW = innerSize;
-      let drawH = innerSize * BRAND_LOGO_ASPECT;
-      if (drawH > innerSize) {
-        drawH = innerSize;
-        drawW = innerSize / BRAND_LOGO_ASPECT;
+      // When boxH/boxW ≈ BRAND_LOGO_ASPECT, the logo fills edge-to-edge with
+      // zero whitespace. When the box is square, the logo is fit by height
+      // and horizontal whitespace remains (legacy behavior).
+      const innerW = boxW - padding * 2;
+      const innerH = boxH - padding * 2;
+      let drawW = innerW;
+      let drawH = innerW * BRAND_LOGO_ASPECT;
+      if (drawH > innerH) {
+        drawH = innerH;
+        drawW = innerH / BRAND_LOGO_ASPECT;
       }
-      const imgX = x + (boxSize - drawW) / 2;
-      const imgY = y + (boxSize - drawH) / 2;
+      const imgX = x + (boxW - drawW) / 2;
+      const imgY = y + (boxH - drawH) / 2;
       doc.image(buffer, imgX, imgY, { width: drawW, height: drawH });
     } catch {
       // border + bg already drawn; ignore image errors
     }
   } else {
     // Fallback: gold square with VTX text
-    doc.fontSize(boxSize * 0.35).fillColor("#ffffff");
-    doc.font(FONT.bold).text("VTX", x, y + boxSize * 0.3, { width: boxSize, align: "center" });
+    doc.fontSize(boxW * 0.35).fillColor("#ffffff");
+    doc.font(FONT.bold).text("VTX", x, y + boxH * 0.3, { width: boxW, align: "center" });
   }
   doc.restore();
-  return boxSize;
+  return boxW;
 }
 
 /**
@@ -349,9 +369,12 @@ function drawBrandLogoSquareCentered(
   boxSize: number,
   opts?: BrandLogoOptions,
 ): number {
+  // Phase 15 (rev 4): advance y by the actual box height (not boxSize) so
+  // cover-page layout adapts correctly when boxHeight is provided.
+  const boxH = opts?.boxHeight ?? boxSize;
   const x = centerX - boxSize / 2;
   drawBrandLogoSquare(doc, x, y, boxSize, opts);
-  return y + boxSize;
+  return y + boxH;
 }
 
 // ── NEW: Empty Data Check ──
@@ -803,12 +826,14 @@ export async function generateInvoicePDF(invoice: InvoiceData): Promise<Buffer> 
       let headerRightStartX = P + 200;
 
       // LEFT: Logo + Company Name
-      // Phase 15 (rev 3): padding=0 so logo fills the square edge-to-edge.
+      // Phase 15 (rev 4): boxHeight matches logo aspect so logo fills the
+      // box edge-to-edge (no horizontal whitespace inside golden border).
       drawBrandLogoSquare(doc, P, y, 44, {
         bgColor: C.goldBg2,
         borderColor: C.gold,
         borderWidth: 1.2,
         padding: 0,
+        boxHeight: Math.round(44 * BRAND_LOGO_ASPECT),
       });
       headerRightStartX = P + 56;
 
@@ -1253,7 +1278,8 @@ export async function generateCustomInvoicePDF(invoice: InvoiceData): Promise<Bu
       doc.restore();
 
       // ── LOGO + BRAND NAME (white text on charcoal) ──
-      // Phase 15 (rev 3): padding=0 so logo fills the square edge-to-edge.
+      // Phase 15 (rev 4): boxHeight matches logo aspect so logo fills the
+      // box edge-to-edge (no horizontal whitespace inside golden border).
       let y = 36;
       let headerRightStartX = P + 60;
 
@@ -1262,6 +1288,7 @@ export async function generateCustomInvoicePDF(invoice: InvoiceData): Promise<Bu
         borderColor: C.gold,
         borderWidth: 1.4,
         padding: 0,
+        boxHeight: Math.round(48 * BRAND_LOGO_ASPECT),
       });
 
       // Brand name (white)
@@ -1652,9 +1679,11 @@ export async function generateReportPDF(report: ReportData): Promise<Buffer> {
       doc.rect(-4, -4, 8, 8).fill(accentColor);
       doc.restore();
 
-      // ── LOGO (founder brand icon, large, SQUARE golden border) ──
-      // Phase 15 (rev 3): Founder directive — remove the white space inside
-      // the golden border. Logo now fills the square edge-to-edge (padding=0).
+      // ── LOGO (founder brand icon, large, golden border) ──
+      // Phase 15 (rev 4): boxHeight matches logo aspect (282/235 ≈ 1.2) so
+      // the box is slightly taller-than-wide and the logo fills it edge-to-
+      // edge with ZERO horizontal whitespace. This is the real fix for the
+      // whitespace issue that rev 3 attempted with padding=0 alone.
       let logoCenterY = topDecoY + 24;
       const coverLogoSize = 96;
       logoCenterY = drawBrandLogoSquareCentered(doc, W / 2, logoCenterY, coverLogoSize, {
@@ -1662,6 +1691,7 @@ export async function generateReportPDF(report: ReportData): Promise<Buffer> {
         borderColor: C.gold,
         borderWidth: 1.5,
         padding: 0,
+        boxHeight: Math.round(coverLogoSize * BRAND_LOGO_ASPECT),
       });
       logoCenterY += 24;
 
@@ -1805,13 +1835,15 @@ export async function generateReportPDF(report: ReportData): Promise<Buffer> {
       let tableY = P + 6;
 
       // ── CONTENT HEADER ──
-      // Phase 15 (rev 3): padding=0 so logo fills the square edge-to-edge.
+      // Phase 15 (rev 4): boxHeight matches logo aspect so logo fills the
+      // box edge-to-edge (no horizontal whitespace inside golden border).
       let contentLogoRightX = P;
       drawBrandLogoSquare(doc, P, tableY, 32, {
         bgColor: C.goldBg2,
         borderColor: C.gold,
         borderWidth: 0.8,
         padding: 0,
+        boxHeight: Math.round(32 * BRAND_LOGO_ASPECT),
       });
       contentLogoRightX = P + 40;
 

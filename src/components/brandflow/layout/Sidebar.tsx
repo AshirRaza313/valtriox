@@ -201,6 +201,40 @@ export function Sidebar() {
   const accentColor = appTheme === "premium-dark" ? "#D4A73A" : "#D4A73A";
   const isCollapsed = sidebarCollapsed;
 
+  // ── Phase 15 (rev 4): Client Inbox unread badge ──
+  // Polls /api/communications/inbox every 60s to display a live unread count
+  // on the "Client Messages" sidebar item. Only active for non-platform
+  // roles (platform/valtriox_team users don't have a client inbox — they
+  // use the Communication Center instead). Failed fetches silently fall
+  // back to 0 so the badge simply disappears if the API is unreachable.
+  const [unreadInboxCount, setUnreadInboxCount] = useState(0);
+  useEffect(() => {
+    // Skip for platform users — they don't have a client inbox
+    if (isPlatformRole(userRole) || userRole === "valtriox_team") return;
+    // Skip if no user (logged out)
+    if (!user) return;
+
+    let cancelled = false;
+    const fetchUnread = async () => {
+      try {
+        const res = await fetchWithAuth("/api/communications/inbox");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled) return;
+        const count = data?.stats?.unread ?? 0;
+        setUnreadInboxCount(typeof count === "number" ? count : 0);
+      } catch {
+        // Silent — badge just stays at last known value
+      }
+    };
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 60_000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [user, userRole]);
+
   // Pre-compute group visibility to avoid hiding groups with no visible items
   const visibleGroups = useMemo(() => {
     const hiddenSections = user?.visibleSections;
@@ -426,7 +460,7 @@ export function Sidebar() {
                             const isActive = item.id === activeSection;
                             const isAccessible = isSectionAccessible(item.id, userRole, user?.visibleSections);
                             const isSubLocked = isAccessible && !isPlatformOwner(userRole) && !isPlatformBypassRole(userRole) && !isFeatureAvailableWithOverrides(item.id, subscriptionPlan, userRole, adminLockedFeatures);
-                            const badge = BADGE_MAP[item.id];
+                            const badge = item.id === "client-inbox" ? unreadInboxCount : BADGE_MAP[item.id];
                             // Platform-only item detection for visual distinction
                             const isPlatformItem = PLATFORM_ONLY_ITEM_IDS.has(item.id);
 
