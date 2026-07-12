@@ -4,6 +4,7 @@
 import { useValtrioxStore } from "@/store/brandflow-store";
 import { ArrowLeft, Shield, Globe, Database, BarChart3, Eye, Settings, RefreshCw, Mail } from "lucide-react";
 import { usePlatformIdentity } from "@/lib/platform-identity";
+import { cn } from "@/lib/utils";
 
 interface LegalPageProps {
   onBack?: () => void;
