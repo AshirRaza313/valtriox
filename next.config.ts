@@ -142,6 +142,14 @@ const nextConfig: NextConfig = {
         ],
       },
       {
+        // The service worker must always be revalidated so cache-policy fixes
+        // reach existing browsers without being held behind an old HTTP cache.
+        source: "/sw.js",
+        headers: [
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+        ],
+      },
+      {
         source: "/downloads/:path*",
         headers: [
           { key: "Cache-Control", value: "public, max-age=86400" },

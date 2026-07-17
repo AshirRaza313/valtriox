@@ -63,6 +63,10 @@ upload/
 # Agent context
 agent-ctx/
 
+# Private Codex conversation context and user-provided working assets
+/chat.md
+/upload-assets/
+
 # Download files (generated)
 download/
 
