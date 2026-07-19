@@ -101,11 +101,11 @@ function isRetryable(error: unknown): boolean {
  * Retry a database operation with exponential backoff.
  * Use for critical queries that should survive transient PgBouncer hiccups.
  */
-export async function withRetry<T>(
-  queryFn: () => Promise<T>,
+export async function withRetry<TResult>(
+  queryFn: () => TResult,
   retries = 3,
   baseDelay = 300
-): Promise<T> {
+): Promise<Awaited<TResult>> {
   let lastError: unknown;
   for (let i = 0; i <= retries; i++) {
     try {
@@ -2605,12 +2605,12 @@ DO $$ BEGIN CREATE INDEX IF NOT EXISTS "ClientMessage_createdAt_idx" ON "ClientM
   }
 }
 
-export async function safeDbQuery<T>(
-  queryFn: () => Promise<T>,
+export async function safeDbQuery<TResult>(
+  queryFn: () => TResult,
   retries = 3,
   baseDelay = 300
 ): Promise<{
-  data: T | null;
+  data: Awaited<TResult> | null;
   error: string | null;
   /** The original raw error object — preserves Prisma code/message/meta
    *  even in production. Use this in admin-only routes to build detailed

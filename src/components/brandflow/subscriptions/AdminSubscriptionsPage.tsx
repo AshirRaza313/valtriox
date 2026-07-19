@@ -177,7 +177,7 @@ export function AdminSubscriptionsPage() {
 
       // Step 2: Download the PDF
       try {
-        const dlRes = await fetchWithAuth(`/api/invoices/${newInvoice.id}/download`);
+        const dlRes = await fetchWithAuth(`/api/admin/invoices/${newInvoice.id}/pdf`);
         if (dlRes.ok) {
           const blob = await dlRes.blob();
           const url = URL.createObjectURL(blob);

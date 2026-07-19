@@ -22,7 +22,7 @@ interface ActivityItem {
 }
 
 /** Safely run a DB query — returns null on any error instead of throwing */
-async function safeQuery<T>(fn: () => Promise<T>): Promise<T | null> {
+async function safeQuery<TResult>(fn: () => TResult): Promise<Awaited<TResult> | null> {
   try {
     return await fn();
   } catch (err: unknown) {
