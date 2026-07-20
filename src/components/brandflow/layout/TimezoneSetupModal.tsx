@@ -6,6 +6,7 @@ import { Globe, MapPin, Clock, Shield, ChevronRight, Loader2, Check, X, Sparkles
 import { cn } from "@/lib/utils";
 import { useValtrioxStore } from "@/store/brandflow-store";
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
+import { useTranslation } from "@/lib/i18n";
 
 // ─── Timezone name display map ──────────────────────────────────────────────
 const TIMEZONE_LABELS: Record<string, string> = {
@@ -100,6 +101,7 @@ function getCurrentDateInTz(tz: string): string {
 
 export function TimezoneSetupModal() {
   const { organization, setOrganization, appTheme } = useValtrioxStore();
+  const t = useTranslation();
   const [visible, setVisible] = useState(false);
   const [step, setStep] = useState<"ask" | "detecting" | "confirmed" | "done">("ask");
   const [detectedTimezone, setDetectedTimezone] = useState<string>("");
@@ -206,7 +208,7 @@ export function TimezoneSetupModal() {
       setLiveTime(getCurrentTimeInTz(finalTimezone));
       setStep("confirmed");
     } catch (err: any) {
-      setError("Could not detect timezone. Using browser default.");
+      setError(t("errorDetectingTimezone", "Could not detect timezone. Using browser default."));
       // Fallback to browser timezone
       try {
         const fallback = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -216,7 +218,7 @@ export function TimezoneSetupModal() {
         setStep("ask");
       }
     }
-  }, []);
+  }, [t]);
 
   const confirmTimezone = useCallback(async () => {
     if (!detectedTimezone || !organization?.id) return;
@@ -342,10 +344,10 @@ export function TimezoneSetupModal() {
                   {step === "ask" && (
                     <motion.div key="ask" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }}>
                       <h2 className={cn("text-lg font-bold text-center mb-1", isDark ? "text-white" : "text-slate-900")}>
-                        Set Your Timezone
+                        {t("setYourTimezone", "Set Your Timezone")}
                       </h2>
                       <p className={cn("text-sm text-center mb-5", isDark ? "text-slate-400" : "text-slate-500")}>
-                        Valtriox needs your location to display accurate dates, times, and analytics for your region.
+                        {t("timezoneNeeded", "Valtriox needs your location to display accurate dates, times, and analytics for your region.")}
                       </p>
 
                       {/* Info cards */}
@@ -359,10 +361,10 @@ export function TimezoneSetupModal() {
                           </div>
                           <div>
                             <p className={cn("text-sm font-medium", isDark ? "text-slate-200" : "text-slate-700")}>
-                              Live Location Access
+                              {t("liveLocationAccess", "Live Location Access")}
                             </p>
                             <p className={cn("text-xs mt-0.5", isDark ? "text-slate-400" : "text-slate-500")}>
-                              We detect your timezone using your device location. Your exact position is never stored.
+                              {t("locationNotStored", "We detect your timezone using your device location. Your exact position is never stored.")}
                             </p>
                           </div>
                         </div>
@@ -376,10 +378,10 @@ export function TimezoneSetupModal() {
                           </div>
                           <div>
                             <p className={cn("text-sm font-medium", isDark ? "text-slate-200" : "text-slate-700")}>
-                              Accurate Time Display
+                              {t("accurateTimeDisplay", "Accurate Time Display")}
                             </p>
                             <p className={cn("text-xs mt-0.5", isDark ? "text-slate-400" : "text-slate-500")}>
-                              All dates, reports, notifications, and schedules will match your local time.
+                              {t("allDatesLocalTime", "All dates, reports, notifications, and schedules will match your local time.")}
                             </p>
                           </div>
                         </div>
@@ -393,10 +395,10 @@ export function TimezoneSetupModal() {
                           </div>
                           <div>
                             <p className={cn("text-sm font-medium", isDark ? "text-slate-200" : "text-slate-700")}>
-                              Privacy First
+                              {t("privacyFirst", "Privacy First")}
                             </p>
                             <p className={cn("text-xs mt-0.5", isDark ? "text-slate-400" : "text-slate-500")}>
-                              Only your timezone is saved. No GPS coordinates or personal location data is stored.
+                              {t("onlyTimezoneStored", "Only your timezone is saved. No GPS coordinates or personal location data is stored.")}
                             </p>
                           </div>
                         </div>
@@ -410,7 +412,7 @@ export function TimezoneSetupModal() {
                         )}>
                           <Globe className="h-3.5 w-3.5 text-amber-500" />
                           <span className={cn("text-xs font-medium", isDark ? "text-amber-300" : "text-amber-700")}>
-                            Browser detected: {getTimezoneLabel(detectedTimezone)}
+                            {t("browserDetected", "Browser detected")}: {getTimezoneLabel(detectedTimezone)}
                           </span>
                           <span className={cn("text-xs", isDark ? "text-amber-400/60" : "text-amber-600/60")}>
                             {currentTime}
@@ -429,7 +431,7 @@ export function TimezoneSetupModal() {
                               : "text-slate-500 hover:bg-slate-100 hover:text-slate-700"
                           )}
                         >
-                          Skip for now
+                          {t("skipForNow", "Skip for now")}
                         </button>
                         <button
                           onClick={detectTimezone}
@@ -440,7 +442,7 @@ export function TimezoneSetupModal() {
                           }}
                         >
                           <MapPin className="h-4 w-4" />
-                          Allow Location
+                          {t("allowLocation", "Allow Location")}
                         </button>
                       </div>
                     </motion.div>
@@ -458,10 +460,10 @@ export function TimezoneSetupModal() {
                           <div className="absolute -inset-2 rounded-full border-2 border-dashed border-amber-500/20 animate-spin" style={{ animationDuration: "8s" }} />
                         </div>
                         <h3 className={cn("text-base font-bold mb-1", isDark ? "text-white" : "text-slate-900")}>
-                          Detecting Your Timezone...
+                          {t("detectingYourTimezone", "Detecting Your Timezone...")}
                         </h3>
                         <p className={cn("text-sm", isDark ? "text-slate-400" : "text-slate-500")}>
-                          Requesting location access from your device
+                          {t("requestingLocationAccess", "Requesting location access from your device")}
                         </p>
                         {error && (
                           <p className="text-xs text-amber-400 mt-3 bg-amber-500/10 px-3 py-1.5 rounded-lg">
@@ -476,10 +478,10 @@ export function TimezoneSetupModal() {
                   {step === "confirmed" && (
                     <motion.div key="confirmed" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }}>
                       <h2 className={cn("text-lg font-bold text-center mb-1", isDark ? "text-white" : "text-slate-900")}>
-                        Timezone Detected!
+                        {t("timezoneDetected", "Timezone Detected!")}
                       </h2>
                       <p className={cn("text-sm text-center mb-5", isDark ? "text-slate-400" : "text-slate-500")}>
-                        Your timezone has been identified successfully.
+                        {t("timezoneIdentified", "Your timezone has been identified successfully.")}
                       </p>
 
                       {/* Detected timezone display */}
@@ -528,10 +530,16 @@ export function TimezoneSetupModal() {
                         isDark ? "bg-emerald-500/5 border-emerald-500/10" : "bg-emerald-50 border-emerald-100"
                       )}>
                         <p className={cn("text-xs font-semibold mb-1.5", isDark ? "text-emerald-400" : "text-emerald-700")}>
-                          This will update:
+                          {t("thisWillUpdate", "This will update")}:
                         </p>
                         <div className="space-y-1">
-                          {["Live clock & calendar in header", "Dashboard analytics dates", "Order & task timestamps", "Report date formatting", "Notification times"].map((item) => (
+                          {[
+                            t("liveClockCalendar", "Live clock & calendar in header"),
+                            t("dashboardAnalyticsDates", "Dashboard analytics dates"),
+                            t("orderTaskTimestamps", "Order & task timestamps"),
+                            t("reportDateFormatting", "Report date formatting"),
+                            t("notificationTimes", "Notification times"),
+                          ].map((item) => (
                             <div key={item} className="flex items-center gap-1.5">
                               <Check className="h-3 w-3 text-emerald-500 flex-shrink-0" />
                               <span className={cn("text-xs", isDark ? "text-slate-400" : "text-slate-600")}>{item}</span>
@@ -551,7 +559,7 @@ export function TimezoneSetupModal() {
                               : "text-slate-500 hover:bg-slate-100 hover:text-slate-700"
                           )}
                         >
-                          Cancel
+                          {t("cancel", "Cancel")}
                         </button>
                         <button
                           onClick={confirmTimezone}
@@ -562,7 +570,7 @@ export function TimezoneSetupModal() {
                           }}
                         >
                           <Check className="h-4 w-4" />
-                          Confirm Timezone
+                          {t("confirmTimezone", "Confirm Timezone")}
                           <ChevronRight className="h-4 w-4" />
                         </button>
                       </div>
@@ -583,7 +591,7 @@ export function TimezoneSetupModal() {
                           <Check className="h-7 w-7 text-white" />
                         </motion.div>
                         <h3 className={cn("text-base font-bold mb-1", isDark ? "text-white" : "text-slate-900")}>
-                          Timezone Set Successfully!
+                          {t("timezoneSetSuccessfully", "Timezone Set Successfully!")}
                         </h3>
                         <p className={cn("text-sm text-center", isDark ? "text-slate-400" : "text-slate-500")}>
                           {getTimezoneLabel(detectedTimezone)}
