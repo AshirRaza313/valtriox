@@ -115,7 +115,6 @@ export function TimezoneSetupModal() {
     try {
       const alreadyDetected = localStorage.getItem("valtriox-timezone-detected");
       if (!alreadyDetected && organization?.id) {
-        // Short delay for smooth transition after dashboard loads
         const timer = setTimeout(() => setVisible(true), 1200);
         return () => clearTimeout(timer);
       }
@@ -148,39 +147,29 @@ export function TimezoneSetupModal() {
     setError("");
 
     try {
-      // First, get browser timezone (works without geolocation)
       const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
       let finalTimezone = browserTz;
       let country = "";
 
-      // Then try geolocation for more accurate detection + country name
       if (navigator.geolocation) {
         try {
           const position = await new Promise<GeolocationPosition>((resolve, reject) => {
             navigator.geolocation.getCurrentPosition(resolve, reject, {
               timeout: 10000,
               enableHighAccuracy: false,
-              maximumAge: 300000, // 5 min cache
+              maximumAge: 300000,
             });
           });
 
           const { latitude, longitude } = position.coords;
 
-          // Try to get timezone name from coordinates using Intl API
-          // The Intl API should already match the device's timezone
-          // But we can also try to get country info
           try {
-            // Use a free timezone API for country detection
             const tzResponse = await fetch(
               `https://worldtimeapi.org/api/timezone/area/${latitude.toFixed(2)}`,
               { signal: AbortSignal.timeout(3000) }
             );
-            // Fallback: just use browser timezone with coordinate-based verification
-          } catch {
-            // If timezone API fails, just use browser timezone
-          }
+          } catch {}
 
-          // Reverse geocode for country name (best effort)
           try {
             const geoResponse = await fetch(
               `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=1&accept-language=en`,
@@ -190,15 +179,9 @@ export function TimezoneSetupModal() {
               const geoData = await geoResponse.json();
               country = geoData.address?.country || "";
             }
-          } catch {
-            // Silent fail - country name is optional
-          }
+          } catch {}
         } catch (geoError: any) {
-          // User denied location or it failed - use browser timezone
-          if (geoError?.code === 1) {
-            // PERMISSION_DENIED - use browser timezone silently
-          }
-          // Continue with browser timezone
+          if (geoError?.code === 1) {}
         }
       }
 
@@ -208,8 +191,7 @@ export function TimezoneSetupModal() {
       setLiveTime(getCurrentTimeInTz(finalTimezone));
       setStep("confirmed");
     } catch (err: any) {
-      setError(t("errorDetectingTimezone", "Could not detect timezone. Using browser default."));
-      // Fallback to browser timezone
+      setError(t("noData"));
       try {
         const fallback = Intl.DateTimeFormat().resolvedOptions().timeZone;
         setDetectedTimezone(fallback);
@@ -224,7 +206,6 @@ export function TimezoneSetupModal() {
     if (!detectedTimezone || !organization?.id) return;
 
     try {
-      // Update organization timezone via API
       const res = await fetchWithAuth("/api/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -232,16 +213,12 @@ export function TimezoneSetupModal() {
       });
 
       if (res.ok) {
-        // Update the store
         setOrganization({ ...organization, timezone: detectedTimezone });
-        // Mark as detected
         localStorage.setItem("valtriox-timezone-detected", "true");
         localStorage.setItem("valtriox-timezone-value", detectedTimezone);
         setStep("done");
-        // Auto-dismiss after brief success display
         setTimeout(() => setVisible(false), 1500);
       } else {
-        // Still save locally even if API fails
         setOrganization({ ...organization, timezone: detectedTimezone });
         localStorage.setItem("valtriox-timezone-detected", "true");
         localStorage.setItem("valtriox-timezone-value", detectedTimezone);
@@ -249,7 +226,6 @@ export function TimezoneSetupModal() {
         setTimeout(() => setVisible(false), 1500);
       }
     } catch {
-      // Save locally even on network error
       setOrganization({ ...organization, timezone: detectedTimezone });
       localStorage.setItem("valtriox-timezone-detected", "true");
       localStorage.setItem("valtriox-timezone-value", detectedTimezone);
@@ -259,7 +235,6 @@ export function TimezoneSetupModal() {
   }, [detectedTimezone, organization, setOrganization]);
 
   const skipTimezone = useCallback(() => {
-    // Mark as detected so it doesn't show again, but use browser default
     try {
       const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
       localStorage.setItem("valtriox-timezone-detected", "true");
@@ -279,7 +254,6 @@ export function TimezoneSetupModal() {
     <AnimatePresence>
       {visible && (
         <>
-          {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -288,7 +262,6 @@ export function TimezoneSetupModal() {
             onClick={step === "done" ? () => setVisible(false) : undefined}
           />
 
-          {/* Modal */}
           <motion.div
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -302,16 +275,13 @@ export function TimezoneSetupModal() {
                 ? "bg-[#0f1117] border-white/10 shadow-black/50"
                 : "bg-white border-slate-200 shadow-slate-200/50"
             )}>
-              {/* ── Header gradient strip ── */}
               <div className="relative h-32 overflow-hidden">
                 <div className="absolute inset-0" style={{
                   background: "linear-gradient(135deg, #10151E 0%, #0f172a 50%, #1e293b 100%)"
                 }} />
-                {/* Animated globe decoration */}
                 <div className="absolute inset-0 flex items-center justify-center opacity-20">
                   <Globe className="h-40 w-40 text-amber-400 animate-[spin_30s_linear_infinite]" />
                 </div>
-                {/* Floating sparkles */}
                 <div className="absolute top-4 left-6">
                   <motion.div
                     animate={{ y: [0, -6, 0], opacity: [0.3, 0.8, 0.3] }}
@@ -328,7 +298,6 @@ export function TimezoneSetupModal() {
                     <Sparkles className="h-3 w-3 text-amber-300/40" />
                   </motion.div>
                 </div>
-                {/* Logo / Branding */}
                 <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex flex-col items-center">
                   <div className="flex h-12 w-12 items-center justify-center rounded-xl shadow-lg"
                     style={{ background: "linear-gradient(135deg, #D4A73A, #D4A73A, #B8942F)" }}>
@@ -337,20 +306,17 @@ export function TimezoneSetupModal() {
                 </div>
               </div>
 
-              {/* ── Content ── */}
               <div className="px-6 pt-5 pb-6">
                 <AnimatePresence mode="wait">
-                  {/* STEP: ASK */}
                   {step === "ask" && (
                     <motion.div key="ask" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }}>
                       <h2 className={cn("text-lg font-bold text-center mb-1", isDark ? "text-white" : "text-slate-900")}>
-                        {t("setYourTimezone", "Set Your Timezone")}
+                        {t("setYourTimezone")}
                       </h2>
                       <p className={cn("text-sm text-center mb-5", isDark ? "text-slate-400" : "text-slate-500")}>
-                        {t("timezoneNeeded", "Valtriox needs your location to display accurate dates, times, and analytics for your region.")}
+                        {t("timezoneNeeded")}
                       </p>
 
-                      {/* Info cards */}
                       <div className="space-y-3 mb-5">
                         <div className={cn(
                           "flex items-start gap-3 rounded-xl p-3 border",
@@ -361,10 +327,10 @@ export function TimezoneSetupModal() {
                           </div>
                           <div>
                             <p className={cn("text-sm font-medium", isDark ? "text-slate-200" : "text-slate-700")}>
-                              {t("liveLocationAccess", "Live Location Access")}
+                              {t("liveLocationAccess")}
                             </p>
                             <p className={cn("text-xs mt-0.5", isDark ? "text-slate-400" : "text-slate-500")}>
-                              {t("locationNotStored", "We detect your timezone using your device location. Your exact position is never stored.")}
+                              {t("weBrowserTimezone")}
                             </p>
                           </div>
                         </div>
@@ -378,10 +344,10 @@ export function TimezoneSetupModal() {
                           </div>
                           <div>
                             <p className={cn("text-sm font-medium", isDark ? "text-slate-200" : "text-slate-700")}>
-                              {t("accurateTimeDisplay", "Accurate Time Display")}
+                              {t("accurateTimeDisplay")}
                             </p>
                             <p className={cn("text-xs mt-0.5", isDark ? "text-slate-400" : "text-slate-500")}>
-                              {t("allDatesLocalTime", "All dates, reports, notifications, and schedules will match your local time.")}
+                              {t("allDatesReports")}
                             </p>
                           </div>
                         </div>
@@ -395,16 +361,15 @@ export function TimezoneSetupModal() {
                           </div>
                           <div>
                             <p className={cn("text-sm font-medium", isDark ? "text-slate-200" : "text-slate-700")}>
-                              {t("privacyFirst", "Privacy First")}
+                              {t("privacyFirst")}
                             </p>
                             <p className={cn("text-xs mt-0.5", isDark ? "text-slate-400" : "text-slate-500")}>
-                              {t("onlyTimezoneStored", "Only your timezone is saved. No GPS coordinates or personal location data is stored.")}
+                              {t("onlyTimezoneNot")}
                             </p>
                           </div>
                         </div>
                       </div>
 
-                      {/* Current browser timezone preview */}
                       {detectedTimezone && (
                         <div className={cn(
                           "rounded-lg p-2.5 mb-5 border flex items-center justify-center gap-2",
@@ -412,7 +377,7 @@ export function TimezoneSetupModal() {
                         )}>
                           <Globe className="h-3.5 w-3.5 text-amber-500" />
                           <span className={cn("text-xs font-medium", isDark ? "text-amber-300" : "text-amber-700")}>
-                            {t("browserDetected", "Browser detected")}: {getTimezoneLabel(detectedTimezone)}
+                            {t("browserDetected")}: {getTimezoneLabel(detectedTimezone)}
                           </span>
                           <span className={cn("text-xs", isDark ? "text-amber-400/60" : "text-amber-600/60")}>
                             {currentTime}
@@ -420,7 +385,6 @@ export function TimezoneSetupModal() {
                         </div>
                       )}
 
-                      {/* Actions */}
                       <div className="flex gap-3">
                         <button
                           onClick={skipTimezone}
@@ -431,7 +395,7 @@ export function TimezoneSetupModal() {
                               : "text-slate-500 hover:bg-slate-100 hover:text-slate-700"
                           )}
                         >
-                          {t("skipForNow", "Skip for now")}
+                          {t("skipForNow")}
                         </button>
                         <button
                           onClick={detectTimezone}
@@ -442,13 +406,12 @@ export function TimezoneSetupModal() {
                           }}
                         >
                           <MapPin className="h-4 w-4" />
-                          {t("allowLocation", "Allow Location")}
+                          {t("allowLocation")}
                         </button>
                       </div>
                     </motion.div>
                   )}
 
-                  {/* STEP: DETECTING */}
                   {step === "detecting" && (
                     <motion.div key="detecting" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }}>
                       <div className="flex flex-col items-center py-8">
@@ -460,10 +423,10 @@ export function TimezoneSetupModal() {
                           <div className="absolute -inset-2 rounded-full border-2 border-dashed border-amber-500/20 animate-spin" style={{ animationDuration: "8s" }} />
                         </div>
                         <h3 className={cn("text-base font-bold mb-1", isDark ? "text-white" : "text-slate-900")}>
-                          {t("detectingYourTimezone", "Detecting Your Timezone...")}
+                          {t("detectingYourTimezone")}
                         </h3>
                         <p className={cn("text-sm", isDark ? "text-slate-400" : "text-slate-500")}>
-                          {t("requestingLocationAccess", "Requesting location access from your device")}
+                          {t("requestingLocationAccess")}
                         </p>
                         {error && (
                           <p className="text-xs text-amber-400 mt-3 bg-amber-500/10 px-3 py-1.5 rounded-lg">
@@ -474,17 +437,15 @@ export function TimezoneSetupModal() {
                     </motion.div>
                   )}
 
-                  {/* STEP: CONFIRMED */}
                   {step === "confirmed" && (
                     <motion.div key="confirmed" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }}>
                       <h2 className={cn("text-lg font-bold text-center mb-1", isDark ? "text-white" : "text-slate-900")}>
-                        {t("timezoneDetected", "Timezone Detected!")}
+                        {t("timezoneDetectedSuccess")}
                       </h2>
                       <p className={cn("text-sm text-center mb-5", isDark ? "text-slate-400" : "text-slate-500")}>
-                        {t("timezoneIdentified", "Your timezone has been identified successfully.")}
+                        {t("timezoneHasBeenIdentified")}
                       </p>
 
-                      {/* Detected timezone display */}
                       <div className={cn(
                         "rounded-xl border p-4 mb-4",
                         isDark ? "bg-white/[0.03] border-white/[0.06]" : "bg-slate-50 border-slate-100"
@@ -504,7 +465,6 @@ export function TimezoneSetupModal() {
                           </div>
                         </div>
 
-                        {/* Live time display */}
                         <div className={cn(
                           "rounded-lg p-3 flex items-center justify-center",
                           isDark ? "bg-black/30" : "bg-white"
@@ -518,27 +478,25 @@ export function TimezoneSetupModal() {
                           </span>
                         </div>
 
-                        {/* Date display */}
                         <p className={cn("text-xs text-center mt-2", isDark ? "text-slate-400" : "text-slate-500")}>
                           {getCurrentDateInTz(detectedTimezone)}
                         </p>
                       </div>
 
-                      {/* What changes */}
                       <div className={cn(
                         "rounded-lg p-3 mb-5 border",
                         isDark ? "bg-emerald-500/5 border-emerald-500/10" : "bg-emerald-50 border-emerald-100"
                       )}>
                         <p className={cn("text-xs font-semibold mb-1.5", isDark ? "text-emerald-400" : "text-emerald-700")}>
-                          {t("thisWillUpdate", "This will update")}:
+                          {t("thisWillUpdate")}:
                         </p>
                         <div className="space-y-1">
                           {[
-                            t("liveClockCalendar", "Live clock & calendar in header"),
-                            t("dashboardAnalyticsDates", "Dashboard analytics dates"),
-                            t("orderTaskTimestamps", "Order & task timestamps"),
-                            t("reportDateFormatting", "Report date formatting"),
-                            t("notificationTimes", "Notification times"),
+                            t("liveClockCalendar"),
+                            t("dashboardAnalyticsDate"),
+                            t("orderTaskTimestamp"),
+                            t("reportDateFormatting"),
+                            t("notificationTimes")
                           ].map((item) => (
                             <div key={item} className="flex items-center gap-1.5">
                               <Check className="h-3 w-3 text-emerald-500 flex-shrink-0" />
@@ -548,7 +506,6 @@ export function TimezoneSetupModal() {
                         </div>
                       </div>
 
-                      {/* Actions */}
                       <div className="flex gap-3">
                         <button
                           onClick={skipTimezone}
@@ -559,7 +516,7 @@ export function TimezoneSetupModal() {
                               : "text-slate-500 hover:bg-slate-100 hover:text-slate-700"
                           )}
                         >
-                          {t("cancel", "Cancel")}
+                          {t("cancel")}
                         </button>
                         <button
                           onClick={confirmTimezone}
@@ -570,14 +527,13 @@ export function TimezoneSetupModal() {
                           }}
                         >
                           <Check className="h-4 w-4" />
-                          {t("confirmTimezone", "Confirm Timezone")}
+                          {t("confirmTimezone")}
                           <ChevronRight className="h-4 w-4" />
                         </button>
                       </div>
                     </motion.div>
                   )}
 
-                  {/* STEP: DONE */}
                   {step === "done" && (
                     <motion.div key="done" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}>
                       <div className="flex flex-col items-center py-8">
@@ -591,7 +547,7 @@ export function TimezoneSetupModal() {
                           <Check className="h-7 w-7 text-white" />
                         </motion.div>
                         <h3 className={cn("text-base font-bold mb-1", isDark ? "text-white" : "text-slate-900")}>
-                          {t("timezoneSetSuccessfully", "Timezone Set Successfully!")}
+                          Timezone Set Successfully!
                         </h3>
                         <p className={cn("text-sm text-center", isDark ? "text-slate-400" : "text-slate-500")}>
                           {getTimezoneLabel(detectedTimezone)}
@@ -602,7 +558,6 @@ export function TimezoneSetupModal() {
                 </AnimatePresence>
               </div>
 
-              {/* Close button (top-right, only for non-loading states) */}
               {step !== "detecting" && step !== "done" && (
                 <button
                   onClick={skipTimezone}
