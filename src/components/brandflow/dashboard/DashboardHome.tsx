@@ -168,7 +168,7 @@ export function DashboardHome() {
     const orgId = organization?.id;
     if (!orgId) {
       setLoading(false);
-      setError("No organization selected. Please complete your profile setup.");
+      setError(t("somethingWentWrong"));
       return;
     }
 
@@ -185,7 +185,7 @@ export function DashboardHome() {
       setStats(data);
     } catch (err: any) {
       console.error("Dashboard fetch error:", err);
-      const msg = err?.message || "Something went wrong while loading dashboard data.";
+      const msg = err?.message || t("somethingWentWrong");
       setError(msg);
       toast.error("Dashboard Error", { description: msg });
     } finally {
@@ -460,8 +460,8 @@ export function DashboardHome() {
               ) : (
                 <div className="flex flex-col items-center justify-center py-8">
                   <ShoppingBag className={`h-10 w-10 mb-3 ${isGold ? "text-amber-500/30" : "text-muted-foreground/30"}`} />
-                  <p className={`text-sm ${isDark ? "text-slate-400" : "text-muted-foreground"}`}>No order data yet</p>
-                  <p className={`text-xs ${isDark ? "text-slate-400/60" : "text-muted-foreground/60"} mt-1`}>Order status distribution will appear here</p>
+                  <p className={`text-sm ${isDark ? "text-slate-400" : "text-muted-foreground"}`}>{t("noOrdersYet")}</p>
+                  <p className={`text-xs ${isDark ? "text-slate-400/60" : "text-muted-foreground/60"} mt-1`}>{t("noOrdersDesc")}</p>
                 </div>
               )}
             </CardContent>

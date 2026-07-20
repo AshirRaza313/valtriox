@@ -4,9 +4,11 @@ import { useValtrioxStore } from "@/store/brandflow-store";
 import { Card, CardContent } from "@/components/ui/card";
 import { TrendingUp, CalendarDays } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 
 export function RevenueForecastWidget() {
   const { appTheme } = useValtrioxStore();
+  const t = useTranslation();
   const isGold = appTheme === "premium-dark";
   const isDark = appTheme === "dark" || isGold;
 
@@ -34,7 +36,7 @@ export function RevenueForecastWidget() {
         {/* Empty state */}
         <div className="flex flex-col items-center justify-center py-8 text-center">
           <CalendarDays className={cn("h-8 w-8 mb-2", textMuted)} style={{ opacity: 0.3 }} />
-          <p className={cn("text-xs", textMuted)}>Not enough revenue data for forecast</p>
+          <p className={cn("text-xs", textMuted)}>{t("noForecast")}</p>
           <p className={cn("text-[10px] mt-1", textMuted)} style={{ opacity: 0.6 }}>
             Requires at least 30 days of revenue data
           </p>

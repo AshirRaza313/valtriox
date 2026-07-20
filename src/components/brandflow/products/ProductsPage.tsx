@@ -93,8 +93,11 @@ function formatPrice(price: number): string {
 
 // ── Component ────────────────────────────────────────────────────────────────
 
+import { useTranslation } from "@/lib/i18n";
+
 export function ProductsPage() {
   const { organization, appTheme } = useValtrioxStore();
+  const t = useTranslation();
   const isGold = appTheme === "premium-dark";
   const isDark = appTheme === "dark" || isGold;
 
@@ -452,8 +455,8 @@ export function ProductsPage() {
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold" style={{ fontFamily: "'Cinzel', serif" }}>Products</h1>
-            <p className="text-sm text-slate-500 mt-1">Manage your product catalog</p>
+            <h1 className="text-xl sm:text-2xl font-bold" style={{ fontFamily: "'Cinzel', serif" }}>{t("productsTitle")}</h1>
+            <p className="text-sm text-slate-500 mt-1">{t("productsDesc")}</p>
           </div>
         </div>
         <Card className={cn(
@@ -702,7 +705,7 @@ export function ProductsPage() {
               <div className="relative flex-1">
                 <Search className={cn("absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4", isDark ? "text-slate-400" : "text-slate-500")} />
                 <Input
-                  placeholder="Search by name, SKU, or category..."
+                  placeholder={t("search")}
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className={cn(
@@ -834,7 +837,7 @@ export function ProductsPage() {
               <Card className={cn(isGold ? "premium-card" : isDark ? "premium-card" : "")}>
                 <CardContent className="flex flex-col items-center justify-center py-16 text-center">
                   <Search className={cn("h-12 w-12 mb-4", isDark ? "text-slate-400" : "text-slate-300")} />
-                  <h3 className={cn("text-lg font-semibold mb-1", isDark ? "text-white" : "")}>No results found</h3>
+                  <h3 className={cn("text-lg font-semibold mb-1", isDark ? "text-white" : "")}>{t("noResults")}</h3>
                   <p className={cn("text-sm max-w-sm", isDark ? "text-slate-400" : "text-muted-foreground")}>
                     Try adjusting your search or filter criteria
                   </p>
@@ -1356,7 +1359,7 @@ export function ProductsPage() {
                 <CardContent className="p-4">
                   <div className="flex items-center gap-2 mb-1">
                     <div className="h-2.5 w-2.5 rounded-full bg-red-500" />
-                    <p className={cn("text-[10px] font-medium uppercase tracking-wider", isDark ? "text-slate-400" : "text-muted-foreground")}>Out of Stock</p>
+                    <p className={cn("text-[10px] font-medium uppercase tracking-wider", isDark ? "text-slate-400" : "text-muted-foreground")}>{t("outOfStock")}</p>
                   </div>
                   <p className={cn("text-2xl font-bold", isDark ? "text-red-400" : "text-red-600")}>
                     {products.filter(p => p.stock === 0).length}

@@ -5,6 +5,7 @@ import { useValtrioxStore } from "@/store/brandflow-store";
 import { Card, CardContent } from "@/components/ui/card";
 import { Megaphone, Eye, MousePointerClick, Loader2, ArrowUpRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 import { motion } from "framer-motion";
 
@@ -23,6 +24,7 @@ interface CampaignData {
 
 export function CampaignPerformanceWidget() {
   const { organization, appTheme, setActiveSection } = useValtrioxStore();
+  const t = useTranslation();
   const isGold = appTheme === "premium-dark";
   const isDark = appTheme === "dark" || isGold;
 
@@ -174,7 +176,7 @@ export function CampaignPerformanceWidget() {
 
         {(!data || data.activeCampaigns === 0) && (
           <div className="text-center py-2">
-            <p className={cn("text-xs", textMuted)}>No active campaigns</p>
+            <p className={cn("text-xs", textMuted)}>{t("noCampaigns")}</p>
             <button
               className={cn("text-[10px] font-medium mt-1", isDark ? "text-amber-400" : "text-amber-600")}
               onClick={() => setActiveSection("broadcasts")}

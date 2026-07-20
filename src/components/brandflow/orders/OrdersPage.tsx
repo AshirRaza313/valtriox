@@ -58,6 +58,7 @@ import { StatsCard } from "@/components/brandflow/shared/StatsCard";
 import { OrderModal } from "./OrderModal";
 import { InvoiceGenerator } from "./InvoiceGenerator";
 import { AutoStatusRules } from "./AutoStatusRules";
+import { useTranslation } from "@/lib/i18n";
 import {
   Tooltip,
   TooltipTrigger,
@@ -202,6 +203,7 @@ const getChannelBadgeClasses = (channel: string, isGold: boolean, isDark: boolea
 
 export function OrdersPage() {
   const { organization, appTheme } = useValtrioxStore();
+  const t = useTranslation();
   const isGold = appTheme === "premium-dark";
   const isDark = appTheme === "dark" || isGold;
 
@@ -417,8 +419,8 @@ export function OrdersPage() {
       {/* ── Header ──────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className={cn("text-xl sm:text-2xl font-bold", textPrimary)}>Orders</h1>
-          <p className={cn("text-sm mt-1", textSecondary)}>Manage and track all your orders</p>
+          <h1 className={cn("text-xl sm:text-2xl font-bold", textPrimary)}>{t("ordersTitle")}</h1>
+          <p className={cn("text-sm mt-1", textSecondary)}>{t("ordersDesc")}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button
@@ -431,7 +433,7 @@ export function OrdersPage() {
               isDark && !isGold && "border-white/10 text-slate-300 hover:bg-white/5"
             )}
           >
-            <Download className="mr-2 h-4 w-4" /> Export CSV
+            <Download className="mr-2 h-4 w-4" /> {t("exportCsv")}
           </Button>
           <Button
             variant="outline"
@@ -444,7 +446,7 @@ export function OrdersPage() {
             )}
           >
             <RefreshCw className={cn("mr-2 h-4 w-4", loading && "animate-spin")} />
-            Refresh
+            {t("refresh")}
           </Button>
           <Button
             className={isGold
@@ -453,7 +455,7 @@ export function OrdersPage() {
             }
             onClick={() => setOrderModalOpen(true)}
           >
-            <Plus className="mr-2 h-4 w-4" /> New Order
+            <Plus className="mr-2 h-4 w-4" /> {t("newOrderBtn")}
           </Button>
         </div>
       </div>
@@ -470,31 +472,31 @@ export function OrdersPage() {
         <div className="flex items-center gap-2">
           <ShoppingBag className={cn("h-4 w-4", isGold ? "text-amber-400" : isDark ? "text-amber-400" : "text-amber-600")} />
           <span className={cn("text-sm font-semibold", textPrimary)}>{stats.total}</span>
-          <span className={cn("text-xs", textMuted)}>Total Orders</span>
+          <span className={cn("text-xs", textMuted)}>{t("ordersLabel")}</span>
         </div>
         <div className={cn("h-4 w-px", isDark ? "bg-white/[0.06]" : "bg-slate-200")} />
         <div className="flex items-center gap-2">
           <span className="h-2 w-2 rounded-full bg-amber-500" />
           <span className={cn("text-sm font-medium", textPrimary)}>{stats.pending}</span>
-          <span className={cn("text-xs", textMuted)}>Pending</span>
+          <span className={cn("text-xs", textMuted)}>{t("pending")}</span>
         </div>
         <div className={cn("h-4 w-px", isDark ? "bg-white/[0.06]" : "bg-slate-200")} />
         <div className="flex items-center gap-2">
           <span className="h-2 w-2 rounded-full bg-purple-500" />
           <span className={cn("text-sm font-medium", textPrimary)}>{stats.confirmed + stats.dispatched}</span>
-          <span className={cn("text-xs", textMuted)}>In Progress</span>
+          <span className={cn("text-xs", textMuted)}>{t("inProgress")}</span>
         </div>
         <div className={cn("h-4 w-px", isDark ? "bg-white/[0.06]" : "bg-slate-200")} />
         <div className="flex items-center gap-2">
           <span className="h-2 w-2 rounded-full bg-emerald-500" />
           <span className={cn("text-sm font-medium", textPrimary)}>{stats.delivered}</span>
-          <span className={cn("text-xs", textMuted)}>Delivered</span>
+          <span className={cn("text-xs", textMuted)}>{t("delivered")}</span>
         </div>
         <div className={cn("h-4 w-px", isDark ? "bg-white/[0.06]" : "bg-slate-200")} />
         <div className="flex items-center gap-2">
           <Banknote className={cn("h-4 w-4", isGold ? "text-amber-400" : isDark ? "text-amber-400" : "text-emerald-600")} />
-          <span className={cn("text-sm font-bold", isGold ? "text-amber-400" : textPrimary)}>Rs. {totalRevenue.toLocaleString()}</span>
-          <span className={cn("text-xs", textMuted)}>Revenue</span>
+          <span className={cn("text-sm font-bold", isGold ? "text-amber-400" : textPrimary)}>{t("rupees")} {totalRevenue.toLocaleString()}</span>
+          <span className={cn("text-xs", textMuted)}>{t("revenue")}</span>
         </div>
       </div>
 
@@ -550,7 +552,7 @@ export function OrdersPage() {
         <div className="relative flex-1 w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search orders by #, customer, phone..."
+            placeholder={t("search")}
             value={searchInput}
             onChange={(e) => handleSearchChange(e.target.value)}
             className={cn(
@@ -562,11 +564,11 @@ export function OrdersPage() {
         </div>
         {!loading && orders.length > 0 && (
           <div className={cn("text-xs flex gap-3 flex-shrink-0", textMuted)}>
-            <span>{pagination.totalCount} order{pagination.totalCount !== 1 ? "s" : ""}</span>
+            <span>{pagination.totalCount} {t("ordersLabel").toLowerCase()}</span>
             <span>•</span>
-            <span>{totalItems} item{totalItems !== 1 ? "s" : ""}</span>
+            <span>{totalItems} {t("items")}</span>
             <span>•</span>
-            <span>Rs. {totalRevenue.toLocaleString()}</span>
+            <span>{t("rupees")} {totalRevenue.toLocaleString()}</span>
           </div>
         )}
       </div>
@@ -582,10 +584,10 @@ export function OrdersPage() {
         >
           <Card className={cn(cardClass, "border-red-500/30")}>
             <CardContent className="p-6 text-center">
-              <p className="text-red-500 font-medium mb-2">Failed to load orders</p>
+              <p className="text-red-500 font-medium mb-2">{t("somethingWentWrong")}</p>
               <p className={cn("text-sm mb-4", textMuted)}>{error}</p>
               <Button variant="outline" onClick={() => fetchOrders()}>
-                <RefreshCw className="mr-2 h-4 w-4" /> Try Again
+                <RefreshCw className="mr-2 h-4 w-4" /> {t("retry")}
               </Button>
             </CardContent>
           </Card>

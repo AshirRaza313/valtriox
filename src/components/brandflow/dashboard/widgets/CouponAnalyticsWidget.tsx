@@ -5,6 +5,7 @@ import { useValtrioxStore } from "@/store/brandflow-store";
 import { Card, CardContent } from "@/components/ui/card";
 import { Ticket, Percent, Users, ArrowUpRight, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 
 interface CouponData {
@@ -20,6 +21,7 @@ interface CouponData {
 
 export function CouponAnalyticsWidget() {
   const { organization, appTheme, setActiveSection } = useValtrioxStore();
+  const t = useTranslation();
   const isGold = appTheme === "premium-dark";
   const isDark = appTheme === "dark" || isGold;
 
@@ -142,7 +144,7 @@ export function CouponAnalyticsWidget() {
 
         {(!data || data.activeCoupons === 0) && (
           <div className="text-center py-2">
-            <p className={cn("text-xs", textMuted)}>No coupons yet</p>
+            <p className={cn("text-xs", textMuted)}>{t("noCoupons")}</p>
             <button
               className={cn("text-[10px] font-medium mt-1", isDark ? "text-amber-400" : "text-amber-600")}
               onClick={() => setActiveSection("coupons")}

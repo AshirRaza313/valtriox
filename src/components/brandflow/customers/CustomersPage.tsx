@@ -22,6 +22,7 @@ import { LoadingSkeleton } from "@/components/brandflow/shared/LoadingSkeleton";
 import { ConfirmDialog } from "@/components/brandflow/shared/ConfirmDialog";
 import { CustomerModal } from "./CustomerModal";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
 
 // ─── Types ───────────────────────────────────────────────────────────
@@ -135,6 +136,7 @@ function exportToCSV(customers: Customer[], stats: CustomerStats) {
 
 export function CustomersPage() {
   const { organization, appTheme } = useValtrioxStore();
+  const t = useTranslation();
   const isGold = appTheme === "premium-dark";
   const isDark = appTheme === "dark" || isGold;
 
@@ -300,8 +302,8 @@ export function CustomersPage() {
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className={cn("text-xl sm:text-2xl font-bold", textPrimary)}>Customers</h1>
-            <p className={cn("text-sm mt-1", textSecondary)}>Manage your customer relationships</p>
+            <h1 className={cn("text-xl sm:text-2xl font-bold", textPrimary)}>{t("customersTitle")}</h1>
+            <p className={cn("text-sm mt-1", textSecondary)}>{t("customersDesc")}</p>
           </div>
         </div>
         <Card className="border-red-200 bg-red-50 dark:bg-red-500/10 dark:border-red-500/20">
@@ -494,7 +496,7 @@ export function CustomersPage() {
               <div className="relative flex-1">
                 <Search className={cn("absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4", textMuted)} />
                 <Input
-                  placeholder="Search by name, email, phone, or city..."
+                  placeholder={t("search")}
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className={cn("pl-9", inputClass)}

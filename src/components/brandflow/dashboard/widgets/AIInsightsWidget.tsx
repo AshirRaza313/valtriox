@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Sparkles, TrendingUp, Mail, Users, Loader2, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
+import { useTranslation } from "@/lib/i18n";
 
 interface AIInsight {
   id: string;
@@ -42,6 +43,7 @@ const FALLBACK_INSIGHTS: AIInsight[] = [
 
 export function AIInsightsWidget() {
   const { organization, appTheme } = useValtrioxStore();
+  const t = useTranslation();
   const isGold = appTheme === "premium-dark";
   const isDark = appTheme === "dark" || isGold;
 
@@ -141,7 +143,7 @@ export function AIInsightsWidget() {
         <CardContent className="flex items-center justify-center p-6">
           <div className="flex items-center gap-2">
             <Sparkles className={cn("h-4 w-4 animate-pulse", accentColor)} />
-            <span className={cn("text-xs", textMuted)}>Analyzing your data...</span>
+            <span className={cn("text-xs", textMuted)}>{t("aiGenerating")}</span>
           </div>
         </CardContent>
       </Card>
@@ -158,9 +160,9 @@ export function AIInsightsWidget() {
               <Sparkles className={cn("h-4 w-4", accentColor)} />
             </div>
             <div>
-              <p className={cn("text-xs font-semibold", textPrimary)}>AI Insights</p>
+              <p className={cn("text-xs font-semibold", textPrimary)}>{t("aiInsights")}</p>
               {isAIGenerated && (
-                <p className={cn("text-[10px]", textMuted)}>Powered by AI</p>
+                <p className={cn("text-[10px]", textMuted)}>AI Powered</p>
               )}
             </div>
           </div>

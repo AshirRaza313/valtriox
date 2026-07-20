@@ -4,9 +4,11 @@ import { useValtrioxStore } from "@/store/brandflow-store";
 import { Card, CardContent } from "@/components/ui/card";
 import { CalendarDays, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 
 export function MarketingCalendarWidget() {
   const { appTheme, setActiveSection } = useValtrioxStore();
+  const t = useTranslation();
   const isGold = appTheme === "premium-dark";
   const isDark = appTheme === "dark" || isGold;
 
@@ -31,7 +33,7 @@ export function MarketingCalendarWidget() {
         {/* Empty state */}
         <div className="flex flex-col items-center justify-center py-8 text-center">
           <CalendarDays className={cn("h-8 w-8 mb-2", textMuted)} style={{ opacity: 0.3 }} />
-          <p className={cn("text-xs", textMuted)}>No upcoming marketing events scheduled</p>
+          <p className={cn("text-xs", textMuted)}>{t("noMarketingEvents")}</p>
           <button
             className={cn("mt-2 text-[10px] font-medium px-3 py-1.5 rounded-md transition-colors flex items-center gap-1", isDark ? "text-amber-400 hover:bg-amber-500/10" : "text-amber-600 hover:bg-amber-50")}
             onClick={() => setActiveSection("marketing-calendar")}

@@ -58,6 +58,7 @@ import { cn } from "@/lib/utils";
 import { NotificationCenter } from "@/components/brandflow/shared/NotificationCenter";
 import { DashboardErrorBoundary } from "@/components/brandflow/shared/DashboardErrorBoundary";
 import { useAutoNotifications } from "@/hooks/useAutoNotifications";
+import { useTranslation } from "@/lib/i18n";
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 
@@ -77,6 +78,41 @@ const SECTION_META: Record<
   subscriptions: { group: "Billing", label: "Billing & Plans", icon: null },
   "payment-approvals": { group: "Billing", label: "Payment Approvals", icon: null },
 };
+
+// Map raw SECTION_META labels to i18n keys for translation
+const SECTION_LABEL_KEYS: Record<string, string> = {
+  Dashboard: "dashboard",
+  Orders: "orders",
+  Products: "products",
+  Customers: "customers",
+  Analytics: "analytics",
+  Tasks: "tasks",
+  Coupons: "coupons",
+  Team: "team",
+  Settings: "settings",
+  "Billing & Plans": "subscriptionsTitle",
+  "Payment Approvals": "paymentApprovalsTitle",
+};
+const SECTION_GROUP_KEYS: Record<string, string> = {
+  Home: "main",
+  Operations: "operationsGroup",
+  Catalog: "productsGroup",
+  People: "team",
+  Insights: "analyticsGroup",
+  Workflow: "tasks",
+  Marketing: "marketingGroup",
+  Configuration: "settings",
+  Billing: "billing",
+};
+
+function translateSectionLabel(t: (k: string, fb?: string) => string, raw: string): string {
+  const key = SECTION_LABEL_KEYS[raw];
+  return key ? t(key, raw) : raw;
+}
+function translateSectionGroup(t: (k: string, fb?: string) => string, raw: string): string {
+  const key = SECTION_GROUP_KEYS[raw];
+  return key ? t(key, raw) : raw;
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -131,6 +167,9 @@ export function Header() {
     intervalMs: 30000,
     showToast: true,
   });
+
+  // i18n
+  const t = useTranslation();
 
   // Local state
   const currentTime = useCurrentTime();
@@ -216,20 +255,23 @@ export function Header() {
 
   // Breadcrumb data
   const sectionMeta = SECTION_META[activeSection];
-  const breadcrumbFirst = brandName || "Home";
+  const breadcrumbFirst = brandName || t("main", "Home");
 
   // User initials
   const initials = user?.name ? getInitials(user.name) : "U";
 
-  // Mobile search results
+  // Mobile search results — search across translated labels
   const mobileFilteredResults =
     searchQuery.length > 0
       ? Object.entries(SECTION_META)
-          .filter(
-            ([, meta]) =>
-              (meta.label || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-              (meta.group || "").toLowerCase().includes(searchQuery.toLowerCase())
-          )
+          .filter(([, meta]) => {
+            const label = translateSectionLabel(t, meta.label).toLowerCase();
+            const group = translateSectionGroup(t, meta.group).toLowerCase();
+            const q = searchQuery.toLowerCase();
+            return label.includes(q) || group.includes(q) ||
+              (meta.label || "").toLowerCase().includes(q) ||
+              (meta.group || "").toLowerCase().includes(q);
+          })
           .slice(0, 5)
       : [];
 
@@ -279,7 +321,7 @@ export function Header() {
                 <Menu className="h-4.5 w-4.5" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="bottom">Toggle sidebar</TooltipContent>
+            <TooltipContent side="bottom">{t("toggleSidebar")}</TooltipContent>
           </Tooltip>
 
           {/* Organization badge */}
@@ -311,19 +353,19 @@ export function Header() {
                     textPrimary
                   )}
                 >
-                  {brandName || organization?.name || "My Brand"}
+                  {brandName || organization?.name || t("myBrand")}
                 </span>
                 <Badge
                   className="h-4 px-1.5 text-[9px] font-bold leading-none bg-amber-500/15 text-amber-400 border-amber-500/25 hover:bg-amber-500/20"
                 >
-                  BETA v3.0
+                  {t("betaVersion")}
                 </Badge>
               </button>
             </TooltipTrigger>
             <TooltipContent side="bottom">
               {organization?.plan
-                ? `${organization.name} - ${organization.plan} plan`
-                : "Workspace"}
+                ? `${organization.name} - ${organization.plan} ${t("plan")}`
+                : t("workspace")}
             </TooltipContent>
           </Tooltip>
 
@@ -352,7 +394,7 @@ export function Header() {
                     textSecondary
                   )}
                 >
-                  {sectionMeta?.group}
+                  {translateSectionGroup(t, sectionMeta?.group || "")}
                 </BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator>
@@ -360,7 +402,7 @@ export function Header() {
               </BreadcrumbSeparator>
               <BreadcrumbItem>
                 <BreadcrumbPage className={cn("font-medium", textPrimary)}>
-                  {sectionMeta?.label}
+                  {translateSectionLabel(t, sectionMeta?.label || "")}
                 </BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
@@ -386,7 +428,7 @@ export function Header() {
               <Search className="h-4 w-4" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="bottom">Search</TooltipContent>
+          <TooltipContent side="bottom">{t("search", "Search")}</TooltipContent>
         </Tooltip>
 
         {/* ── Center Section: Global Search (desktop/tablet) ── */}
@@ -419,7 +461,7 @@ export function Header() {
                 }}
                 onFocus={() => setSearchResultsOpen(true)}
                 onBlur={() => setTimeout(() => setSearchResultsOpen(false), 200)}
-                placeholder="Search anything..."
+                placeholder={t("searchAnything")}
                 className={cn(
                   "pl-8 pr-16 h-8 text-[13px] bg-transparent border-0 shadow-none focus-visible:ring-0",
                   textPrimary,
@@ -463,19 +505,18 @@ export function Header() {
                           textSecondary
                         )}
                       >
-                        Quick navigation
+                        {t("quickNavigation")}
                       </p>
                     </div>
                     {Object.entries(SECTION_META)
-                      .filter(
-                        ([, meta]) =>
-                          (meta.label || "")
-                            .toLowerCase()
-                            .includes(searchQuery.toLowerCase()) ||
-                          (meta.group || "")
-                            .toLowerCase()
-                            .includes(searchQuery.toLowerCase())
-                      )
+                      .filter(([, meta]) => {
+                        const label = translateSectionLabel(t, meta.label).toLowerCase();
+                        const group = translateSectionGroup(t, meta.group).toLowerCase();
+                        const q = searchQuery.toLowerCase();
+                        return label.includes(q) || group.includes(q) ||
+                          (meta.label || "").toLowerCase().includes(q) ||
+                          (meta.group || "").toLowerCase().includes(q);
+                      })
                       .slice(0, 5)
                       .map(([key, meta]) => (
                         <button
@@ -506,27 +547,26 @@ export function Header() {
                           </div>
                           <div>
                             <p className={cn("text-[13px] font-medium", textPrimary)}>
-                              {meta.label}
+                              {translateSectionLabel(t, meta.label)}
                             </p>
                             <p className={cn("text-[11px]", textSecondary)}>
-                              {meta.group}
+                              {translateSectionGroup(t, meta.group)}
                             </p>
                           </div>
                         </button>
                       ))}
-                    {Object.entries(SECTION_META).filter(
-                      ([, meta]) =>
-                        (meta.label || "")
-                          .toLowerCase()
-                          .includes(searchQuery.toLowerCase()) ||
-                        (meta.group || "")
-                          .toLowerCase()
-                          .includes(searchQuery.toLowerCase())
-                    ).length === 0 && (
+                    {Object.entries(SECTION_META).filter(([, meta]) => {
+                      const label = translateSectionLabel(t, meta.label).toLowerCase();
+                      const group = translateSectionGroup(t, meta.group).toLowerCase();
+                      const q = searchQuery.toLowerCase();
+                      return label.includes(q) || group.includes(q) ||
+                        (meta.label || "").toLowerCase().includes(q) ||
+                        (meta.group || "").toLowerCase().includes(q);
+                    }).length === 0 && (
                       <div className="px-2 py-6 text-center">
                         <Search className={cn("h-5 w-5 mx-auto mb-2", textSecondary)} />
                         <p className={cn("text-xs", textSecondary)}>
-                          No results for &ldquo;{searchQuery}&rdquo;
+                          {t("noResultsFor")} &ldquo;{searchQuery}&rdquo;
                         </p>
                       </div>
                     )}
@@ -538,7 +578,7 @@ export function Header() {
                     )}
                   >
                     <p className={cn("text-[11px]", textSecondary)}>
-                      Type to search across all sections
+                      {t("typeToSearch")}
                     </p>
                     <div className="flex items-center gap-1">
                       <kbd
@@ -551,7 +591,7 @@ export function Header() {
                       >
                         ↵
                       </kbd>
-                      <span className={cn("text-[10px]", textSecondary)}>select</span>
+                      <span className={cn("text-[10px]", textSecondary)}>{t("select")}</span>
                     </div>
                   </div>
                 </motion.div>
@@ -595,7 +635,7 @@ export function Header() {
               </TooltipTrigger>
               <TooltipContent side="bottom" className="max-w-xs">
                 <p className="font-medium">{formattedDate}</p>
-                <p className="text-xs opacity-70 mt-0.5">Timezone: {timezone}</p>
+                <p className="text-xs opacity-70 mt-0.5">{t("timezone")}: {timezone}</p>
               </TooltipContent>
             </Tooltip>
 
@@ -724,7 +764,7 @@ export function Header() {
                         textPrimary
                       )}
                     >
-                      {user?.name || "User"}
+                      {user?.name || t("user")}
                     </span>
                     {user?.role && (
                       <Badge
@@ -739,7 +779,7 @@ export function Header() {
                     )}
                   </div>
                   <p className={cn("text-[11px] leading-tight mt-0.5", textSecondary)}>
-                    {user?.email || "user@portal.com"}
+                    {user?.email || t("userPlaceholder")}
                   </p>
                 </div>
 
@@ -788,7 +828,7 @@ export function Header() {
                   </div>
                   <div className="min-w-0">
                     <p className={cn("text-sm font-semibold truncate", textPrimary)}>
-                      {user?.name || "User"}
+                      {user?.name || t("user")}
                     </p>
                     <div className="flex items-center gap-1.5 mt-0.5">
                       {user?.role && (
@@ -803,7 +843,7 @@ export function Header() {
                         </Badge>
                       )}
                       <span className="text-[11px] text-slate-400 truncate">
-                        {user?.email || "user@portal.com"}
+                        {user?.email || t("userPlaceholder")}
                       </span>
                     </div>
                   </div>
@@ -814,7 +854,7 @@ export function Header() {
               <DropdownMenuGroup className="gap-0.5">
                 <DropdownMenuItem className="rounded-lg px-2.5 py-2 cursor-pointer text-[13px] focus:bg-white/[0.04]">
                   <User className="mr-2.5 h-4 w-4 text-slate-400" />
-                  Profile
+                  {t("profile")}
                   <DropdownMenuShortcut className="ml-auto text-[11px] text-slate-400">
                     ⇧⌘P
                   </DropdownMenuShortcut>
@@ -824,14 +864,14 @@ export function Header() {
                   className="rounded-lg px-2.5 py-2 cursor-pointer text-[13px] focus:bg-white/[0.04]"
                 >
                   <Settings className="mr-2.5 h-4 w-4 text-slate-400" />
-                  Settings
+                  {t("settings")}
                   <DropdownMenuShortcut className="ml-auto text-[11px] text-slate-400">
                     ⌘,
                   </DropdownMenuShortcut>
                 </DropdownMenuItem>
                 <DropdownMenuItem className="rounded-lg px-2.5 py-2 cursor-pointer text-[13px] focus:bg-white/[0.04]">
                   <HelpCircle className="mr-2.5 h-4 w-4 text-slate-400" />
-                  Help & Support
+                  {t("helpSupport")}
                   <DropdownMenuShortcut className="ml-auto text-[11px] text-slate-400">
                     ⌘?
                   </DropdownMenuShortcut>
@@ -848,7 +888,7 @@ export function Header() {
                 )}
               >
                 <LogOut className="mr-2.5 h-4 w-4" />
-                Sign out
+                {t("logOut")}
                 <DropdownMenuShortcut className="ml-auto text-[11px] text-red-400">
                   ⇧⌘Q
                 </DropdownMenuShortcut>
@@ -887,7 +927,7 @@ export function Header() {
                   ref={mobileSearchRef}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search anything..."
+                  placeholder={t("searchAnything")}
                   className={cn(
                     "pl-9 h-10 text-sm border-0 focus-visible:ring-2",
                     appTheme === "light"
@@ -917,7 +957,7 @@ export function Header() {
                     textSecondary
                   )}
                 >
-                  Quick navigation
+                  {t("quickNavigation")}
                 </p>
                 {mobileFilteredResults.map(([key, meta]) => (
                   <button
@@ -944,9 +984,9 @@ export function Header() {
                     </div>
                     <div>
                       <p className={cn("text-sm font-medium", textPrimary)}>
-                        {meta.label}
+                        {translateSectionLabel(t, meta.label)}
                       </p>
-                      <p className={cn("text-xs", textSecondary)}>{meta.group}</p>
+                      <p className={cn("text-xs", textSecondary)}>{translateSectionGroup(t, meta.group)}</p>
                     </div>
                   </button>
                 ))}
@@ -955,14 +995,14 @@ export function Header() {
               <div className="py-12 text-center">
                 <Search className={cn("h-6 w-6 mx-auto mb-2", textSecondary)} />
                 <p className={cn("text-sm", textSecondary)}>
-                  No results for &ldquo;{searchQuery}&rdquo;
+                  {t("noResultsFor")} &ldquo;{searchQuery}&rdquo;
                 </p>
               </div>
             ) : (
               <div className="py-12 text-center">
                 <Search className={cn("h-6 w-6 mx-auto mb-2", textSecondary)} />
                 <p className={cn("text-sm", textSecondary)}>
-                  Type to search across all sections
+                  {t("typeToSearch")}
                 </p>
               </div>
             )}
