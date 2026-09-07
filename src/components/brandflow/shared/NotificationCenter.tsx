@@ -249,7 +249,7 @@ export function NotificationCenter() {
   const panelRef = useRef<HTMLDivElement>(null);
 
   // Fetch notifications when panel opens (both generated and real db notifications)
-  const fetchNotifications = useCallback(async () => {
+  const fetchNotifications = useCallback(async (rethrow = false) => {
     if (!organization?.id) return;
     setLoading(true);
     try {
@@ -280,6 +280,9 @@ export function NotificationCenter() {
       setNotifications(deduped);
     } catch (err) {
       console.error("Fetch notifications error:", err);
+      if (rethrow) {
+        throw err;
+      }
       toast.error("Failed to load notifications");
     } finally {
       setLoading(false);
@@ -350,7 +353,10 @@ export function NotificationCenter() {
   const markAllRead = useCallback(async () => {
     if (!organization?.id) return;
 
-    // Optimistic UI update — mark all visible as read, reset badge
+    const previousNotifications = notifications;
+    const previousUnreadCount = apiUnreadCount;
+
+    // Optimistic update
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
     setApiUnreadCount(0);
 
@@ -359,16 +365,30 @@ export function NotificationCenter() {
         "/api/db-notifications/mark-all-read?orgId=" + encodeURIComponent(organization.id),
         { method: "POST" }
       );
-      // On success, refetch authoritative state (server returns count but we refresh UI)
-      await fetchNotifications();
-      if (res.ok) {
-        toast.success("All notifications marked as read");
+
+      if (!res.ok) {
+        throw new Error("Mutation failed");
+      }
+
+      toast.success("All notifications marked as read");
+      try {
+        await fetchNotifications(true);
+      } catch {
+        toast.error("Notifications marked as read, but refresh failed. Please refresh manually.");
       }
     } catch {
-      // Network error: refetch authoritative state
-      await fetchNotifications();
+      // Mutation failed: try authoritative refetch
+      try {
+        await fetchNotifications(true);
+        toast.error("Failed to mark all as read");
+      } catch {
+        // Both failed: rollback
+        setNotifications(previousNotifications);
+        setApiUnreadCount(previousUnreadCount);
+        toast.error("Failed to mark as read. Please try again.");
+      }
     }
-  }, [organization?.id, fetchNotifications]);
+  }, [organization?.id, fetchNotifications, notifications, apiUnreadCount]);
 
   const unreadCount = apiUnreadCount;
 
@@ -513,7 +533,7 @@ export function NotificationCenter() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={fetchNotifications}
+                        onClick={() => void fetchNotifications()}
                         disabled={loading}
                         className={cn(
                           "h-7 w-7 rounded-lg",
@@ -621,10 +641,3 @@ export function NotificationCenter() {
     </>
   );
 }
-
-
-
-
-
-
-

@@ -2,7 +2,7 @@
 import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
-import { NotificationCenter } from "@/components/brandflow/shared/NotificationCenter";
+import { NotificationCenter } from "../components/brandflow/shared/NotificationCenter";
 
 vi.mock("@/store/brandflow-store", () => ({
   useValtrioxStore: (selector?: any) => {
@@ -46,8 +46,11 @@ describe("NotificationCenter markAllRead double-failure rollback", () => {
     const bellButton = document.getElementById("notification-bell-btn")!;
     fireEvent.click(bellButton);
 
-    // Wait for notifications to load
-    await waitFor(() => expect(screen.getByText("Test")).toBeTruthy());
+    // Wait for initial notifications to load and assert unread state
+    await waitFor(() => {
+      expect(screen.getByText("Test")).toBeTruthy();
+      expect(screen.getByText("2 unread")).toBeTruthy();
+    });
 
     // Set up mutation POST fail and refetch GET fail
     fetchMock.mockImplementationOnce(async () => ({ ok: false, json: async () => ({}) }));
@@ -57,10 +60,14 @@ describe("NotificationCenter markAllRead double-failure rollback", () => {
     const markAllButtons = screen.getAllByText(/Mark all read/i);
     fireEvent.click(markAllButtons[0]);
 
-    // Wait for rollback to 2
+    // Wait for rollback to 2 and verify state visually
     await waitFor(() => {
-      expect(screen.getByText("2")).toBeTruthy();
+      expect(screen.getByText("2 unread")).toBeTruthy();
     });
+
+    // Assert that notifications are back to previous unread status (dots are visible)
+    // Since both notifications have `read: false`, there should be 2 unread dots
+    const unreadDots = document.querySelectorAll('span.h-2.w-2.rounded-full');
+    expect(unreadDots.length).toBe(2);
   });
 });
-
