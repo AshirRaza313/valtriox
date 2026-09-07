@@ -25,7 +25,7 @@ async function main() {
   console.log(`Environment: ${env}`);
   console.log(`HEAD SHA: ${headSha}`);
 
-  // Verify SELECT-only grants for current_user, PUBLIC, and inherited roles
+  // Verify SELECT-only grants for current_user, PUBLIC, and inherited roles (Table-level)
   const writeGrants = await prisma.$queryRawUnsafe(`
     SELECT table_name, privilege_type, grantee
     FROM information_schema.role_table_grants
@@ -38,9 +38,31 @@ async function main() {
       )
   `) as any[];
 
-  if (writeGrants.length > 0) {
-    console.error("ERROR: current user has effective write privileges on public tables; SELECT-only role required.");
-    console.error(JSON.stringify(writeGrants, null, 2));
+  // Verify SELECT-only grants for current_user, PUBLIC, and inherited roles (Column-level)
+  const columnWriteGrants = await prisma.$queryRawUnsafe(`
+    SELECT table_name, column_name, privilege_type, grantee
+    FROM information_schema.role_column_grants
+    WHERE table_schema = 'public'
+      AND privilege_type IN ('INSERT','UPDATE','REFERENCES')
+      AND (
+        grantee = current_user
+        OR grantee = 'PUBLIC'
+        OR pg_has_role(current_user, grantee, 'member')
+      )
+  `) as any[];
+
+  const writePrivilegesFound = writeGrants.length > 0 || columnWriteGrants.length > 0;
+
+  if (writePrivilegesFound) {
+    console.error("ERROR: current user has effective write privileges on public tables or columns; SELECT-only role required.");
+    if (writeGrants.length > 0) {
+      console.error("Table-level write grants found:");
+      console.error(JSON.stringify(writeGrants, null, 2));
+    }
+    if (columnWriteGrants.length > 0) {
+      console.error("Column-level write grants found:");
+      console.error(JSON.stringify(columnWriteGrants, null, 2));
+    }
     process.exit(1);
   }
 
@@ -54,12 +76,14 @@ async function main() {
   const row = roleRows[0];
   console.log(`Database role: current_user=${row.current_user}, session_user=${row.session_user}`);
   console.log(`Read-only mode: ${row.read_only}, isolation: ${row.isolation}`);
-  if (String(row.read_only).toLowerCase() !== "on") {
+  
+  const isReadOnly = String(row.read_only).toLowerCase() === "on";
+  if (!isReadOnly) {
     console.error("ERROR: transaction_read_only is off; aborting to protect data.");
     process.exit(1);
   }
 
-  console.log("SELECT-only grants verified.");
+  console.log("SELECT-only grants verified (Table & Column level).");
 
   const total = await prisma.notification.count();
   const readCount = await prisma.notification.count({ where: { read: true } });
@@ -117,6 +141,28 @@ async function main() {
       console.log(`  Total: ${totalType}, Last 7 days: ${last7}, Last 30 days: ${last30}`);
     }
   }
+
+  // Protected Execution Receipt Output
+  const executionReceipt = {
+    receipt_type: "PROTECTED_EXECUTION_RECEIPT",
+    timestamp: nowIso,
+    pr_head_sha: headSha,
+    database_role: {
+      current_user: row.current_user,
+      session_user: row.session_user,
+    },
+    grants_summary: {
+      table_count: writeGrants.length,
+      column_count: columnWriteGrants.length,
+      write_privileges_found: writePrivilegesFound,
+    },
+    read_only_mode_status: isReadOnly,
+  };
+
+  console.log("\n===================================================");
+  console.log("Protected Execution Receipt:");
+  console.log(JSON.stringify(executionReceipt, null, 2));
+  console.log("===================================================");
 }
 
 main()
@@ -127,4 +173,3 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
-
