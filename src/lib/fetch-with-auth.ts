@@ -28,8 +28,7 @@ export async function fetchWithAuth(
     init.signal.addEventListener("abort", onExternalAbort, { once: true });
   }
 
-  const cleanup = () => {
-    clearTimeout(timeoutId);
+  const cleanupExternalListener = () => {
     if (init?.signal && onExternalAbort) {
       init.signal.removeEventListener("abort", onExternalAbort);
     }
@@ -41,6 +40,9 @@ export async function fetchWithAuth(
       signal: controller.signal,
     });
 
+    // Headers resolved successfully! Clear the timeout so it doesn't abort the body read.
+    clearTimeout(timeoutId);
+
     const bodyMethods = ["text", "json", "blob", "arrayBuffer", "formData"] as const;
 
     for (const method of bodyMethods) {
@@ -50,7 +52,8 @@ export async function fetchWithAuth(
           try {
             return await original(...args);
           } finally {
-            cleanup();
+            // Cleanup external listener after body read completes or fails
+            cleanupExternalListener();
           }
         };
       }
@@ -58,7 +61,9 @@ export async function fetchWithAuth(
 
     return response;
   } catch (error: any) {
-    cleanup();
+    clearTimeout(timeoutId);
+    cleanupExternalListener();
+    
     if (error?.name === "AbortError") {
       if (externalAbort) throw error;
       throw new Error("Request timed out. Please try again.");
@@ -70,4 +75,3 @@ export async function fetchWithAuth(
 export function getAuthHeaders(): Record<string, string> {
   return {};
 }
-
