@@ -15,6 +15,7 @@ const {
 const { assertConnectedIdentity, validateRehearsalUrl } = require("./safety-guard.cjs");
 
 const BASELINE_MIGRATION = "20260101000000_baseline";
+const FORWARD_MIGRATION = "20260201000000_add_notification_read_receipt";
 const EVIDENCE_DIR = path.resolve("backups/path-b-evidence");
 const migrationName = process.argv[2];
 if (migrationName !== BASELINE_MIGRATION) {
@@ -76,7 +77,7 @@ async function captureDataState(pool, label) {
   `);
   const tables = tableResult.rows.map((row) => row.table_name);
   if (JSON.stringify(tables) !== JSON.stringify([...APPROVED_TABLES].sort())) {
-    console.warn(`${label}: application table set mismatch (ignored for Path-B)`);
+    throw new Error(`${label}: application table set mismatch`);
   }
 
   const fingerprints = [];
@@ -105,7 +106,7 @@ async function captureDataState(pool, label) {
 
 function assertDataUnchanged(before, after) {
   if (before.aggregate_sha256 !== after.aggregate_sha256) {
-    throw new Error("Application data fingerprint changed during migrate resolve");
+    throw new Error("Application data fingerprint changed during migrate resolve and forward deploy");
   }
 }
 
@@ -203,19 +204,31 @@ async function main() {
       { stdio: "inherit", env: process.env }
     );
 
-    const postHistory = await pool.query(
+    const postResolveHistory = await pool.query(
       `SELECT migration_name, finished_at FROM public._prisma_migrations WHERE migration_name = $1`,
       [BASELINE_MIGRATION]
     );
-    if (postHistory.rows.length !== 1 || !postHistory.rows[0].finished_at) {
+    if (postResolveHistory.rows.length !== 1 || !postResolveHistory.rows[0].finished_at) {
       throw new Error("Post-resolve baseline migration history is missing or not finished");
     }
 
-    
-    
+    // Deploy forward migration
+    const deployResult = runPrismaDeploy("after-resolve");
+    if (deployResult.status !== 0) {
+      throw new Error(`Forward migration deploy failed (exit=${deployResult.status})`);
+    }
+
+    const postDeployHistory = await pool.query(
+      `SELECT migration_name, finished_at FROM public._prisma_migrations WHERE migration_name = $1`,
+      [FORWARD_MIGRATION]
+    );
+    if (postDeployHistory.rows.length !== 1 || !postDeployHistory.rows[0].finished_at) {
+      throw new Error("Post-deploy forward migration history is missing or not finished");
+    }
 
     const afterData = await captureDataState(pool, "after-resolve");
-    console.warn("Path-B data fingerprint compare skipped due to table-set delta");
+    assertDataUnchanged(beforeData, afterData);
+
     const afterCatalogPath = path.join(EVIDENCE_DIR, "after-resolve-catalog.json");
     const afterCatalog = await captureFullCatalog({
       connectionString,
@@ -227,7 +240,29 @@ async function main() {
       runAttempt,
       expectedConnectedRole: parsed.expectedConnectedRole,
     });
-    console.warn("Path-B schema fingerprint compare skipped (forward migration may be pending)");
+    
+    // Validate evolved schema (41 tables)
+    const evolvedFixture = JSON.parse(
+      fs.readFileSync("tests/fixtures/expected-evolved-catalog.json", "utf8")
+    );
+    const postconditionDiffs = compareCatalogs(evolvedFixture, afterCatalog, {
+      production: { sourceKind: "versioned_baseline_fixture" },
+      rehearsal: {
+        sourceKind: "database_capture",
+        projectRef: parsed.projectRef,
+        headSha,
+        captureProfile: "generic",
+      },
+    });
+    writeReport(
+      path.join(EVIDENCE_DIR, "after-resolve-catalog-postcondition.txt"),
+      postconditionDiffs
+    );
+    if (postconditionDiffs.length > 0) {
+      throw new Error(
+        `Path-B evolved schema postcondition failed with ${postconditionDiffs.length} catalog difference(s)`
+      );
+    }
 
     const history = await pool.query(`
       SELECT
@@ -240,26 +275,50 @@ async function main() {
       FROM public._prisma_migrations
       ORDER BY started_at
     `);
-    if (history.rows.length !== 1) {
-      throw new Error(`Expected exactly one migration history row, got ${history.rows.length}`);
+    if (history.rows.length !== 2) {
+      throw new Error(`Expected exactly two migration history rows, got ${history.rows.length}`);
     }
-    const row = history.rows[0];
-    const expectedChecksum = sha256(
+
+    const baselineRow = history.rows[0];
+    const forwardRow = history.rows[1];
+
+    const expectedBaselineChecksum = sha256(
       fs.readFileSync(`prisma/migrations/${BASELINE_MIGRATION}/migration.sql`)
     );
-    if (row.migration_name !== BASELINE_MIGRATION) throw new Error("Unexpected migration history name");
-    if (row.checksum !== expectedChecksum) throw new Error("Migration history checksum mismatch");
-    if (!row.finished_at || row.rolled_back_at !== null || row.applied_steps_count !== 0) {
-      throw new Error("Migration history row is not a clean resolve --applied record");
+    const expectedForwardChecksum = sha256(
+      fs.readFileSync(`prisma/migrations/${FORWARD_MIGRATION}/migration.sql`)
+    );
+
+    if (baselineRow.migration_name !== BASELINE_MIGRATION) throw new Error("Unexpected baseline migration history name");
+    if (baselineRow.checksum !== expectedBaselineChecksum) throw new Error("Baseline migration history checksum mismatch");
+    if (!baselineRow.finished_at || baselineRow.rolled_back_at !== null || baselineRow.applied_steps_count !== 0) {
+      throw new Error("Baseline migration history row is not a clean resolve --applied record");
     }
+
+    if (forwardRow.migration_name !== FORWARD_MIGRATION) throw new Error("Unexpected forward migration history name");
+    if (forwardRow.checksum !== expectedForwardChecksum) throw new Error("Forward migration history checksum mismatch");
+    if (!forwardRow.finished_at || forwardRow.rolled_back_at !== null || forwardRow.applied_steps_count !== 1) {
+      throw new Error("Forward migration history row is not a clean deploy record");
+    }
+
     const historyEvidence = {
       exact_history_row_count: history.rows.length,
-      migration_name: row.migration_name,
-      checksum: row.checksum,
-      started_at: row.started_at,
-      finished_at: row.finished_at,
-      rolled_back_at: row.rolled_back_at,
-      applied_steps_count: row.applied_steps_count,
+      baseline: {
+        migration_name: baselineRow.migration_name,
+        checksum: baselineRow.checksum,
+        started_at: baselineRow.started_at,
+        finished_at: baselineRow.finished_at,
+        rolled_back_at: baselineRow.rolled_back_at,
+        applied_steps_count: baselineRow.applied_steps_count,
+      },
+      forward: {
+        migration_name: forwardRow.migration_name,
+        checksum: forwardRow.checksum,
+        started_at: forwardRow.started_at,
+        finished_at: forwardRow.finished_at,
+        rolled_back_at: forwardRow.rolled_back_at,
+        applied_steps_count: forwardRow.applied_steps_count,
+      },
       pr_head_sha: headSha,
       tested_merge_sha: mergeSha,
       run_id: runId,
@@ -275,6 +334,7 @@ async function main() {
       evidence_kind: "synthetic_path_b_adoption",
       production_recovery_proof: false,
       migration_name: BASELINE_MIGRATION,
+      forward_migration_name: FORWARD_MIGRATION,
       pr_head_sha: headSha,
       tested_merge_sha: mergeSha,
       run_id: runId,
@@ -292,7 +352,7 @@ async function main() {
       ),
     };
     writeJson("manifest.json", manifest);
-    console.log("Synthetic Path-B adoption proof complete; schema and data fingerprints are unchanged");
+    console.log("Synthetic Path-B adoption proof complete; evolved schema validated and data fingerprints are unchanged");
   } finally {
     await pool.end();
   }
@@ -302,5 +362,3 @@ main().catch((error) => {
   console.error(error.message);
   process.exit(1);
 });
-
-
