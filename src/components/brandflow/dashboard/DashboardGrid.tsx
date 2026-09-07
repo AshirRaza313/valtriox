@@ -116,7 +116,7 @@ export function DashboardGrid() {
           </div>
           <div>
             <h2 className={cn("text-sm font-bold", textPrimary)}>
-              Dashboard Widgets
+              {t("dashboardWidgets")}
             </h2>
             <p className={cn("text-[10px]", textMuted)}>
               {t("widgetsActiveTotal", { active: availableWidgets.length, total: ALL_WIDGETS.length })}
@@ -249,9 +249,3 @@ export function DashboardGrid() {
     </div>
   );
 }
-
-
-
-
-
-
