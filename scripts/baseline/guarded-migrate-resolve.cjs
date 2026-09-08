@@ -61,7 +61,7 @@ async function captureDataState(pool, label, expectedTables) {
     const canonicalRows = rows.rows.map(r => r.row_json).sort();
     fingerprints.push({ table, rows: canonicalRows.length, sha256: sha256(canonicalRows.join("\n")) });
   }
-  return { label, captured_at_utc: new Date().toISOString(), table_fingerprints: fingerprints, aggregate_sha256: sha256(canonicalJson(fingerprints)) };
+  const state = { label, captured_at_utc: new Date().toISOString(), table_fingerprints: fingerprints, aggregate_sha256: sha256(canonicalJson(fingerprints)) }; writeJson(`${label}-data-state.json`, state); return state;
 }
 
 function assertDataUnchanged(before, after) {
@@ -167,3 +167,4 @@ async function main() {
   } finally { await pool.end(); }
 }
 main().catch((error) => { console.error(error.message); process.exit(1); });
+
