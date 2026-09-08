@@ -1,4 +1,7 @@
 import { PrismaClient } from "@prisma/client";
+import * as path from "path";
+import * as fs from "fs";
+import * as crypto from "crypto";
 
 const readonlyUrl = process.env.DATABASE_URL_READONLY;
 if (!readonlyUrl) {
@@ -115,6 +118,17 @@ async function main() {
   console.log("\n===================================================");
   console.log(JSON.stringify(executionReceipt, null, 2));
   console.log("===================================================");
+  const fs = require("fs");
+  const receiptDir = "backups";
+  if (!fs.existsSync(receiptDir)) fs.mkdirSync(receiptDir, { recursive: true });
+  const receiptPath = path.join(receiptDir, "historical-rows-inventory-receipt.json");
+  fs.writeFileSync(receiptPath, JSON.stringify(executionReceipt, null, 2) + "\n");
+  const crypto = require("crypto");
+  const receiptHash = crypto.createHash("sha256").update(JSON.stringify(executionReceipt)).digest("hex");
+  fs.writeFileSync(receiptPath + ".sha256", receiptHash + "\n");
+  console.log(`Receipt saved: ${receiptPath}`);
 }
 
 main().catch((e) => { console.error("Inventory script failed:", e); process.exit(1); }).finally(() => prisma.$disconnect());
+
+
