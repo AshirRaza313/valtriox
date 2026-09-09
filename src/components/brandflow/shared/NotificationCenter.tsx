@@ -255,7 +255,9 @@ export function NotificationCenter() {
     try {
       // Fetch real db notifications only
       const dbRes = await fetch(`/api/db-notifications?orgId=${organization.id}`);
-
+if (!dbRes.ok) {
+  throw new Error(`Fetch notifications failed with status ${dbRes.status}`);
+}
       const allNotifications: Notification[] = [];
 
       // Merge real db notifications
