@@ -122,9 +122,9 @@ async function main() {
   const receiptDir = "backups";
   if (!fs.existsSync(receiptDir)) fs.mkdirSync(receiptDir, { recursive: true });
   const receiptPath = path.join(receiptDir, "historical-rows-inventory-receipt.json");
-  fs.writeFileSync(receiptPath, JSON.stringify(executionReceipt, null, 2) + "\n");
-  const crypto = require("crypto");
-  const receiptHash = crypto.createHash("sha256").update(JSON.stringify(executionReceipt)).digest("hex");
+  const receiptContent = JSON.stringify(executionReceipt, null, 2) + "\n";
+  fs.writeFileSync(receiptPath, receiptContent);
+  const receiptHash = crypto.createHash("sha256").update(receiptContent).digest("hex");
   fs.writeFileSync(receiptPath + ".sha256", receiptHash + "\n");
   console.log(`Receipt saved: ${receiptPath}`);
 }
