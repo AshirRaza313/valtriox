@@ -1,9 +1,9 @@
 // ============================================================================
 // Authenticated Fetch Utility
 // ============================================================================
-// Wraps native fetch() with a 30-second timeout. Auth is handled
-// automatically by httpOnly + HMAC-signed cookies sent by the browser on
-// every same-origin request — no client-side auth header injection needed.
+// Wraps native fetch() with a 30-second timeout for headers, and a separate
+// 30-second timeout for body consumption so stalled response bodies cannot
+// keep the UI in a permanent loading state.
 // ============================================================================
 
 export async function fetchWithAuth(
@@ -11,14 +11,14 @@ export async function fetchWithAuth(
   init?: RequestInit
 ): Promise<Response> {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 30_000);
+  const headerTimeoutId = setTimeout(() => controller.abort(), 30_000);
 
   let externalAbort = false;
   let onExternalAbort: (() => void) | null = null;
 
   if (init?.signal) {
     if (init.signal.aborted) {
-      clearTimeout(timeoutId);
+      clearTimeout(headerTimeoutId);
       throw new DOMException("The operation was aborted.", "AbortError");
     }
     onExternalAbort = () => {
@@ -40,8 +40,9 @@ export async function fetchWithAuth(
       signal: controller.signal,
     });
 
-    // Headers resolved successfully! Clear the timeout so it doesn't abort the body read.
-    clearTimeout(timeoutId);
+    // Headers resolved successfully — clear the header timeout so it
+    // doesn't interfere with body reading.
+    clearTimeout(headerTimeoutId);
 
     const bodyMethods = ["text", "json", "blob", "arrayBuffer", "formData"] as const;
 
@@ -49,21 +50,36 @@ export async function fetchWithAuth(
       if (typeof (response as any)[method] === "function") {
         const original = (response as any)[method].bind(response);
         (response as any)[method] = async (...args: any[]) => {
-          try {
-            return await original(...args);
-          } finally {
-            // Cleanup external listener after body read completes or fails
+          let bodyTimeoutId: ReturnType<typeof setTimeout> | null = null;
+
+          // Race the original body read against a body timeout.
+          return await new Promise<any>((resolve, reject) => {
+            bodyTimeoutId = setTimeout(() => {
+              reject(new DOMException("Body read timed out.", "TimeoutError"));
+            }, 30_000);
+
+            original(...args)
+              .then((value: any) => {
+                if (bodyTimeoutId) clearTimeout(bodyTimeoutId);
+                resolve(value);
+              })
+              .catch((err: any) => {
+                if (bodyTimeoutId) clearTimeout(bodyTimeoutId);
+                reject(err);
+              });
+          }).finally(() => {
+            // Cleanup external listener after body read completes, fails, or times out
             cleanupExternalListener();
-          }
+          });
         };
       }
     }
 
     return response;
   } catch (error: any) {
-    clearTimeout(timeoutId);
+    clearTimeout(headerTimeoutId);
     cleanupExternalListener();
-    
+
     if (error?.name === "AbortError") {
       if (externalAbort) throw error;
       throw new Error("Request timed out. Please try again.");
