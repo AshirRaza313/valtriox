@@ -133,6 +133,42 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+      # ─────────────────────────────────────────────────────────────────────
+      # Protected inventory audit — exact-head execution proof
+      # ─────────────────────────────────────────────────────────────────────
+      - name: Create readonly DB role for audit
+        env:
+          PGPASSWORD: valtriox_test_pass
+        run: |
+          psql -h localhost -U valtriox_test -d valtriox_test -v ON_ERROR_STOP=1 <<'SQL'
+            DROP ROLE IF EXISTS audit_readonly;
+            CREATE ROLE audit_readonly WITH LOGIN PASSWORD 'audit_pass';
+            GRANT CONNECT ON DATABASE valtriox_test TO audit_readonly;
+            GRANT USAGE ON SCHEMA public TO audit_readonly;
+            GRANT SELECT ON ALL TABLES IN SCHEMA public TO audit_readonly;
+            ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO audit_readonly;
+            ALTER ROLE audit_readonly SET default_transaction_read_only = on;
+          SQL
+
+      - name: Run protected inventory audit (exact-head)
+        if: success()
+        env:
+          DATABASE_URL_READONLY: postgresql://audit_readonly:audit_pass@localhost:5432/valtriox_test
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          NODE_ENV: ci
+        run: npx tsx scripts/historical-rows-inventory.ts
+
+      - name: Upload inventory receipt artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: inventory-receipt-${{ github.event.pull_request.head.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            backups/historical-rows-inventory-receipt.json
+            backups/historical-rows-inventory-receipt.json.sha256
+          if-no-files-found: error
+          retention-days: 30
+
   path-b-migrate-resolve:
     name: Path B - Synthetic Adoption Proof
     runs-on: ubuntu-latest
@@ -154,7 +190,7 @@ jobs:
       CI: "true"
       REHEARSAL_DATABASE_URL: postgresql://valtriox_test:valtriox_test_pass@localhost:5432/valtriox_test
       DATABASE_URL: postgresql://valtriox_test:valtriox_test_pass@localhost:5432/valtriox_test
-      DIRECT_DATABASE_URL: postgresql://valtriox_test:valtriox_test_pass@localhost:5432/valtriox_test
+      DIRECT_DATABASE_URL: postgresql://integration-tests:valtriox_test_pass@localhost:5432/valtriox_test
       PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
       MERGE_SHA: ${{ github.sha }}
       MIGRATION_NAME: 20260101000000_baseline
@@ -259,6 +295,3 @@ jobs:
               exit 1
             fi
           done
-
-
-

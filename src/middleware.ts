@@ -10,10 +10,15 @@ const ALLOWED_ORIGINS = [
 ].filter(Boolean) as string[];
 
 // Generate a cryptographically random nonce for CSP
+// Edge-safe: uses Web APIs only (btoa + Uint8Array), no Node.js Buffer.
 function generateNonce(): string {
   const bytes = new Uint8Array(18);
   crypto.getRandomValues(bytes);
-  return Buffer.from(bytes).toString("base64");
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
 }
 
 export function middleware(request: NextRequest) {
@@ -92,9 +97,21 @@ export function middleware(request: NextRequest) {
     response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()");
     return response;
   } catch (error) {
-    // Fail open to prevent MIDDLEWARE_INVOCATION_FAILED 500s
+    // Fail-open to prevent MIDDLEWARE_INVOCATION_FAILED 500s,
+    // but preserve critical security headers so we never silently
+    // strip baseline protection from end users.
     console.error("Middleware Error:", error);
-    return NextResponse.next();
+    const fallback = NextResponse.next();
+    fallback.headers.set("X-Content-Type-Options", "nosniff");
+    fallback.headers.set("X-Frame-Options", "DENY");
+    fallback.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+    if (process.env.NODE_ENV === "production") {
+      fallback.headers.set(
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains; preload"
+      );
+    }
+    return fallback;
   }
 }
 

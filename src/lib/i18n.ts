@@ -591,7 +591,7 @@ const translations: Record<Language, Record<string, string>> = {
   },
   ur: {
     // ── Navigation / Sidebar ──
-    dashboard: "Aalaat Ka Takhta",
+    dashboard: "Dashboard",
     orders: "Faramaishain",
     products: "Masnooat",
     customers: "Gaahak",
@@ -599,14 +599,14 @@ const translations: Record<Language, Record<string, string>> = {
     calendar: "Tareekh Nama",
     settings: "Tarteebat",
     analytics: "Tajziya",
-    marketing: "Marketing",
+    marketing: "Bazaarigari",
     operations: "Intezaamat",
     connections: "Rabtay",
     guide: "Rehnumai",
     system: "Nizam",
     reports: "Tafseeli Report",
     team: "Amlah",
-    coupons: "Reayat",
+    coupons: "Coupons",
     events: "Taqreebat",
 
     // ── Sidebar Group Labels ──
@@ -634,8 +634,8 @@ const translations: Record<Language, Record<string, string>> = {
     trafficAnalytics: "Gaahako ki Aamad",
     campaigns: "Muheem",
     seoManager: "SEO Manager",
-    socialMedia: "Social Media",
-    emailMarketing: "Email Marketing",
+    socialMedia: "Samaji Media",
+    emailMarketing: "Email Bazaarigari",
     adManager: "Ishtihar Intezam",
     loyaltyProgram: "Inaami Program",
     seasonalSales: "Mausami Faroopt",
@@ -659,7 +659,7 @@ const translations: Record<Language, Record<string, string>> = {
     userGuide: "Rehnuma-e-Sarif",
     brandSettings: "Brand Tarteebat",
     userManagement: "Sarifeen Ka Intezam",
-    adminDashboard: "Admin Ka Takhta",
+    adminDashboard: "Admin Jaiza Panel",
     auditLog: "Ehtisab ka record",
 
     // ── Sub-tab labels ──
@@ -866,7 +866,7 @@ const translations: Record<Language, Record<string, string>> = {
     orderStatus: "Order ki Halat",
     quickActions: "Fauri Iqdamaat",
     newOrder: "Naya Order",
-    addProduct: "Masnoonat Shamil Karein",
+    addProduct: "Masnooat Shamil Karein",
     addCustomer: "Gaahak Shamil Karein",
     viewReports: "Reports Dekhein",
     aiAssistant: "AI Madadgaar",
@@ -1102,9 +1102,9 @@ const translations: Record<Language, Record<string, string>> = {
     slaDisabled: "Off",
 
     // Storage Usage Widget
-    storageTitle: "Zakhira Ka Unwan / Gudaam Ka Unwan",
+    storageTitle: "Zakhira",
     storageEstimated: "(andazan)",
-    storageUnlimited: "Unlimited",
+    storageUnlimited: "Behad",
     storageUsed: "bhari hui",
     storageCritical: "Khatra",
     storageWarning: "Hoshiyar",
@@ -1134,7 +1134,7 @@ const translations: Record<Language, Record<string, string>> = {
     campaignPerformanceActive: "Chalu",
     campaignPerformanceReach: "Pohanch",
     campaignPerformanceConv: "Kamiyabi",
-    couponAnalyticsTitle: "Coupons",
+    couponAnalyticsTitle: "Coupon Tajziya",
     couponAnalyticsActive: "Chalu",
     couponAnalyticsRedeemed: "Istamal kiye gaye",
     couponAnalyticsAvgDisc: "Ausat Reayat",
