@@ -1,0 +1,23 @@
+name: Vercel Runtime Smoke Test
+on:
+  pull_request:
+    types: [synchronize]
+
+jobs:
+  smoke-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for Vercel Deploy
+        run: sleep 60 # Give Vercel time to deploy the preview
+
+      - name: Check Preview Health
+        env:
+          # Replace with actual Vercel preview URL extraction logic or secret
+          PREVIEW_URL: ${{ secrets.VERCEL_PREVIEW_URL }}
+        run: |
+          HTTP_STATUS=$(curl -s -f -o /dev/null -w "%{http_code}" $PREVIEW_URL)
+          if [ "$HTTP_STATUS" -ne 200 ]; then
+            echo "Vercel Runtime returned $HTTP_STATUS. Failing check."
+            exit 1
+          fi
+          echo "Vercel Runtime healthy (200 OK)"

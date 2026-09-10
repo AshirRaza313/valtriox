@@ -2,6 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import * as path from "path";
 import * as fs from "fs";
 import * as crypto from "crypto";
+import { execSync } from "child_process";
 
 const readonlyUrl = process.env.DATABASE_URL_READONLY;
 if (!readonlyUrl) {
@@ -21,14 +22,26 @@ async function main() {
   console.log("===================================================");
   const nowIso = new Date().toISOString();
   const env = process.env.NODE_ENV || "development";
-  const headSha = process.env.PR_HEAD_SHA || (() => {
-    try { return require("child_process").execSync("git rev-parse HEAD").toString().trim(); } catch { return "unknown"; }
-  })();
+  
+  const prHeadSha = process.env.PR_HEAD_SHA || "unknown";
+  let actualGitSha = "unknown";
+  try {
+    actualGitSha = execSync("git rev-parse HEAD").toString().trim();
+  } catch (e) {
+    console.error("Warning: Could not verify checked-out HEAD SHA.", e);
+  }
+
+  if (prHeadSha !== "unknown" && prHeadSha !== actualGitSha) {
+    console.error(`ERROR: PR_HEAD_SHA (${prHeadSha}) does not match checked-out HEAD (${actualGitSha}). Tampering or drift detected.`);
+    process.exit(1);
+  }
+
+  const headSha = actualGitSha;
   console.log(`Timestamp: ${nowIso}`);
   console.log(`Environment: ${env}`);
-  console.log(`HEAD SHA: ${headSha}`);
+  console.log(`Verified HEAD SHA: ${headSha}`);
 
-  // Effective table-level write privileges (handles PUBLIC, inherited roles, ownership)
+  // Effective table-level write privileges
   const tableWriteGrants = await prisma.$queryRawUnsafe(`
     SELECT c.relname AS table_name, p.privilege_type
     FROM pg_catalog.pg_class c
@@ -66,7 +79,13 @@ async function main() {
   console.log(`Read-only mode: ${row.read_only}, isolation: ${row.isolation}`);
   if (String(row.read_only).toLowerCase() !== "on") { console.error("ERROR: transaction_read_only off"); process.exit(1); }
 
-  console.log("SELECT-only grants verified (effective table & column level).");
+  // Restricted accurate claim
+  console.log("Checked table/column DML privileges verified.");
+
+  // Fetch PostgreSQL Version
+  const pgVersionRow = await prisma.$queryRawUnsafe(`SELECT version() AS version`) as any[];
+  const pgVersion = pgVersionRow?.[0]?.version || "unknown";
+  console.log(`PostgreSQL Version: ${pgVersion}`);
 
   // Inventory queries
   const total = await prisma.notification.count();
@@ -110,15 +129,14 @@ async function main() {
   const executionReceipt = {
     receipt_type: "PROTECTED_EXACT_HEAD_EXECUTION_RECEIPT",
     timestamp: nowIso,
-    pr_head_sha: headSha,
+    pr_head_sha: prHeadSha,
+    verified_git_sha: headSha,
     database_role: { current_user: row.current_user, session_user: row.session_user },
     grants_summary: { table_write_count: tableWriteGrants.length, column_write_count: columnWriteGrants.length },
+    pg_version: pgVersion,
     read_only_mode_status: String(row.read_only).toLowerCase() === "on" ? "on" : "off",
   };
-  console.log("\n===================================================");
-  console.log(JSON.stringify(executionReceipt, null, 2));
-  console.log("===================================================");
-  const fs = require("fs");
+  
   const receiptDir = "backups";
   if (!fs.existsSync(receiptDir)) fs.mkdirSync(receiptDir, { recursive: true });
   const receiptPath = path.join(receiptDir, "historical-rows-inventory-receipt.json");
@@ -126,10 +144,11 @@ async function main() {
   fs.writeFileSync(receiptPath, receiptContent);
   const receiptHash = crypto.createHash("sha256").update(receiptContent).digest("hex");
   fs.writeFileSync(receiptPath + ".sha256", receiptHash + "\n");
+  
+  console.log("\n===================================================");
+  console.log(JSON.stringify(executionReceipt, null, 2));
+  console.log("===================================================");
   console.log(`Receipt saved: ${receiptPath}`);
 }
 
 main().catch((e) => { console.error("Inventory script failed:", e); process.exit(1); }).finally(() => prisma.$disconnect());
-
-
-

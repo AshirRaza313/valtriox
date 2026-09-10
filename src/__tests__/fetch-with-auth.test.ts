@@ -4,7 +4,7 @@ import { fetchWithAuth } from "@/lib/fetch-with-auth";
 describe("fetchWithAuth external AbortSignal", () => {
   afterEach(() => {
     vi.restoreAllMocks();
-    globalThis.fetch = globalThis.fetch;
+    vi.useRealTimers();
   });
 
   it("aborts fetch when external signal fires during request", async () => {
@@ -47,7 +47,7 @@ describe("fetchWithAuth external AbortSignal", () => {
     await expect(promise).rejects.toThrow("Aborted");
   });
 
-  it("triggers internal timeout and rejects with timeout error", async () => {
+  it("triggers internal header timeout and rejects with timeout error", async () => {
     vi.useFakeTimers();
     const fetchMock = vi.fn((input: any, init: any) => {
       return new Promise((_, reject) => {
@@ -59,7 +59,6 @@ describe("fetchWithAuth external AbortSignal", () => {
     const promise = fetchWithAuth("/api/test");
     vi.advanceTimersByTime(30_000);
     await expect(promise).rejects.toThrow("Request timed out. Please try again.");
-    vi.useRealTimers();
   });
 
   it("aborts pending body when external signal fires after headers", async () => {
@@ -88,5 +87,75 @@ describe("fetchWithAuth external AbortSignal", () => {
     controller.abort();
     expect(capturedSignal?.aborted).toBe(true);
     await expect(bodyRead).rejects.toThrow("Aborted");
+  });
+
+  it("body timeout aborts underlying transport and rejects with TimeoutError", async () => {
+    vi.useFakeTimers();
+    let capturedSignal: AbortSignal | undefined;
+    let abortFired = false;
+
+    const mockResponse = {
+      status: 200,
+      headers: new Headers({ "Content-Type": "text/plain" }),
+      text: () => new Promise((_, reject) => {
+        capturedSignal!.addEventListener("abort", () => {
+          abortFired = true;
+          reject(new DOMException("Aborted", "AbortError"));
+        }, { once: true });
+      }),
+      ok: true,
+    } as unknown as Response;
+
+    const fetchMock = vi.fn((input: any, init: any) => {
+      capturedSignal = init.signal;
+      return Promise.resolve(mockResponse);
+    });
+    globalThis.fetch = fetchMock as any;
+
+    const result = await fetchWithAuth("/api/test");
+    expect(capturedSignal).toBeDefined();
+    const bodyRead = result.text();
+
+    // Advance past body timeout (30s) — should abort the underlying transport
+    vi.advanceTimersByTime(30_000);
+
+    // Verify underlying signal was actually aborted (transport cancellation)
+    expect(capturedSignal?.aborted).toBe(true);
+    expect(abortFired).toBe(true);
+    await expect(bodyRead).rejects.toThrow("Body read timed out.");
+  });
+
+  it("never-ending body does not leave orphan read after timeout", async () => {
+    vi.useFakeTimers();
+    let capturedSignal: AbortSignal | undefined;
+    let listenerFired = false;
+
+    const mockResponse = {
+      status: 200,
+      headers: new Headers({ "Content-Type": "text/plain" }),
+      text: () => new Promise((_, reject) => {
+        capturedSignal!.addEventListener("abort", () => {
+          listenerFired = true;
+          reject(new DOMException("Aborted", "AbortError"));
+        }, { once: true });
+      }),
+      ok: true,
+    } as unknown as Response;
+
+    const fetchMock = vi.fn((input: any, init: any) => {
+      capturedSignal = init.signal;
+      return Promise.resolve(mockResponse);
+    });
+    globalThis.fetch = fetchMock as any;
+
+    const result = await fetchWithAuth("/api/test");
+    const bodyRead = result.text();
+
+    vi.advanceTimersByTime(30_000);
+
+    // Underlying signal must be aborted — proves transport was cancelled
+    expect(capturedSignal?.aborted).toBe(true);
+    expect(listenerFired).toBe(true);
+    await expect(bodyRead).rejects.toThrow("Body read timed out.");
   });
 });

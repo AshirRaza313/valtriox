@@ -1,9 +1,11 @@
 // ============================================================================
 // Authenticated Fetch Utility
 // ============================================================================
-// Wraps native fetch() with a 30-second timeout for headers, and a separate
-// 30-second timeout for body consumption so stalled response bodies cannot
-// keep the UI in a permanent loading state.
+// Wraps native fetch() with:
+//   - 30-second header timeout (aborts if headers don't resolve in time)
+//   - 30-second body-read timeout (aborts underlying transport if body stalls)
+// Both timeouts use a single AbortController so the underlying transport is
+// actually cancelled — no orphaned body reads remain.
 // ============================================================================
 
 export async function fetchWithAuth(
@@ -14,6 +16,7 @@ export async function fetchWithAuth(
   const headerTimeoutId = setTimeout(() => controller.abort(), 30_000);
 
   let externalAbort = false;
+  let bodyAbort = false;
   let onExternalAbort: (() => void) | null = null;
 
   if (init?.signal) {
@@ -31,6 +34,7 @@ export async function fetchWithAuth(
   const cleanupExternalListener = () => {
     if (init?.signal && onExternalAbort) {
       init.signal.removeEventListener("abort", onExternalAbort);
+      onExternalAbort = null;
     }
   };
 
@@ -40,8 +44,7 @@ export async function fetchWithAuth(
       signal: controller.signal,
     });
 
-    // Headers resolved successfully — clear the header timeout so it
-    // doesn't interfere with body reading.
+    // Headers resolved — clear header timeout so it doesn't fire during body read.
     clearTimeout(headerTimeoutId);
 
     const bodyMethods = ["text", "json", "blob", "arrayBuffer", "formData"] as const;
@@ -50,27 +53,24 @@ export async function fetchWithAuth(
       if (typeof (response as any)[method] === "function") {
         const original = (response as any)[method].bind(response);
         (response as any)[method] = async (...args: any[]) => {
-          let bodyTimeoutId: ReturnType<typeof setTimeout> | null = null;
+          const bodyTimeoutId = setTimeout(() => {
+            bodyAbort = true;
+            // Abort the controller — this actually terminates the underlying
+            // transport and cancels any pending body stream read.
+            controller.abort();
+          }, 30_000);
 
-          // Race the original body read against a body timeout.
-          return await new Promise<any>((resolve, reject) => {
-            bodyTimeoutId = setTimeout(() => {
-              reject(new DOMException("Body read timed out.", "TimeoutError"));
-            }, 30_000);
-
-            original(...args)
-              .then((value: any) => {
-                if (bodyTimeoutId) clearTimeout(bodyTimeoutId);
-                resolve(value);
-              })
-              .catch((err: any) => {
-                if (bodyTimeoutId) clearTimeout(bodyTimeoutId);
-                reject(err);
-              });
-          }).finally(() => {
-            // Cleanup external listener after body read completes, fails, or times out
+          try {
+            return await original(...args);
+          } catch (error: any) {
+            if (error?.name === "AbortError" && bodyAbort && !externalAbort) {
+              throw new DOMException("Body read timed out.", "TimeoutError");
+            }
+            throw error;
+          } finally {
+            clearTimeout(bodyTimeoutId);
             cleanupExternalListener();
-          });
+          }
         };
       }
     }
