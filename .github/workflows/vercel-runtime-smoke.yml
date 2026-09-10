@@ -1,23 +1,133 @@
 name: Vercel Runtime Smoke Test
+
 on:
   pull_request:
-    types: [synchronize]
+    types: [opened, synchronize, reopened]
+    branches: [main]
 
 jobs:
   smoke-test:
+    name: Preview Health Check
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - name: Wait for Vercel Deploy
-        run: sleep 60 # Give Vercel time to deploy the preview
-
-      - name: Check Preview Health
+      - name: Resolve Vercel preview URL for this PR
+        id: resolve
         env:
-          # Replace with actual Vercel preview URL extraction logic or secret
-          PREVIEW_URL: ${{ secrets.VERCEL_PREVIEW_URL }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_BRANCH: ${{ github.head_ref }}
         run: |
-          HTTP_STATUS=$(curl -s -f -o /dev/null -w "%{http_code}" $PREVIEW_URL)
-          if [ "$HTTP_STATUS" -ne 200 ]; then
-            echo "Vercel Runtime returned $HTTP_STATUS. Failing check."
+          set -euo pipefail
+
+          if [ -z "${VERCEL_TOKEN:-}" ]; then
+            echo "::error::VERCEL_TOKEN secret is not configured"
             exit 1
           fi
-          echo "Vercel Runtime healthy (200 OK)"
+          if [ -z "${VERCEL_PROJECT_ID:-}" ]; then
+            echo "::error::VERCEL_PROJECT_ID secret is not configured"
+            exit 1
+          fi
+
+          echo "Looking up preview deployment for:"
+          echo "  branch:    $PR_BRANCH"
+          echo "  head sha:  $PR_HEAD_SHA"
+
+          # Poll up to 10 minutes for a READY deployment matching this PR head sha
+          DEADLINE=$(( $(date +%s) + 600 ))
+          PREVIEW_URL=""
+
+          while [ "$(date +%s)" -lt "$DEADLINE" ]; do
+            RESPONSE=$(curl -sS --fail-with-body \
+              -H "Authorization: Bearer $VERCEL_TOKEN" \
+              "https://api.vercel.com/v6/deployments?projectId=$VERCEL_PROJECT_ID&target=preview&state=READY&limit=20")
+
+            # Prefer exact head sha match, fallback to branch match
+            MATCH=$(echo "$RESPONSE" | jq -r --arg sha "$PR_HEAD_SHA" --arg branch "$PR_BRANCH" '
+              (.deployments // [])
+              | map(select(.meta.githubCommitSha == $sha or .meta.githubCommitRef == $branch))
+              | .[0].url // empty')
+
+            if [ -n "$MATCH" ]; then
+              PREVIEW_URL="https://$MATCH"
+              break
+            fi
+
+            echo "No READY deployment yet — retrying in 15s..."
+            sleep 15
+          done
+
+          if [ -z "$PREVIEW_URL" ]; then
+            echo "::error::Timed out waiting for a READY Vercel preview deployment matching this PR"
+            exit 1
+          fi
+
+          echo "Resolved preview URL: $PREVIEW_URL"
+          echo "PREVIEW_URL=$PREVIEW_URL" >> "$GITHUB_ENV"
+          echo "url=$PREVIEW_URL" >> "$GITHUB_OUTPUT"
+
+      - name: Check preview HTTP health (with retries)
+        env:
+          PREVIEW_URL: ${{ steps.resolve.outputs.url }}
+        run: |
+          set -uo pipefail
+
+          for attempt in 1 2 3 4 5; do
+            echo "Health check attempt $attempt for $PREVIEW_URL"
+
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+              --max-time 30 \
+              "$PREVIEW_URL" || echo "000")
+
+            echo "  HTTP status: $HTTP_STATUS"
+
+            if [ "$HTTP_STATUS" = "200" ]; then
+              echo "✅ Preview healthy (HTTP 200)"
+              exit 0
+            fi
+
+            if [ "$HTTP_STATUS" = "500" ] || [ "$HTTP_STATUS" = "502" ] || [ "$HTTP_STATUS" = "503" ]; then
+              echo "  Server-side error — will retry after backoff"
+            fi
+
+            sleep 15
+          done
+
+          echo "::error::Preview did not return HTTP 200 after 5 attempts (last: $HTTP_STATUS)"
+          exit 1
+
+      - name: Verify middleware headers present
+        env:
+          PREVIEW_URL: ${{ steps.resolve.outputs.url }}
+        run: |
+          set -uo pipefail
+
+          echo "Fetching response headers from $PREVIEW_URL"
+          HEADERS=$(curl -sS -D - -o /dev/null --max-time 30 "$PREVIEW_URL")
+
+          echo "$HEADERS"
+
+          MISSING=""
+          for header in "x-content-type-options" "x-frame-options" "referrer-policy"; do
+            if ! echo "$HEADERS" | grep -qi "^$header:"; then
+              MISSING="$MISSING $header"
+            fi
+          done
+
+          if [ -n "$MISSING" ]; then
+            echo "::error::Missing security headers on preview:$MISSING"
+            exit 1
+          fi
+
+          echo "✅ All baseline security headers present"
+
+      - name: Publish preview evidence
+        if: always()
+        run: |
+          {
+            echo "### Vercel Preview Smoke Test"
+            echo "- Preview URL: ${{ steps.resolve.outputs.url || 'unresolved' }}"
+            echo "- PR head SHA: ${{ github.event.pull_request.head.sha }}"
+            echo "- Run: ${{ github.run_id }} (attempt ${{ github.run_attempt }})"
+          } >> "$GITHUB_STEP_SUMMARY"
