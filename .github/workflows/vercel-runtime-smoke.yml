@@ -70,14 +70,22 @@ jobs:
       - name: Check preview HTTP health (with retries)
         env:
           PREVIEW_URL: ${{ steps.resolve.outputs.url }}
+          BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
         run: |
           set -uo pipefail
+
+          if [ -z "${BYPASS_SECRET:-}" ]; then
+            echo "::error::VERCEL_AUTOMATION_BYPASS_SECRET is not configured"
+            exit 1
+          fi
 
           for attempt in 1 2 3 4 5; do
             echo "Health check attempt $attempt for $PREVIEW_URL"
 
             HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
               --max-time 30 \
+              -H "x-vercel-protection-bypass: $BYPASS_SECRET" \
+              -H "x-vercel-set-bypass-cookie: true" \
               "$PREVIEW_URL" || echo "000")
 
             echo "  HTTP status: $HTTP_STATUS"
@@ -85,10 +93,6 @@ jobs:
             if [ "$HTTP_STATUS" = "200" ]; then
               echo "✅ Preview healthy (HTTP 200)"
               exit 0
-            fi
-
-            if [ "$HTTP_STATUS" = "500" ] || [ "$HTTP_STATUS" = "502" ] || [ "$HTTP_STATUS" = "503" ]; then
-              echo "  Server-side error — will retry after backoff"
             fi
 
             sleep 15
@@ -100,11 +104,15 @@ jobs:
       - name: Verify middleware headers present
         env:
           PREVIEW_URL: ${{ steps.resolve.outputs.url }}
+          BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
         run: |
           set -uo pipefail
 
           echo "Fetching response headers from $PREVIEW_URL"
-          HEADERS=$(curl -sS -D - -o /dev/null --max-time 30 "$PREVIEW_URL")
+          HEADERS=$(curl -sS -D - -o /dev/null --max-time 30 \
+            -H "x-vercel-protection-bypass: $BYPASS_SECRET" \
+            -H "x-vercel-set-bypass-cookie: true" \
+            "$PREVIEW_URL")
 
           echo "$HEADERS"
 
