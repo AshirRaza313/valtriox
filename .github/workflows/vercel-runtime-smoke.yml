@@ -89,9 +89,8 @@ jobs:
           set -uo pipefail
 
           echo "Fetching response headers from $PREVIEW_URL"
-          HEADERS=$(curl -sS -L -D - -o /dev/null --max-time 30 \
+          HEADERS=$(curl -sS -D - -o /dev/null --max-time 30 \
             -H "x-vercel-protection-bypass: $BYPASS_SECRET" \
-            -H "x-vercel-set-bypass-cookie: true" \
             "$PREVIEW_URL")
 
           echo "$HEADERS"
