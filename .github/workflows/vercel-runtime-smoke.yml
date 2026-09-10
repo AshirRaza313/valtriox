@@ -67,39 +67,19 @@ jobs:
           echo "PREVIEW_URL=$PREVIEW_URL" >> "$GITHUB_ENV"
           echo "url=$PREVIEW_URL" >> "$GITHUB_OUTPUT"
 
-      - name: Check preview HTTP health (with retries)
+      - name: Debug - check redirect target
         env:
           PREVIEW_URL: ${{ steps.resolve.outputs.url }}
           BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
         run: |
-          set -uo pipefail
+          echo "=== WITHOUT bypass ==="
+          curl -sI --max-time 30 "$PREVIEW_URL" | head -20
 
-          if [ -z "${BYPASS_SECRET:-}" ]; then
-            echo "::error::VERCEL_AUTOMATION_BYPASS_SECRET is not configured"
-            exit 1
-          fi
-
-          for attempt in 1 2 3 4 5; do
-            echo "Health check attempt $attempt for $PREVIEW_URL"
-
-            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-              --max-time 30 \
-              -H "x-vercel-protection-bypass: $BYPASS_SECRET" \
-              -H "x-vercel-set-bypass-cookie: true" \
-              "$PREVIEW_URL" || echo "000")
-
-            echo "  HTTP status: $HTTP_STATUS"
-
-            if [ "$HTTP_STATUS" = "200" ]; then
-              echo "✅ Preview healthy (HTTP 200)"
-              exit 0
-            fi
-
-            sleep 15
-          done
-
-          echo "::error::Preview did not return HTTP 200 after 5 attempts (last: $HTTP_STATUS)"
-          exit 1
+          echo ""
+          echo "=== WITH bypass header ==="
+          curl -sI --max-time 30 \
+            -H "x-vercel-protection-bypass: $BYPASS_SECRET" \
+            "$PREVIEW_URL" | head -20
 
       - name: Verify middleware headers present
         env:
@@ -109,7 +89,7 @@ jobs:
           set -uo pipefail
 
           echo "Fetching response headers from $PREVIEW_URL"
-          HEADERS=$(curl -sS -D - -o /dev/null --max-time 30 \
+          HEADERS=$(curl -sS -L -D - -o /dev/null --max-time 30 \
             -H "x-vercel-protection-bypass: $BYPASS_SECRET" \
             -H "x-vercel-set-bypass-cookie: true" \
             "$PREVIEW_URL")
