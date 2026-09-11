@@ -13,6 +13,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -24,6 +27,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -35,6 +41,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -46,6 +55,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -153,12 +165,13 @@ jobs:
             ALTER ROLE audit_readonly SET default_transaction_read_only = on;
           SQL
 
-      - name: Run protected inventory audit (exact-head)
+      - name: Run protected inventory audit (exact-head, ci-smoke)
         if: success()
         env:
           DATABASE_URL_READONLY: postgresql://audit_readonly:audit_pass@localhost:5432/valtriox_test
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           NODE_ENV: ci
+          AUDIT_MODE: ci-smoke
         run: npx tsx scripts/historical-rows-inventory.ts
 
       - name: Upload inventory receipt artifact
@@ -263,6 +276,55 @@ jobs:
             echo "- Artifact URL: ${{ steps.upload_path_b.outputs.artifact-url }}"
             echo "- Artifact SHA-256: ${{ steps.upload_path_b.outputs.artifact-digest }}"
             echo "- Inner bundle manifest: backups/path-b-upload-manifest.json"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  real-inventory-audit:
+    name: Real Inventory Audit (Protected)
+    runs-on: ubuntu-latest
+    environment: production-audit
+    # This job only runs when explicitly enabled on the PR via label,
+    # because it uses real production read-only credentials.
+    if: ${{ contains(github.event.pull_request.labels.*.name, 'run-real-audit') }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci
+      - name: Prisma generate
+        run: npx prisma generate
+
+      - name: Run real protected inventory audit
+        env:
+          DATABASE_URL_READONLY: ${{ secrets.REAL_DATABASE_URL_READONLY }}
+          PG_EXPECTED_VERSION: ${{ secrets.PG_EXPECTED_VERSION }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          NODE_ENV: production
+          AUDIT_MODE: real
+        run: npx tsx scripts/historical-rows-inventory.ts
+
+      - name: Upload real inventory receipt
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: real-inventory-receipt-${{ github.event.pull_request.head.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            backups/historical-rows-inventory-receipt.json
+            backups/historical-rows-inventory-receipt.json.sha256
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Publish real audit receipt
+        if: always()
+        run: |
+          {
+            echo "### Real Inventory Audit"
+            echo "- PR head SHA: ${{ github.event.pull_request.head.sha }}"
+            echo "- Receipt: uploaded as artifact"
+            echo "- Run: ${{ github.run_id }} (attempt ${{ github.run_attempt }})"
           } >> "$GITHUB_STEP_SUMMARY"
 
   baseline-validation-gate:
