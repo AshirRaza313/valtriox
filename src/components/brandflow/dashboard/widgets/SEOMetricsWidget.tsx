@@ -41,7 +41,7 @@ export function SEOMetricsWidget() {
             className={cn("text-[10px] font-medium flex items-center gap-0.5", isDark ? "text-amber-400 hover:text-amber-300" : "text-amber-600 hover:text-amber-700")}
             onClick={() => setActiveSection("seo-manager")}
           >
-            Details <ArrowUpRight className="h-2.5 w-2.5" />
+            {t("details")} <ArrowUpRight className="h-2.5 w-2.5" />
           </button>
         </div>
 
@@ -53,7 +53,7 @@ export function SEOMetricsWidget() {
             className={cn("mt-2 text-[10px] font-medium px-3 py-1.5 rounded-md transition-colors", isDark ? "text-amber-400 hover:bg-amber-500/10" : "text-amber-600 hover:bg-amber-50")}
             onClick={() => setActiveSection("seo-manager")}
           >
-            Connect Google Search Console
+            {t("connectGoogleSearchConsole")}
           </button>
         </div>
       </CardContent>

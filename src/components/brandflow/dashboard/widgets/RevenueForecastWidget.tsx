@@ -38,7 +38,7 @@ export function RevenueForecastWidget() {
           <CalendarDays className={cn("h-8 w-8 mb-2", textMuted)} style={{ opacity: 0.3 }} />
           <p className={cn("text-xs", textMuted)}>{t("noForecast")}</p>
           <p className={cn("text-[10px] mt-1", textMuted)} style={{ opacity: 0.6 }}>
-            Requires at least 30 days of revenue data
+            {t("revenueForecastRequires")}
           </p>
         </div>
       </CardContent>

@@ -102,8 +102,7 @@ function getActorInitials(actor: string | undefined): string {
 // ── Component ──
 
 export function ActivityFeed() {
-  
-const t = useTranslation();
+  const t = useTranslation();
   const { organization, appTheme, setActiveSection } = useValtrioxStore();
   const isGold = appTheme === "premium-dark";
   const isDark = appTheme === "dark" || isGold;
@@ -151,7 +150,7 @@ const t = useTranslation();
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className={cn("text-base font-semibold flex items-center gap-2", textPrimary)}>
           <Activity className={cn("h-4 w-4", isGold ? "text-amber-400" : "text-amber-500")} />
-          Activity Feed
+          {t("activityFeed")}
         </CardTitle>
         <Button
           variant="ghost"
@@ -162,7 +161,7 @@ const t = useTranslation();
           )}
           onClick={() => setActiveSection("audit-log")}
         >
-          View All <ArrowRight className="ml-1 h-3 w-3" />
+          {t("viewAll")} <ArrowRight className="ml-1 h-3 w-3" />
         </Button>
       </CardHeader>
       <CardContent>
@@ -214,7 +213,7 @@ const t = useTranslation();
                 onClick={() => setActiveSection("orders")}
               >
                 <ShoppingBag className="w-3 h-3" />
-                Create first order
+                {t("createFirstOrder")}
               </Button>
             </div>
           </motion.div>

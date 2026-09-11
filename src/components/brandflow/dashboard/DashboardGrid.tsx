@@ -207,7 +207,7 @@ export function DashboardGrid() {
               )}
               onClick={() => setActiveSection("subscriptions")}
             >
-              Upgrade <ChevronRight className="h-3 w-3" />
+              {t("upgrade")} <ChevronRight className="h-3 w-3" />
             </button>
           </div>
 

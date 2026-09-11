@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useValtrioxStore } from "@/store/brandflow-store";
 import { getRoleByName } from "@/lib/roles";
+import { useTranslation } from "@/lib/i18n";
 
 interface DashboardHeaderProps {
   onToggleSidebar: () => void;
@@ -32,6 +33,7 @@ function formatLastUpdated(): string {
 
 export function DashboardHeader({ onToggleSidebar }: DashboardHeaderProps) {
   const { user, appTheme } = useValtrioxStore();
+  const t = useTranslation();
   const isDark = appTheme === "dark" || appTheme === "premium-dark";
   const isGold = appTheme === "premium-dark";
 
@@ -83,7 +85,7 @@ export function DashboardHeader({ onToggleSidebar }: DashboardHeaderProps) {
         <div className="relative hidden md:block ml-2">
           <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${isDark ? "text-slate-500" : "text-slate-400"}`} />
           <Input
-            placeholder="Search orders, products, customers..."
+            placeholder={t("searchOrdersProducts")}
             className={`pl-10 w-64 lg:w-80 h-10 transition-all duration-200 focus:ring-2 focus:ring-amber-500/30 ${
               isGold
                 ? "bg-white/[0.04] border-white/[0.08] text-white placeholder:text-slate-500 focus:bg-white/[0.06] focus:border-amber-500/30"

@@ -38,7 +38,7 @@ export function EmailStatsWidget() {
             className={cn("mt-2 text-[10px] font-medium px-3 py-1.5 rounded-md transition-colors", isDark ? "text-amber-400 hover:bg-amber-500/10" : "text-amber-600 hover:bg-amber-50")}
             onClick={() => setActiveSection("email-marketing")}
           >
-            Start Email Marketing
+            {t("startEmailMarketing")}
           </button>
         </div>
       </CardContent>

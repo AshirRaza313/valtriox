@@ -60,8 +60,7 @@ interface DailySummary {
 // ── Component ──
 
 export function DailySummaryWidget() {
-  
-const t = useTranslation();
+  const t = useTranslation();
   const { organization, appTheme } = useValtrioxStore();
   const isGold = appTheme === "premium-dark";
   const isDark = appTheme === "dark" || isGold;
@@ -138,7 +137,7 @@ const t = useTranslation();
       <CardHeader className="pb-3">
         <CardTitle className={cn("text-base font-semibold flex items-center gap-2", textPrimary)}>
           <BarChart3 className={cn("h-4 w-4", accentColor)} />
-          Daily Summary
+          {t("dailySummary")}
           <span className={cn("text-[10px] font-normal ml-auto", textMuted)}>
             {new Date(summary.date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
           </span>

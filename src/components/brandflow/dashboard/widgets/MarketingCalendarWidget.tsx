@@ -39,7 +39,7 @@ export function MarketingCalendarWidget() {
             onClick={() => setActiveSection("marketing-calendar")}
           >
             <Plus className="h-3 w-3" />
-            Create Event
+            {t("createEvent")}
           </button>
         </div>
       </CardContent>

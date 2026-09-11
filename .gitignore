@@ -78,6 +78,11 @@ download/
 worklog.md
 .zscripts/
 mini-services/
+
+# Local audit outputs (not committed)
+hardcoded-output.txt
+hardcoded-strings-output.txt
+hardcoded-strings-report.json
 examples/
 
 # Editor files

@@ -103,7 +103,7 @@ export function CouponAnalyticsWidget() {
             className={cn("text-[10px] font-medium flex items-center gap-0.5", isDark ? "text-amber-400 hover:text-amber-300" : "text-amber-600 hover:text-amber-700")}
             onClick={() => setActiveSection("coupons")}
           >
-            Manage <ArrowUpRight className="h-2.5 w-2.5" />
+            {t("manage")} <ArrowUpRight className="h-2.5 w-2.5" />
           </button>
         </div>
 

@@ -35,7 +35,7 @@ export function PredictiveAnalyticsWidget() {
           <BrainCircuit className={cn("h-8 w-8 mb-2", textMuted)} style={{ opacity: 0.3 }} />
           <p className={cn("text-xs", textMuted)}>{t("predictiveAnalyticsRequire")}</p>
           <p className={cn("text-[10px] mt-1", textMuted)} style={{ opacity: 0.6 }}>
-            Predictions will appear once enough data is collected
+            {t("predictiveAnalyticsWillAppear")}
           </p>
         </div>
       </CardContent>
