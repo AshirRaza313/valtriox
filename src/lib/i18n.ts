@@ -719,7 +719,7 @@ const translations: Record<Language, Record<string, string>> = {
 
     // ── Common Actions ──
     save: "Mehfooz Karein",
-    cancel: "Cancel",
+    cancel: "Radd Karein",
     delete: "Mitayein",
     editBtn: "Tabdeel Karein",
     createBtn: "Banayein",
@@ -782,8 +782,8 @@ const translations: Record<Language, Record<string, string>> = {
     optional: "Marzi Hai",
     enabled: "Chalu",
     disabled: "Band",
-    on: "On",
-    off: "Off",
+    on: "Chalu",
+    off: "Band",
 
     // ── Common Labels ──
     name: "Naam",
@@ -1049,8 +1049,8 @@ const translations: Record<Language, Record<string, string>> = {
 
     // ── Misc ──
     version: "Version",
-    groups: "groups",
-    items: "items",
+    groups: "Majma",
+    items: "cheezein",
     rupees: "Rs.",
     free: "Muft",
     premium: "Premium",
@@ -1097,9 +1097,9 @@ const translations: Record<Language, Record<string, string>> = {
     slaNoOrg: "Koi idara select nahi kiya",
     slaNoOrgDesc: "SLA rules dekhne ke liye idara select karein",
     slaConfigure: "SLA Set Karein",
-    slaActive: "active",
+    slaActive: "chalu",
     slaEnabled: "Chalu",
-    slaDisabled: "Off",
+    slaDisabled: "band",
 
     // Storage Usage Widget
     storageTitle: "Zakhira",
