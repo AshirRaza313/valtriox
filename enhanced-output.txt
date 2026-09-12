@@ -1,0 +1,10 @@
+Enhanced hardcoded candidates: 4933
+
+By category:
+  jsx-text: 2956
+  config-array: 1363
+  prop: 493
+  prop-lowercase: 68
+  jsx-text-lowercase: 53
+
+JSON report: hardcoded-enhanced-report.json

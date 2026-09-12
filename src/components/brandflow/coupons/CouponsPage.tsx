@@ -16,6 +16,7 @@ import { LoadingSkeleton } from "@/components/brandflow/shared/LoadingSkeleton";
 import { StatsCard } from "@/components/brandflow/shared/StatsCard";
 import { cn } from "@/lib/utils";
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
+import { useTranslation } from "@/lib/i18n";
 
 // ── Types ────────────────────────────────────────────────────────────[...]
 
@@ -45,6 +46,7 @@ const subTabs = [
 // ── Component ──────────────────────────────────────────────────────────��[...]
 
 export function CouponsPage() {
+  const t = useTranslation();
   const { organization, appTheme } = useValtrioxStore();
   const isGold = appTheme === "premium-dark";
   const isDark = appTheme === "dark" || isGold;
@@ -267,7 +269,7 @@ export function CouponsPage() {
             className={isGold ? "bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 text-black hover:shadow-[0_4px_20px_rgba(211,166,56,0.3)] hover:-translate-y-0.5" : "bg-amber-600 hover:bg-amber-700 text-white"}
             onClick={openCreate}
           >
-            <Plus className="mr-2 h-4 w-4" /> Create Coupon
+            <Plus className="mr-2 h-4 w-4" /> {t("createCoupon")}
           </Button>
         </div>
       </div>
@@ -399,7 +401,7 @@ export function CouponsPage() {
                       )}
                       onClick={openCreate}
                     >
-                      <Plus className="mr-2 h-4 w-4" /> Create First Coupon
+                      <Plus className="mr-2 h-4 w-4" /> {t("createFirstCoupon")}
                     </Button>
                   ) : (
                     search && (

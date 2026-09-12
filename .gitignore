@@ -78,6 +78,11 @@ download/
 worklog.md
 .zscripts/
 mini-services/
+
+# Local audit outputs (not committed)
+hardcoded-output.txt
+hardcoded-strings-output.txt
+hardcoded-strings-report.json
 examples/
 
 # Editor files
@@ -88,6 +93,21 @@ examples/
 .vscode/
 tool-results/
 backups/
+# Re-open the directory so the evidence exception can be traversed.
+!backups/
+backups/*
+# Allow screenshots (evidence for PRs)
+!backups/screenshots/
+!backups/screenshots/**
 
 # CI-generated catalog comparison (recreated each run)
 docs/baseline-repair/catalog-comparison.txt
+
+# Local scanner outputs
+hardcoded-ast-report.json
+hardcoded-enhanced-report.json
+hardcoded-strings-report.json
+hardcoded-output.txt
+hardcoded-strings-output.txt
+enhanced-output.txt
+ast-output.txt

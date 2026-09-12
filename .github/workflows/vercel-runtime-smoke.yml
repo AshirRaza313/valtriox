@@ -1,0 +1,162 @@
+name: Vercel Runtime Smoke Test
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+
+jobs:
+  smoke-test:
+    name: Preview Health Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Resolve Vercel preview URL for this PR
+        id: resolve
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_PROJECT_ID_BRANDFLOW: ${{ secrets.VERCEL_PROJECT_ID_BRANDFLOW }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${VERCEL_TOKEN:-}" ]; then
+            echo "::error::VERCEL_TOKEN secret is not configured"
+            exit 1
+          fi
+          if [ -z "${VERCEL_PROJECT_ID:-}" ]; then
+            echo "::error::VERCEL_PROJECT_ID secret is not configured"
+            exit 1
+          fi
+
+          resolve_url() {
+            local project_id="$1"
+            local label="$2"
+            local deadline=$(( $(date +%s) + 600 ))
+            local url=""
+
+            while [ "$(date +%s)" -lt "$deadline" ]; do
+              RESPONSE=$(curl -sS --fail-with-body \
+                -H "Authorization: Bearer $VERCEL_TOKEN" \
+                "https://api.vercel.com/v6/deployments?projectId=$project_id&target=preview&state=READY&limit=20")
+
+              # Exact SHA match only. Never fall back to a same-branch deployment.
+              MATCH=$(echo "$RESPONSE" | jq -r --arg sha "$PR_HEAD_SHA" '
+                (.deployments // [])
+                | map(select(.meta.githubCommitSha == $sha))
+                | .[0].url // empty')
+
+              if [ -n "$MATCH" ]; then
+                url="https://$MATCH"
+                break
+              fi
+
+              echo "[$label] No READY deployment for SHA $PR_HEAD_SHA yet — retrying in 15s..." >&2
+              sleep 15
+            done
+
+            echo "$url"
+          }
+
+          VALTRIOX_URL=$(resolve_url "$VERCEL_PROJECT_ID" "valtriox")
+          if [ -z "$VALTRIOX_URL" ]; then
+            echo "::error::Timed out waiting for valtriox preview deployment at SHA $PR_HEAD_SHA"
+            exit 1
+          fi
+          echo "valtriox_url=$VALTRIOX_URL" >> "$GITHUB_OUTPUT"
+
+          if [ -n "${VERCEL_PROJECT_ID_BRANDFLOW:-}" ]; then
+            BRANDFLOW_URL=$(resolve_url "$VERCEL_PROJECT_ID_BRANDFLOW" "brandflow")
+            if [ -z "$BRANDFLOW_URL" ]; then
+              echo "::error::Timed out waiting for brandflow preview deployment at SHA $PR_HEAD_SHA"
+              exit 1
+            fi
+            echo "brandflow_url=$BRANDFLOW_URL" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::VERCEL_PROJECT_ID_BRANDFLOW not set — skipping brandflow check"
+          fi
+
+      - name: Check valtriox preview health
+        env:
+          PREVIEW_URL: ${{ steps.resolve.outputs.valtriox_url }}
+          BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: |
+          set -uo pipefail
+          for attempt in 1 2 3 4 5; do
+            echo "valtriox health attempt $attempt"
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+              --max-time 30 \
+              -H "x-vercel-protection-bypass: $BYPASS_SECRET" \
+              "$PREVIEW_URL" || echo "000")
+            echo "  HTTP: $HTTP_STATUS"
+            if [[ "$HTTP_STATUS" =~ ^2[0-9][0-9]$ ]]; then
+              echo "✅ valtriox healthy"
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "::error::valtriox preview failed (last: $HTTP_STATUS)"
+          exit 1
+
+      - name: Check brandflow preview health
+        if: steps.resolve.outputs.brandflow_url != ''
+        env:
+          PREVIEW_URL: ${{ steps.resolve.outputs.brandflow_url }}
+          BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: |
+          set -uo pipefail
+          for attempt in 1 2 3 4 5; do
+            echo "brandflow health attempt $attempt"
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+              --max-time 30 \
+              -H "x-vercel-protection-bypass: $BYPASS_SECRET" \
+              "$PREVIEW_URL" || echo "000")
+            echo "  HTTP: $HTTP_STATUS"
+            if [[ "$HTTP_STATUS" =~ ^2[0-9][0-9]$ ]]; then
+              echo "✅ brandflow healthy"
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "::error::brandflow preview failed (last: $HTTP_STATUS)"
+          exit 1
+
+      - name: Verify security headers on valtriox
+        env:
+          PREVIEW_URL: ${{ steps.resolve.outputs.valtriox_url }}
+          BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: |
+          set -uo pipefail
+
+          echo "Fetching response headers from $PREVIEW_URL"
+          HEADERS=$(curl -sS -D - -o /dev/null --max-time 30 \
+            -H "x-vercel-protection-bypass: $BYPASS_SECRET" \
+            "$PREVIEW_URL")
+
+          echo "$HEADERS"
+
+          MISSING=""
+          for header in "x-content-type-options" "x-frame-options" "referrer-policy" "permissions-policy"; do
+            if ! echo "$HEADERS" | grep -qi "^$header:"; then
+              MISSING="$MISSING $header"
+            fi
+          done
+
+          if [ -n "$MISSING" ]; then
+            echo "::error::Missing security headers on preview:$MISSING"
+            exit 1
+          fi
+
+          echo "✅ valtriox headers present"
+
+      - name: Publish preview evidence
+        if: always()
+        run: |
+          {
+            echo "### Vercel Preview Smoke Test"
+            echo "- Valtriox URL: ${{ steps.resolve.outputs.valtriox_url || 'unresolved' }}"
+            echo "- Brandflow URL: ${{ steps.resolve.outputs.brandflow_url || 'skipped' }}"
+            echo "- PR head SHA: ${{ github.event.pull_request.head.sha }}"
+            echo "- Run: ${{ github.run_id }} (attempt ${{ github.run_attempt }})"
+          } >> "$GITHUB_STEP_SUMMARY"

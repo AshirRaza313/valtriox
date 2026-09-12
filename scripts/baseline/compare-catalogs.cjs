@@ -274,3 +274,4 @@ module.exports = {
   validateRepositoryHashes,
   writeReport,
 };
+

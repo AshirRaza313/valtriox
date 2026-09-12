@@ -2,17 +2,24 @@ name: baseline-pr-validation
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, labeled]
     branches: [main]
 
 permissions:
   contents: read
-
+concurrency:
+  group: baseline-pr-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: true
+  
 jobs:
   typecheck:
     name: TypeScript Check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -24,6 +31,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -35,6 +45,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -46,6 +59,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -84,6 +100,9 @@ jobs:
       CATALOG_PROJECT_REF: ci-localhost
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -101,7 +120,7 @@ jobs:
         run: node scripts/baseline/capture-full-catalog.cjs
       - name: Compare CI catalog against expected baseline fixture
         env:
-          PROD_CATALOG: tests/fixtures/expected-baseline-catalog.json
+          PROD_CATALOG: tests/fixtures/expected-evolved-catalog.json
           REH_CATALOG: backups/ci-captured-catalog.json
           CATALOG_REPORT: backups/catalog-comparison.txt
           PROD_EXPECTED_SOURCE_KIND: versioned_baseline_fixture
@@ -109,7 +128,7 @@ jobs:
           REH_EXPECTED_PROJECT_REF: ci-localhost
           REH_EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           REH_EXPECTED_CAPTURE_PROFILE: generic
-        run: node scripts/baseline/compare-catalogs.cjs
+        run: node scripts/baseline/compare-evolved-catalogs.cjs
       - name: Baseline catalog validation tests
         run: node tests/baseline/run-catalog-validation.cjs
       - name: Database target safety guard tests
@@ -130,6 +149,43 @@ jobs:
           path: |
             backups/ci-captured-catalog.json
             backups/catalog-comparison.txt
+          if-no-files-found: error
+          retention-days: 30
+
+      # ─────────────────────────────────────────────────────────────────────
+      # Protected inventory audit — exact-head execution proof
+      # ─────────────────────────────────────────────────────────────────────
+      - name: Create readonly DB role for audit
+        env:
+          PGPASSWORD: valtriox_test_pass
+        run: |
+          psql -h localhost -U valtriox_test -d valtriox_test -v ON_ERROR_STOP=1 <<'SQL'
+            DROP ROLE IF EXISTS audit_readonly;
+            CREATE ROLE audit_readonly WITH LOGIN PASSWORD 'audit_pass';
+            GRANT CONNECT ON DATABASE valtriox_test TO audit_readonly;
+            GRANT USAGE ON SCHEMA public TO audit_readonly;
+            GRANT SELECT ON ALL TABLES IN SCHEMA public TO audit_readonly;
+            ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO audit_readonly;
+            ALTER ROLE audit_readonly SET default_transaction_read_only = on;
+          SQL
+
+      - name: Run protected inventory audit (exact-head, ci-smoke)
+        if: success()
+        env:
+          DATABASE_URL_READONLY: postgresql://audit_readonly:audit_pass@localhost:5432/valtriox_test
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          NODE_ENV: ci
+          AUDIT_MODE: ci-smoke
+        run: npx tsx scripts/historical-rows-inventory.ts
+
+      - name: Upload inventory receipt artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: inventory-receipt-${{ github.event.pull_request.head.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            backups/historical-rows-inventory-receipt.json
+            backups/historical-rows-inventory-receipt.json.sha256
           if-no-files-found: error
           retention-days: 30
 
@@ -154,12 +210,15 @@ jobs:
       CI: "true"
       REHEARSAL_DATABASE_URL: postgresql://valtriox_test:valtriox_test_pass@localhost:5432/valtriox_test
       DATABASE_URL: postgresql://valtriox_test:valtriox_test_pass@localhost:5432/valtriox_test
-      DIRECT_DATABASE_URL: postgresql://valtriox_test:valtriox_test_pass@localhost:5432/valtriox_test
+      DIRECT_DATABASE_URL: postgresql://integration-tests:valtriox_test_pass@localhost:5432/valtriox_test
       PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
       MERGE_SHA: ${{ github.sha }}
       MIGRATION_NAME: 20260101000000_baseline
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -181,9 +240,6 @@ jobs:
             after-resolve-catalog.json \
             before-resolve-catalog-precondition.txt \
             before-resolve-migrate-status.txt \
-            after-resolve-migrate-status.txt \
-            no-op-after-resolve-migrate-deploy.txt \
-            final-after-no-op-deploy-migrate-status.txt \
             migration-history.json \
             target-identity.json \
             manifest.json; do

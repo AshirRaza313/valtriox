@@ -320,7 +320,7 @@ export function Sidebar() {
                 {brandTagline ? (
                   <p className="truncate text-[11px] font-medium text-slate-400">{brandTagline}</p>
                 ) : (
-                  <p className="truncate text-[11px] font-medium text-slate-400">COMMAND YOUR BRAND UNIVERSE</p>
+                  <p className="truncate text-[11px] font-medium text-slate-400">{t("brandTagline")}</p>
                 )}
               </div>
             )}
@@ -501,11 +501,11 @@ export function Sidebar() {
                                         <Crown className="h-3 w-3 text-amber-500" />
                                         <span className="font-semibold">{item.label}</span>
                                       </div>
-                                      <p className="text-slate-400">Requires <span className={cn(
+                                      <p className="text-slate-400">{t("requires")} <span className={cn(
                                         "font-medium",
                                         requiredPlan === "enterprise" ? "text-amber-400" : "text-amber-400"
                                       )}>{getPlanDisplayName(requiredPlan)}</span> plan</p>
-                                      <p className="text-slate-500 mt-0.5">Click to upgrade →</p>
+                                      <p className="text-slate-500 mt-0.5">{t("clickToUpgrade")} →</p>
                                     </div>
                                   ) : (
                                     <>
@@ -545,7 +545,7 @@ export function Sidebar() {
                     <ChevronRight className="h-4 w-4" />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent side="right" className="text-xs">Expand Sidebar</TooltipContent>
+                <TooltipContent side="right" className="text-xs">{t("expandSidebar")}</TooltipContent>
               </Tooltip>
             ) : (
               <button
@@ -553,7 +553,7 @@ export function Sidebar() {
                 className="flex items-center justify-center gap-1.5 w-full rounded-lg px-2.5 py-1.5 text-[11px] font-medium uppercase tracking-wider text-slate-400 hover:bg-white/[0.04] hover:text-slate-300 transition-colors"
               >
                 <ChevronLeft className="h-3 w-3" />
-                <span>Collapse</span>
+                <span>{t("collapse")}</span>
               </button>
             )}
           </div>
@@ -601,7 +601,7 @@ export function Sidebar() {
                       <LogOut className="h-3.5 w-3.5" />
                     </button>
                   </TooltipTrigger>
-                  <TooltipContent side="right" className="text-xs">Sign Out</TooltipContent>
+                  <TooltipContent side="right" className="text-xs">{t("signOut")}</TooltipContent>
                 </Tooltip>
               ) : (
                 <button onClick={logout} className={cn(

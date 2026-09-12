@@ -109,6 +109,24 @@ function getRelativeTime(dateStr: string): string {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
+function normalizeDbNotification(n: any): Notification {
+  const rawType = n.type || "info";
+  const knownTypes = [
+    "new_order", "status_change", "low_stock", "task_due", "payment_received",
+    "info", "success", "warning", "error", "invoice_status",
+    "subscription_renewal", "subscription_expired", "trial_expired", "trial_expiring",
+  ];
+  const safeType = knownTypes.includes(rawType) ? rawType : "info";
+  return {
+    id: `db_${n.id}`,
+    type: safeType as NotificationType,
+    title: n.title,
+    description: n.message || "",
+    timestamp: n.createdAt || new Date().toISOString(),
+    read: n.read || false,
+  };
+}
+
 // ── Notification Item ────────────────────────────────────────────────────────
 
 function NotificationItem({
@@ -227,55 +245,27 @@ export function NotificationCenter() {
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
+  const [apiUnreadCount, setApiUnreadCount] = useState(0);
   const panelRef = useRef<HTMLDivElement>(null);
 
   // Fetch notifications when panel opens (both generated and real db notifications)
-  const fetchNotifications = useCallback(async () => {
+  const fetchNotifications = useCallback(async (rethrow = false) => {
     if (!organization?.id) return;
     setLoading(true);
     try {
-      // Fetch generated notifications and real db notifications in parallel
-      const [generatedRes, dbRes] = await Promise.allSettled([
-        fetch(`/api/notifications?orgId=${organization.id}`),
-        fetch(`/api/db-notifications?orgId=${organization.id}`),
-      ]);
-
+      // Fetch real db notifications only
+      const dbRes = await fetch(`/api/db-notifications?orgId=${organization.id}`);
+if (!dbRes.ok) {
+  throw new Error(`Fetch notifications failed with status ${dbRes.status}`);
+}
       const allNotifications: Notification[] = [];
 
-      // Merge generated notifications
-      if (generatedRes.status === "fulfilled" && generatedRes.value.ok) {
-        const data = await generatedRes.value.json();
-        const generated = (data.notifications || []).map((n: any) => ({
-          id: n.id,
-          type: (n.type || "new_order") as NotificationType,
-          title: n.title,
-          description: n.description || n.message || "",
-          timestamp: n.timestamp || n.createdAt || new Date().toISOString(),
-          read: n.read || false,
-          referenceId: n.referenceId,
-          referenceType: n.referenceType,
-        }));
-        allNotifications.push(...generated);
-      }
-
       // Merge real db notifications
-      if (dbRes.status === "fulfilled" && dbRes.value.ok) {
-        const data = await dbRes.value.json();
-        const dbNotifs = (data.notifications || []).map((n: any) => {
-          // Normalize type to a known value — DB can have arbitrary types like "invoice_status"
-          const rawType = n.type || "info";
-          const knownTypes = ["new_order", "status_change", "low_stock", "task_due", "payment_received", "info", "success", "warning", "error", "invoice_status"];
-          const safeType = knownTypes.includes(rawType) ? rawType : "info";
-          return {
-            id: `db_${n.id}`,
-            type: safeType as NotificationType,
-            title: n.title,
-            description: n.message || "",
-            timestamp: n.createdAt || new Date().toISOString(),
-            read: n.read || n.isRead || false,
-          };
-        });
+      if (dbRes.ok) {
+        const data = await dbRes.json();
+        const dbNotifs = (data.notifications || []).map(normalizeDbNotification);
         allNotifications.push(...dbNotifs);
+        setApiUnreadCount(data.unreadCount || 0);
       }
 
       // Sort by timestamp descending, deduplicate by title+timestamp
@@ -292,6 +282,9 @@ export function NotificationCenter() {
       setNotifications(deduped);
     } catch (err) {
       console.error("Fetch notifications error:", err);
+      if (rethrow) {
+        throw err;
+      }
       toast.error("Failed to load notifications");
     } finally {
       setLoading(false);
@@ -333,18 +326,73 @@ export function NotificationCenter() {
     }
   }, [open]);
 
-  const markRead = useCallback((id: string) => {
+  const markRead = useCallback(async (id: string) => {
+    // Optimistic UI update
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, read: true } : n))
     );
+    setApiUnreadCount((prev) => Math.max(0, prev - 1));
+    // Persist to DB — strip db_ prefix for API call
+    const dbId = id.startsWith("db_") ? id.slice(3) : id;
+    try {
+      const res = await fetch(`/api/db-notifications/${dbId}`, { method: "PUT" });
+      if (!res.ok) {
+        // Rollback on failure
+        setNotifications((prev) =>
+          prev.map((n) => (n.id === id ? { ...n, read: false } : n))
+        );
+    setApiUnreadCount((prev) => prev + 1);
+      }
+    } catch {
+      // Rollback on network error
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, read: false } : n))
+      );
+    setApiUnreadCount((prev) => prev + 1);
+    }
   }, []);
 
-  const markAllRead = useCallback(() => {
+  const markAllRead = useCallback(async () => {
+    if (!organization?.id) return;
+
+    const previousNotifications = notifications;
+    const previousUnreadCount = apiUnreadCount;
+
+    // Optimistic update
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-    toast.success("All notifications marked as read");
-  }, []);
+    setApiUnreadCount(0);
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+    try {
+      const res = await fetch(
+        "/api/db-notifications/mark-all-read?orgId=" + encodeURIComponent(organization.id),
+        { method: "POST" }
+      );
+
+      if (!res.ok) {
+        throw new Error("Mutation failed");
+      }
+
+      toast.success("All notifications marked as read");
+      try {
+        await fetchNotifications(true);
+      } catch {
+        toast.error("Notifications marked as read, but refresh failed. Please refresh manually.");
+      }
+    } catch {
+      // Mutation failed: try authoritative refetch
+      try {
+        await fetchNotifications(true);
+        toast.error("Failed to mark all as read");
+      } catch {
+        // Both failed: rollback
+        setNotifications(previousNotifications);
+        setApiUnreadCount(previousUnreadCount);
+        toast.error("Failed to mark as read. Please try again.");
+      }
+    }
+  }, [organization?.id, fetchNotifications, notifications, apiUnreadCount]);
+
+  const unreadCount = apiUnreadCount;
 
   // Panel styling
   const panelBg = isGold
@@ -487,7 +535,7 @@ export function NotificationCenter() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={fetchNotifications}
+                        onClick={() => void fetchNotifications()}
                         disabled={loading}
                         className={cn(
                           "h-7 w-7 rounded-lg",
