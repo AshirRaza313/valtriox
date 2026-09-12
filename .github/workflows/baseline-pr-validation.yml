@@ -7,7 +7,10 @@ on:
 
 permissions:
   contents: read
-
+concurrency:
+  group: baseline-pr-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: true
+  
 jobs:
   typecheck:
     name: TypeScript Check
@@ -213,6 +216,9 @@ jobs:
       MIGRATION_NAME: 20260101000000_baseline
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -287,21 +293,55 @@ jobs:
     # because it uses real production read-only credentials.
     if: ${{ contains(github.event.pull_request.labels.*.name, 'run-real-audit') }}
     steps:
+      # Checkout both PR head and trusted main in separate paths.
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 1
+          path: pr-head
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+          path: trusted-main
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - run: npm ci
+      - name: Install PR dependencies
+        working-directory: pr-head
+        run: npm ci
       - name: Prisma generate
+        working-directory: pr-head
         run: npx prisma generate
 
+      - name: Compute trusted script hash from main
+        id: script_hash
+        run: |
+          TRUSTED_HASH=$(sha256sum trusted-main/scripts/historical-rows-inventory.ts | cut -d' ' -f1)
+          echo "hash=$TRUSTED_HASH" >> "$GITHUB_OUTPUT"
+          echo "Trusted script hash (main): $TRUSTED_HASH"
+
+      - name: Verify PR head script matches trusted main
+        run: |
+          PR_HASH=$(sha256sum pr-head/scripts/historical-rows-inventory.ts | cut -d' ' -f1)
+          TRUSTED_HASH="${{ steps.script_hash.outputs.hash }}"
+          if [ "$PR_HASH" != "$TRUSTED_HASH" ]; then
+            echo "::error::Script integrity failed — PR head script does not match main branch"
+            echo "  PR head hash: $PR_HASH"
+            echo "  Main hash:    $TRUSTED_HASH"
+            exit 1
+          fi
+          echo "✅ Script integrity verified"
+
       - name: Run real protected inventory audit
+        working-directory: pr-head
         env:
           DATABASE_URL_READONLY: ${{ secrets.REAL_DATABASE_URL_READONLY }}
           PG_EXPECTED_VERSION: ${{ secrets.PG_EXPECTED_VERSION }}
+          PG_EXPECTED_HOST: ${{ secrets.PG_EXPECTED_HOST }}
+          PG_EXPECTED_PORT: "5432"
+          PG_EXPECTED_DATABASE: "postgres"
+          EXPECTED_SCRIPT_SHA256: ${{ steps.script_hash.outputs.hash }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           NODE_ENV: production
           AUDIT_MODE: real
@@ -313,8 +353,8 @@ jobs:
         with:
           name: real-inventory-receipt-${{ github.event.pull_request.head.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
-            backups/historical-rows-inventory-receipt.json
-            backups/historical-rows-inventory-receipt.json.sha256
+            pr-head/backups/historical-rows-inventory-receipt.json
+            pr-head/backups/historical-rows-inventory-receipt.json.sha256
           if-no-files-found: error
           retention-days: 90
 

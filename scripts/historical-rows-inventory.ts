@@ -24,8 +24,17 @@ if (!readonlyUrl) {
 }
 
 const pgExpectedVersion = process.env.PG_EXPECTED_VERSION;
+
+// Expected target identity — required in real mode
+const expectedHost = process.env.PG_EXPECTED_HOST;           // e.g., aws-1-ap-south-1.pooler.supabase.com
+const expectedPort = process.env.PG_EXPECTED_PORT || "5432";
+const expectedDatabase = process.env.PG_EXPECTED_DATABASE || "postgres";
 if (IS_REAL_AUDIT && !pgExpectedVersion) {
   console.error("ERROR: PG_EXPECTED_VERSION is required in AUDIT_MODE=real. Refusing to run without version assertion.");
+  process.exit(1);
+}
+if (IS_REAL_AUDIT && !expectedHost) {
+  console.error("ERROR: PG_EXPECTED_HOST is required in AUDIT_MODE=real. Refusing to run without target host assertion.");
   process.exit(1);
 }
 
@@ -72,6 +81,36 @@ function extractTargetFingerprint(url: string): {
   }
 }
 
+// Compute a non-secret fingerprint hash for disclosure-safe verification.
+// SHA-256 of host:port/database — deterministic, one-way, no PII.
+function hashTargetIdentity(host: string, port: string, database: string): string {
+  return crypto
+    .createHash("sha256")
+    .update(`${host}:${port}/${database}`)
+    .digest("hex");
+}
+
+function computeScriptHash(): string {
+  // Compute this script's source hash for independent harness verification.
+  try {
+    const content = fs.readFileSync(__filename);
+    return crypto.createHash("sha256").update(content).digest("hex");
+  } catch {
+    return "unknown";
+  }
+}
+
+const scriptSha256 = computeScriptHash();
+const expectedScriptSha256 = process.env.EXPECTED_SCRIPT_SHA256;
+
+if (IS_REAL_AUDIT && expectedScriptSha256 && expectedScriptSha256 !== scriptSha256) {
+  console.error("ERROR: Script integrity check failed.");
+  console.error(`  expected_script_sha256: ${expectedScriptSha256}`);
+  console.error(`  actual_script_sha256:   ${scriptSha256}`);
+  console.error("  The audit script has been modified since review.");
+  process.exit(1);
+}
+
 async function main() {
   console.log(`Historical Notification Inventory (Read-Only Audit)`);
   console.log(`===================================================`);
@@ -99,6 +138,39 @@ async function main() {
   console.log(`Timestamp: ${nowIso}`);
   console.log(`Environment: ${env}`);
   console.log(`Verified HEAD SHA: ${headSha}`);
+
+  // ──────────────────────────────────────────────────────────────────────
+  // SECURITY: Verify target identity BEFORE any database query.
+  // Fail-closed: if expected host doesn't match, exit immediately.
+  // Uses hash-based comparison — no raw host in logs/receipt.
+  // ──────────────────────────────────────────────────────────────────────
+  const targetFingerprint = extractTargetFingerprint(readonlyUrl!);
+  const expectedHash = hashTargetIdentity(expectedHost!, expectedPort, expectedDatabase);
+  const actualHash = hashTargetIdentity(
+    targetFingerprint.host,
+    targetFingerprint.port,
+    targetFingerprint.database
+  );
+
+  if (IS_REAL_AUDIT) {
+    if (expectedHash !== actualHash) {
+      console.error("ERROR: Target identity mismatch. Refusing to proceed.");
+      console.error(`  expected_hash: ${expectedHash}`);
+      console.error(`  actual_hash:   ${actualHash}`);
+      console.error("  (Full target details withheld from logs for security.)");
+      process.exit(1);
+    }
+    console.log(`✅ Target identity verified (hash match: ${actualHash.slice(0, 16)}...)`);
+
+    // Defense in depth: real audits must never use localhost.
+    if (targetFingerprint.is_localhost) {
+      console.error("ERROR: Real audit mode requires non-localhost target.");
+      process.exit(1);
+    }
+  } else {
+    console.log(`Target: ${targetFingerprint.host}:${targetFingerprint.port}/${targetFingerprint.database}`);
+    console.log(`  is_localhost: ${targetFingerprint.is_localhost}`);
+  }
 
   // ── Table-level write privilege check ───────────────────────────────────
   const tableWriteGrants = (await prisma.$queryRawUnsafe(`
@@ -234,20 +306,10 @@ async function main() {
     }
   }
 
-  // ── Target identity fingerprint (non-secret) ────────────────────────────
-  const targetFingerprint = extractTargetFingerprint(readonlyUrl!);
-  console.log(
-    `\nTarget identity: ${targetFingerprint.host}:${targetFingerprint.port}/${targetFingerprint.database}`
-  );
+  // ── Target identity classification ──────────────────────────────────────
+  console.log(`\nTarget identity hash: ${actualHash.slice(0, 16)}...`);
   console.log(`  is_localhost: ${targetFingerprint.is_localhost}`);
   console.log(`  is_supabase_pooler: ${targetFingerprint.is_supabase_pooler}`);
-
-  if (IS_REAL_AUDIT && targetFingerprint.is_localhost) {
-    console.error(
-      "ERROR: Real audit mode requires a non-localhost target. Got localhost — refusing to emit receipt."
-    );
-    process.exit(1);
-  }
 
   // ── Receipt ─────────────────────────────────────────────────────────────
   const executionReceipt = {
@@ -256,17 +318,21 @@ async function main() {
     timestamp: nowIso,
     pr_head_sha: prHeadSha,
     verified_git_sha: headSha,
+    script_sha256: scriptSha256,
+    script_hash_verified: IS_REAL_AUDIT && !!expectedScriptSha256
+      ? expectedScriptSha256 === scriptSha256
+      : null,
     database_role: {
       current_user: row.current_user,
       session_user: row.session_user,
     },
     target_identity: {
-      host: targetFingerprint.host,
-      port: targetFingerprint.port,
-      database: targetFingerprint.database,
-      scheme: targetFingerprint.scheme,
+      // Minimum-disclosure: hashes only, no raw values.
+      expected_hash: expectedHash,
+      actual_hash: actualHash,
+      match: expectedHash === actualHash,
       is_localhost: targetFingerprint.is_localhost,
-      is_supabase_pooler: targetFingerprint.is_supabase_pooler,
+      scheme: targetFingerprint.scheme,
     },
     grants_summary: {
       table_write_count: tableWriteGrants.length,
