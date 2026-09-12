@@ -93,6 +93,12 @@ examples/
 .vscode/
 tool-results/
 backups/
+# Re-open the directory so the evidence exception can be traversed.
+!backups/
+backups/*
+# Allow screenshots (evidence for PRs)
+!backups/screenshots/
+!backups/screenshots/**
 
 # CI-generated catalog comparison (recreated each run)
 docs/baseline-repair/catalog-comparison.txt
