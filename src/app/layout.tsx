@@ -8,6 +8,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { PlatformIdentityProvider } from "@/lib/platform-identity";
 import { ReactQueryProvider } from "@/lib/react-query-provider";
 import { ServiceWorkerRegistrar } from "@/components/ServiceWorkerRegistrar";
+import MetaPixel from "@/components/MetaPixel";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -270,35 +271,7 @@ export default async function RootLayout({
         <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
         <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
         <link rel="dns-prefetch" href="https://va.vercel-scripts.com" />
-        {/* Meta Pixel - fires fbq('track', 'Lead') on Thank You page */}
-        {process.env.NEXT_PUBLIC_META_PIXEL_ID && (
-          <>
-            <Script id="meta-pixel" strategy="afterInteractive" nonce={nonce}>
-              {`
-                !function(f,b,e,v,n,t,s)
-                {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-                n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-                if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-                n.queue=[];t=b.createElement(e);t.async=!0;
-                t.src=v;s=b.getElementsByTagName(e)[0];
-                s.parentNode.insertBefore(t,s)}(window, document,'script',
-                'https://connect.facebook.net/en_US/fbevents.js');
-                fbq('init', '${process.env.NEXT_PUBLIC_META_PIXEL_ID}');
-                fbq('track', 'PageView');
-              `}
-            </Script>
-            {/* @ts-expect-error suppressHydrationWarning needed for noscript in head */}
-            <noscript suppressHydrationWarning>
-              <img
-                height="1"
-                width="1"
-                style={{ display: 'none' }}
-                src={`https://www.facebook.com/tr?id=${process.env.NEXT_PUBLIC_META_PIXEL_ID}&ev=PageView&noscript=1`}
-                alt=""
-              />
-            </noscript>
-          </>
-        )}
+
         {/* Google Analytics - fires gtag('event', 'generate_lead') on Thank You page */}
         {process.env.NEXT_PUBLIC_GA_ID && (
           <>
@@ -507,6 +480,7 @@ export default async function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} ${cinzel.variable} antialiased bg-background text-foreground`}
         suppressHydrationWarning
       >
+        <MetaPixel />
         <ReactQueryProvider>
           <PlatformIdentityProvider>
             {children}
