@@ -10,7 +10,10 @@ on:
   workflow_run:
     workflows: ["baseline-pr-validation"]
     types: [completed]
-
+# Per-branch concurrency — new runs for the same PR branch cancel older ones
+concurrency:
+  group: audit-harness-pr-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: true
 permissions:
   contents: read
   pull-requests: read
@@ -51,11 +54,14 @@ jobs:
     runs-on: ubuntu-latest
     environment: production-audit
     steps:
-      - name: Checkout trusted main
+      - name: Checkout trusted harness (pinned immutable commit)
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
         with:
-          ref: main
+          # PINNED to reviewed harness commit — update only via reviewed PR
+          # (placeholders; replace with actual commit SHA after bootstrap merge)
+          ref: ${{ secrets.TRUSTED_HARNESS_SHA }}
           fetch-depth: 1
+          persist-credentials: false
 
       - uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af  # v4.1.0
         with:

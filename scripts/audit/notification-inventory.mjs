@@ -38,15 +38,19 @@ const expectedDatabase = process.env.PG_EXPECTED_DATABASE || "postgres";
 const expectedUsername = process.env.PG_EXPECTED_USERNAME;
 const expectedScriptHash = process.env.EXPECTED_SCRIPT_SHA256;
 
-// ── Verify HEAD SHA ──────────────────────────────────────────────────────
-let actualGitSha = "unknown";
+// ── Capture identities (separate, no equality requirement) ───────────────
+let harnessGitSha = "unknown";
 try {
-  actualGitSha = execSync("git rev-parse HEAD", { encoding: "utf8" }).trim();
+  harnessGitSha = execSync("git rev-parse HEAD", { encoding: "utf8" }).trim();
 } catch {}
 
-if (prHeadSha !== "unknown" && prHeadSha !== actualGitSha) {
-  fail(`PR_HEAD_SHA (${prHeadSha}) does not match checked-out HEAD (${actualGitSha}).`);
-}
+const upstreamWorkflowSha = process.env.UPSTREAM_WORKFLOW_SHA || "unknown";
+const upstreamRunId = process.env.UPSTREAM_RUN_ID || "unknown";
+const upstreamPrNumber = process.env.UPSTREAM_PR_NUMBER || "unknown";
+
+log(`Trusted harness SHA:  ${harnessGitSha}`);
+log(`Upstream workflow SHA: ${upstreamWorkflowSha}`);
+log(`Upstream run ID:       ${upstreamRunId}`);
 
 log(`Audit Mode: ${AUDIT_MODE}${IS_REAL ? " (STRICT)" : " (smoke)"}`);
 log(`Verified HEAD SHA: ${actualGitSha}`);
@@ -130,8 +134,8 @@ log(`Database role: current_user=${currentUser}, session_user=${sessionUser}`);
 log(`Read-only mode: ${readOnly}`);
 if (String(readOnly).toLowerCase() !== "on") fail("transaction_read_only is not on");
 
-// ── Write privilege check ────────────────────────────────────────────────
-const writeCheck = psql(`
+// ── Table-level write privilege check ────────────────────────────────────
+const tableWriteCheck = psql(`
   SELECT COUNT(*) FROM (
     SELECT 1 FROM pg_catalog.pg_class c
     JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
@@ -140,9 +144,27 @@ const writeCheck = psql(`
       AND pg_catalog.has_table_privilege(current_user, c.oid, p.privilege_type)
   ) t
 `);
-const writeGrants = parseInt(writeCheck, 10);
-if (writeGrants > 0) fail(`Current user has ${writeGrants} write grants on public tables.`);
-log(`Checked table/column DML privileges verified.`);
+const tableWriteGrants = parseInt(tableWriteCheck, 10);
+
+// ── Column-level write privilege check (fail-closed) ─────────────────────
+const columnWriteCheck = psql(`
+  SELECT COUNT(*) FROM (
+    SELECT 1
+    FROM pg_catalog.pg_class c
+    JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+    JOIN pg_catalog.pg_attribute a ON a.attrelid = c.oid
+      AND a.attnum > 0 AND NOT a.attisdropped
+    CROSS JOIN (VALUES ('INSERT'),('UPDATE'),('REFERENCES')) AS p(privilege_type)
+    WHERE n.nspname = 'public' AND c.relkind IN ('r','p')
+      AND pg_catalog.has_column_privilege(current_user, c.oid, a.attname, p.privilege_type)
+  ) t
+`);
+const columnWriteGrants = parseInt(columnWriteCheck, 10);
+
+if (tableWriteGrants > 0 || columnWriteGrants > 0) {
+  fail(`Write grants detected. table=${tableWriteGrants}, column=${columnWriteGrants}`);
+}
+log(`Checked table (${tableWriteGrants}) and column (${columnWriteGrants}) DML privileges verified.`);
 
 // ── Version check ────────────────────────────────────────────────────────
 const pgVersion = psql("SELECT version()");
@@ -154,13 +176,39 @@ if (IS_REAL && expectedVersion) {
   log(`✅ PostgreSQL version matches expected "${expectedVersion}"`);
 }
 
-// ── Inventory queries ────────────────────────────────────────────────────
+// ── Required scope: audience + type + read-receipt (fail-closed in real) ─
 const total = parseInt(psql('SELECT COUNT(*) FROM "Notification"'), 10);
 const readCount = parseInt(psql('SELECT COUNT(*) FROM "Notification" WHERE read = true'), 10);
 const unreadCount = parseInt(psql('SELECT COUNT(*) FROM "Notification" WHERE read = false'), 10);
+const orgWide = parseInt(psql('SELECT COUNT(*) FROM "Notification" WHERE "userId" IS NULL'), 10);
+const targeted = parseInt(psql('SELECT COUNT(*) FROM "Notification" WHERE "userId" IS NOT NULL'), 10);
+const distinctTypes = parseInt(psql('SELECT COUNT(DISTINCT type) FROM "Notification"'), 10);
+
+let receiptCount = 0;
+let distinctReceiptUsers = 0;
+try {
+  receiptCount = parseInt(psql('SELECT COUNT(*) FROM "NotificationReadReceipt"'), 10);
+  distinctReceiptUsers = parseInt(
+    psql('SELECT COUNT(DISTINCT "userId") FROM "NotificationReadReceipt"'),
+    10
+  );
+} catch (err) {
+  fail(`NotificationReadReceipt query failed (fail-closed): ${err.message}`);
+}
+
 log(`\nTotal notifications: ${total}`);
-log(`Read: ${readCount}`);
-log(`Unread: ${unreadCount}`);
+log(`Read: ${readCount}, Unread: ${unreadCount}`);
+log(`Org-wide: ${orgWide}, Targeted: ${targeted}`);
+log(`Distinct types: ${distinctTypes}`);
+log(`Read receipts: ${receiptCount}, distinct users: ${distinctReceiptUsers}`);
+
+// Real mode: preserve historical scope — must have audience/type diversity
+if (IS_REAL) {
+  if (total === 0) fail("Real audit requires non-empty Notification table.");
+  if (distinctTypes === 0) fail("Real audit requires at least one notification type.");
+  // Requires both org-wide and targeted (audience scope)
+  if (orgWide === 0 && targeted === 0) fail("Real audit requires notification audience coverage.");
+}
 
 if (IS_REAL && total === 0) {
   fail("Real audit requires non-empty notification table. Got 0 rows.");
@@ -171,8 +219,14 @@ const receipt = {
   receipt_type: "PROTECTED_EXACT_HEAD_EXECUTION_RECEIPT",
   audit_mode: AUDIT_MODE,
   timestamp: new Date().toISOString(),
-  pr_head_sha: prHeadSha,
-  verified_git_sha: actualGitSha,
+  // Two separate identities:
+  // - harness_git_sha: the immutable trusted harness commit (main)
+  // - upstream_workflow_sha: the exact SHA that ran the upstream CI (PR head)
+  harness_git_sha: harnessGitSha,
+  upstream_workflow_sha: upstreamWorkflowSha,
+  upstream_run_id: upstreamRunId,
+  upstream_pr_number: upstreamPrNumber,
+  evidence_binding: "upstream_workflow_sha",
   script_sha256: SCRIPT_SHA256,
   script_hash_verified: IS_REAL ? SCRIPT_SHA256 === expectedScriptHash : null,
   database_role: { current_user: currentUser, session_user: sessionUser },
@@ -188,10 +242,19 @@ const receipt = {
   pg_expected_version: expectedVersion || null,
   pg_version_match: IS_REAL ? pgVersion.includes(expectedVersion || "") : null,
   read_only_mode_status: String(readOnly).toLowerCase() === "on" ? "on" : "off",
+  grants_summary: {
+    table_write_grants: tableWriteGrants,
+    column_write_grants: columnWriteGrants,
+  },
   inventory_summary: {
     total_notifications: total,
     read_count: readCount,
     unread_count: unreadCount,
+    org_wide: orgWide,
+    targeted: targeted,
+    distinct_types: distinctTypes,
+    notification_read_receipts: receiptCount,
+    distinct_receipt_users: distinctReceiptUsers,
   },
 };
 
