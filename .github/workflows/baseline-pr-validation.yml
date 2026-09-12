@@ -2,10 +2,15 @@ name: baseline-pr-validation
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, labeled]
     branches: [main]
 
 permissions:
   contents: read
+
+concurrency:
+  group: baseline-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
 jobs:
   typecheck:

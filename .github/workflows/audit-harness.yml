@@ -1,0 +1,98 @@
+name: audit-harness
+
+# ============================================================================
+# TRUSTED audit workflow — runs from main (base branch), NOT from PR.
+# Uses workflow_run trigger so the workflow definition cannot be modified
+# by any PR.
+# ============================================================================
+
+on:
+  workflow_run:
+    workflows: ["baseline-pr-validation"]
+    types: [completed]
+# Per-branch concurrency — new runs for the same PR branch cancel older ones
+concurrency:
+  group: audit-harness-pr-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  detect-label:
+    name: Detect run-real-audit label
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    outputs:
+      has_label: ${{ steps.check.outputs.has_label }}
+      pr_head_sha: ${{ steps.check.outputs.pr_head_sha }}
+    steps:
+      - id: check
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
+        with:
+          script: |
+            const prs = context.payload.workflow_run.pull_requests || [];
+            if (prs.length === 0) {
+              core.setOutput('has_label', 'false');
+              return;
+            }
+            const prNumber = prs[0].number;
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+            });
+            const hasLabel = pr.labels.some(l => l.name === 'run-real-audit');
+            core.setOutput('has_label', hasLabel ? 'true' : 'false');
+            core.setOutput('pr_head_sha', pr.head.sha);
+            core.info(`PR #${prNumber} — run-real-audit=${hasLabel} — head=${pr.head.sha}`);
+
+  real-inventory-audit:
+    name: Real Inventory Audit (Trusted)
+    needs: detect-label
+    if: needs.detect-label.outputs.has_label == 'true'
+    runs-on: ubuntu-latest
+    environment: production-audit
+    steps:
+      - name: Checkout trusted harness (pinned immutable commit)
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+        with:
+          # PINNED to reviewed harness commit — update only via reviewed PR
+          # (placeholders; replace with actual commit SHA after bootstrap merge)
+          ref: ${{ secrets.TRUSTED_HARNESS_SHA }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af  # v4.1.0
+        with:
+          node-version: 24
+
+      - name: Compute trusted script hash
+        id: script_hash
+        run: |
+          HASH=$(sha256sum scripts/audit/notification-inventory.mjs | cut -d' ' -f1)
+          echo "hash=$HASH" >> "$GITHUB_OUTPUT"
+          echo "Trusted script hash: $HASH"
+
+      - name: Run trusted audit
+        env:
+          DATABASE_URL_READONLY: ${{ secrets.REAL_DATABASE_URL_READONLY }}
+          PG_EXPECTED_HOST: ${{ secrets.PG_EXPECTED_HOST }}
+          PG_EXPECTED_PORT: "5432"
+          PG_EXPECTED_DATABASE: "postgres"
+          PG_EXPECTED_USERNAME: ${{ secrets.PG_EXPECTED_USERNAME }}
+          PG_EXPECTED_VERSION: ${{ secrets.PG_EXPECTED_VERSION }}
+          EXPECTED_SCRIPT_SHA256: ${{ steps.script_hash.outputs.hash }}
+          PR_HEAD_SHA: ${{ needs.detect-label.outputs.pr_head_sha }}
+          AUDIT_MODE: real
+        run: node scripts/audit/notification-inventory.mjs
+
+      - name: Upload receipt
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882  # v4.4.3
+        with:
+          name: real-inventory-receipt-${{ needs.detect-label.outputs.pr_head_sha }}-${{ github.run_id }}
+          path: |
+            backups/historical-rows-inventory-receipt.json
+            backups/historical-rows-inventory-receipt.json.sha256
+          if-no-files-found: error
+          retention-days: 90
