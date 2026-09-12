@@ -36,6 +36,42 @@ function sanitizeOrgId(orgId: string | null): string {
   return orgId.slice(0, 8) + "...";
 }
 
+// ============================================================================
+// Extract non-secret target identity from connection URL.
+// Proves which database the audit actually ran against without exposing
+// credentials.
+// ============================================================================
+function extractTargetFingerprint(url: string): {
+  host: string;
+  port: string;
+  database: string;
+  scheme: string;
+  is_localhost: boolean;
+  is_supabase_pooler: boolean;
+} {
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname;
+    return {
+      host,
+      port: parsed.port || "5432",
+      database: parsed.pathname.replace(/^\//, ""),
+      scheme: parsed.protocol.replace(":", ""),
+      is_localhost: host === "localhost" || host === "127.0.0.1" || host === "::1",
+      is_supabase_pooler: /\.pooler\.supabase\.com$/i.test(host),
+    };
+  } catch {
+    return {
+      host: "unknown",
+      port: "unknown",
+      database: "unknown",
+      scheme: "unknown",
+      is_localhost: false,
+      is_supabase_pooler: false,
+    };
+  }
+}
+
 async function main() {
   console.log(`Historical Notification Inventory (Read-Only Audit)`);
   console.log(`===================================================`);
@@ -117,7 +153,7 @@ async function main() {
   console.log(`PostgreSQL Version: ${pgVersion}`);
 
   if (IS_REAL_AUDIT && pgExpectedVersion) {
-    const matches = pgVersion.includes(pgExpectedVersion);
+    const matches = pgVersion.includes(pgExpectedVersion!);
     if (!matches) {
       console.error(
         `ERROR: PostgreSQL version mismatch. Expected "${pgExpectedVersion}" but got "${pgVersion}".`
@@ -198,6 +234,21 @@ async function main() {
     }
   }
 
+  // ── Target identity fingerprint (non-secret) ────────────────────────────
+  const targetFingerprint = extractTargetFingerprint(readonlyUrl!);
+  console.log(
+    `\nTarget identity: ${targetFingerprint.host}:${targetFingerprint.port}/${targetFingerprint.database}`
+  );
+  console.log(`  is_localhost: ${targetFingerprint.is_localhost}`);
+  console.log(`  is_supabase_pooler: ${targetFingerprint.is_supabase_pooler}`);
+
+  if (IS_REAL_AUDIT && targetFingerprint.is_localhost) {
+    console.error(
+      "ERROR: Real audit mode requires a non-localhost target. Got localhost — refusing to emit receipt."
+    );
+    process.exit(1);
+  }
+
   // ── Receipt ─────────────────────────────────────────────────────────────
   const executionReceipt = {
     receipt_type: "PROTECTED_EXACT_HEAD_EXECUTION_RECEIPT",
@@ -208,6 +259,14 @@ async function main() {
     database_role: {
       current_user: row.current_user,
       session_user: row.session_user,
+    },
+    target_identity: {
+      host: targetFingerprint.host,
+      port: targetFingerprint.port,
+      database: targetFingerprint.database,
+      scheme: targetFingerprint.scheme,
+      is_localhost: targetFingerprint.is_localhost,
+      is_supabase_pooler: targetFingerprint.is_supabase_pooler,
     },
     grants_summary: {
       table_write_count: tableWriteGrants.length,
