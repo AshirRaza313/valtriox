@@ -180,7 +180,7 @@ export function CampaignPerformanceWidget() {
               className={cn("text-[10px] font-medium mt-1 rounded-md px-2 py-1 transition-colors", isDark ? "text-amber-400 hover:text-amber-300 hover:bg-amber-500/10" : "text-amber-600 hover:text-amber-700 hover:bg-amber-50")}
               onClick={() => setActiveSection("broadcasts")}
             >
-              Create your first campaign →
+              {t("createFirstCampaign")} →
             </button>
           </div>
         )}

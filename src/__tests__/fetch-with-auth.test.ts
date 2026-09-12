@@ -198,6 +198,22 @@ describe("fetchWithAuth — internal AbortController + body timeout", () => {
 
       await expect(readPromise).rejects.toThrow();
     });
+
+    it("native no-orphan: real fetch aborts reader loop on internal timeout", async () => {
+      vi.useFakeTimers();
+      stallNext = true;
+      const url = `http://127.0.0.1:${port}/stall`;
+      const res = await fetchWithAuth(url);
+      const reader = res.body!.getReader();
+
+      // Consume the partial chunk; the following read is the stalled one.
+      await reader.read();
+      const readPromise = reader.read();
+
+      vi.advanceTimersByTime(30_000);
+
+      await expect(readPromise).rejects.toThrow("Body read timed out.");
+    });
   });
 
   // ── Group 5: Clone coverage ────────────────────────────────────────────

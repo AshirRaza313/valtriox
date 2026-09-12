@@ -8,7 +8,6 @@ import { Toaster } from "@/components/ui/sonner";
 import { PlatformIdentityProvider } from "@/lib/platform-identity";
 import { ReactQueryProvider } from "@/lib/react-query-provider";
 import { ServiceWorkerRegistrar } from "@/components/ServiceWorkerRegistrar";
-import MetaPixel from "@/components/MetaPixel";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -507,8 +506,7 @@ export default async function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${cinzel.variable} antialiased bg-background text-foreground`}
         suppressHydrationWarning
-      >
-        <MetaPixel />
+      >        
         <ReactQueryProvider>
           <PlatformIdentityProvider>
             {children}

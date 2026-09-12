@@ -320,7 +320,7 @@ export function Sidebar() {
                 {brandTagline ? (
                   <p className="truncate text-[11px] font-medium text-slate-400">{brandTagline}</p>
                 ) : (
-                  <p className="truncate text-[11px] font-medium text-slate-400">COMMAND YOUR BRAND UNIVERSE</p>
+                  <p className="truncate text-[11px] font-medium text-slate-400">{t("brandTagline")}</p>
                 )}
               </div>
             )}
@@ -505,7 +505,7 @@ export function Sidebar() {
                                         "font-medium",
                                         requiredPlan === "enterprise" ? "text-amber-400" : "text-amber-400"
                                       )}>{getPlanDisplayName(requiredPlan)}</span> plan</p>
-                                      <p className="text-slate-500 mt-0.5">Click to upgrade →</p>
+                                      <p className="text-slate-500 mt-0.5">{t("clickToUpgrade")} →</p>
                                     </div>
                                   ) : (
                                     <>
@@ -601,7 +601,7 @@ export function Sidebar() {
                       <LogOut className="h-3.5 w-3.5" />
                     </button>
                   </TooltipTrigger>
-                  <TooltipContent side="right" className="text-xs">Sign Out</TooltipContent>
+                  <TooltipContent side="right" className="text-xs">{t("signOut")}</TooltipContent>
                 </Tooltip>
               ) : (
                 <button onClick={logout} className={cn(

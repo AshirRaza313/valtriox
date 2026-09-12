@@ -22,6 +22,7 @@ import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { fetchWithAuth } from "@/lib/fetch-with-auth";
+import { useTranslation } from "@/lib/i18n";
 import {
   ROLES,
   getRoleByName,
@@ -74,6 +75,7 @@ const EXCLUDED_ROLES = ["platform_owner", "platform_admin", "owner", "custom"];
 // ── Component ──────────────────────────────────────────────────────────────
 
 export function TeamPage() {
+  const t = useTranslation();
   const { organization, appTheme, user } = useValtrioxStore();
   const isGold = appTheme === "premium-dark";
   const isDark = appTheme === "dark" || isGold;
@@ -372,7 +374,7 @@ export function TeamPage() {
         <div>
           <h1 className={cn("text-xl sm:text-2xl font-bold flex items-center gap-2", textPrimary)}>
             <UsersRound className={cn("h-5 w-5 sm:h-6 sm:w-6", accentClass)} />
-            Team Management
+            {t("teamManagement")}
           </h1>
           <p className={cn("text-xs sm:text-sm mt-1", textSecondary)}>
             Manage your team members, roles & invitations
@@ -385,7 +387,7 @@ export function TeamPage() {
             onClick={openInviteDialog}
           >
             <UserPlus className="h-4 w-4" />
-            Add Team Member
+            {t("addTeamMember")}
           </Button>
         )}
       </div>

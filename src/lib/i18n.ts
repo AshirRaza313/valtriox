@@ -395,7 +395,7 @@ const translations: Record<Language, Record<string, string>> = {
     // ── Settings ──
     generalSettings: "General Settings",
     brandName: "Brand Name",
-    brandTagline: "Brand Tagline",
+    brandTagline: "COMMAND YOUR BRAND UNIVERSE",
     brandLogo: "Brand Logo",
     organizationInfo: "Organization Info",
     personalInfo: "Personal Info",
@@ -560,7 +560,11 @@ const translations: Record<Language, Record<string, string>> = {
     couponAnalyticsAvgDisc: "Avg. Disc.",
     couponAnalyticsTopCoupon: "Top Coupon",
     manage: "Manage",
-    createFirstCoupon: "Create your first coupon",
+    createCoupon: "Create Coupon",
+    createFirstCoupon: "Create First Coupon",
+    addTeamMember: "Add Team Member",
+    createFirstCampaign: "Create your first campaign",
+    clickToUpgrade: "Click to upgrade",
     // ── Hardcoded Widget Strings (Round 3) ──
     createFirstOrder: "Create first order",
     startEmailMarketing: "Start Email Marketing",
@@ -986,7 +990,7 @@ const translations: Record<Language, Record<string, string>> = {
     // ── Settings ──
     generalSettings: "Aam Tarteebat",
     brandName: "Brand ka Naam",
-    brandTagline: "Brand ki Tagline",
+    brandTagline: "COMMAND YOUR BRAND UNIVERSE",
     brandLogo: "Brand ka Logo",
     organizationInfo: "Idaray ki Maloomat",
     personalInfo: "Zaati Maloomat",
@@ -1151,7 +1155,11 @@ const translations: Record<Language, Record<string, string>> = {
     couponAnalyticsAvgDisc: "Ausat Reayat",
     couponAnalyticsTopCoupon: "Behtareen Coupon",
     manage: "Intezam Karein",
-    createFirstCoupon: "Apna pehla coupon banayein",
+    createCoupon: "Coupon Banayein",
+    createFirstCoupon: "Pehla Coupon Banayein",
+    addTeamMember: "Amlah Ka Rukan Shamil Karein",
+    createFirstCampaign: "Apna pehla campaign banayein",
+    clickToUpgrade: "Upgrade karne ke liye click karein",
     // ── Hardcoded Widget Strings (Round 3) ──
     createFirstOrder: "Pehla order banayein",
     startEmailMarketing: "Email Marketing Shuru Karein",

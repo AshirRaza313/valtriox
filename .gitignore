@@ -96,3 +96,12 @@ backups/
 
 # CI-generated catalog comparison (recreated each run)
 docs/baseline-repair/catalog-comparison.txt
+
+# Local scanner outputs
+hardcoded-ast-report.json
+hardcoded-enhanced-report.json
+hardcoded-strings-report.json
+hardcoded-output.txt
+hardcoded-strings-output.txt
+enhanced-output.txt
+ast-output.txt
