@@ -34,9 +34,15 @@ function fail(msg) {
 function log(msg) {
   console.log(msg);
 }
-function safeParseInt(value, label) {
-  const n = parseInt(value, 10);
-  if (isNaN(n)) fail(`${label} returned non-numeric value: ${value}`);
+function safeParseInt(value, label, { min = 0, max = Number.MAX_SAFE_INTEGER } = {}) {
+  const trimmed = String(value).trim();
+  if (!/^\d+$/.test(trimmed)) {
+    fail(`${label} returned non-numeric value: "${value}"`);
+  }
+  const n = parseInt(trimmed, 10);
+  if (isNaN(n) || n < min || n > max) {
+    fail(`${label} out of range [${min}, ${max}]: ${n}`);
+  }
   return n;
 }
 
@@ -213,28 +219,31 @@ if (IS_REAL) {
   log(`✅ PostgreSQL version strictly matches expected "${expectedVersion}"`);
 }
 
-// ── Required scope ───────────────────────────────────────────────────────
-const total = safeParseInt(psql('SELECT COUNT(*) FROM "Notification"'), "notification count");
-const readCount = safeParseInt(
-  psql('SELECT COUNT(*) FROM "Notification" WHERE read = true'),
-  "read count"
-);
-const unreadCount = safeParseInt(
-  psql('SELECT COUNT(*) FROM "Notification" WHERE read = false'),
-  "unread count"
-);
-const orgWide = safeParseInt(
-  psql('SELECT COUNT(*) FROM "Notification" WHERE "userId" IS NULL'),
-  "org-wide notification count"
-);
-const targeted = safeParseInt(
-  psql('SELECT COUNT(*) FROM "Notification" WHERE "userId" IS NOT NULL'),
-  "targeted notification count"
-);
-const distinctTypes = safeParseInt(
-  psql('SELECT COUNT(DISTINCT type) FROM "Notification"'),
-  "distinct notification type count"
-);
+// ── Required scope (single snapshot-consistent query) ─────────────────────
+const inventoryRow = psql(`
+  SELECT
+    (SELECT COUNT(*) FROM "Notification") AS total,
+    (SELECT COUNT(*) FROM "Notification" WHERE read = true) AS read_count,
+    (SELECT COUNT(*) FROM "Notification" WHERE read = false) AS unread_count,
+    (SELECT COUNT(*) FROM "Notification" WHERE "userId" IS NULL) AS org_wide,
+    (SELECT COUNT(*) FROM "Notification" WHERE "userId" IS NOT NULL) AS targeted,
+    (SELECT COUNT(DISTINCT type) FROM "Notification") AS distinct_types
+`);
+const [totalS, readS, unreadS, orgWideS, targetedS, typesS] = inventoryRow.split("\t");
+
+const total = safeParseInt(totalS, "notification total");
+const readCount = safeParseInt(readS, "read count");
+const unreadCount = safeParseInt(unreadS, "unread count");
+const orgWide = safeParseInt(orgWideS, "org-wide count");
+const targeted = safeParseInt(targetedS, "targeted count");
+const distinctTypes = safeParseInt(typesS, "distinct types");
+
+if (total !== readCount + unreadCount) {
+  fail(`Snapshot inconsistency: total=${total}, read=${readCount}, unread=${unreadCount}`);
+}
+if (total !== orgWide + targeted) {
+  fail(`Snapshot inconsistency: total=${total}, orgWide=${orgWide}, targeted=${targeted}`);
+}
 
 let receiptCount = 0;
 let distinctReceiptUsers = 0;

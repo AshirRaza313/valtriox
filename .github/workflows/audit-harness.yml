@@ -49,9 +49,11 @@ jobs:
             core.setOutput('upstream_run_id', runId);
 
             if (prs.length === 0) {
-              core.setOutput('has_label', 'false');
-              core.setOutput('upstream_pr_number', 'unknown');
-              core.info(`workflow_run SHA=${runSha} — no PR context`);
+              core.setFailed('workflow_run has no PR context — cannot bind evidence');
+              return;
+            }
+            if (prs.length > 1) {
+              core.setFailed(`workflow_run has ${prs.length} PRs — ambiguous association`);
               return;
             }
 
@@ -85,12 +87,14 @@ jobs:
         with:
           node-version: 24
 
-      - name: Compute trusted script hash
+      - name: Compute trusted script hash (from pinned TRUSTED_HARNESS_SHA)
         id: script_hash
         run: |
-          HASH=$(sha256sum scripts/audit/notification-inventory.mjs | cut -d' ' -f1)
-          echo "hash=$HASH" >> "$GITHUB_OUTPUT"
-          echo "Trusted script hash: $HASH"
+          # Compute hash from the PINNED trusted commit, not the current checkout
+          PINNED_SHA="${{ secrets.TRUSTED_HARNESS_SHA }}"
+          TRUSTED_HASH=$(git show "$PINNED_SHA:scripts/audit/notification-inventory.mjs" | sha256sum | cut -d' ' -f1)
+          echo "hash=$TRUSTED_HASH" >> "$GITHUB_OUTPUT"
+          echo "Trusted script hash (from $PINNED_SHA): $TRUSTED_HASH"
 
       - name: Run trusted audit
         env:
