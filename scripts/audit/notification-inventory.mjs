@@ -34,6 +34,11 @@ function fail(msg) {
 function log(msg) {
   console.log(msg);
 }
+function safeParseInt(value, label) {
+  const n = parseInt(value, 10);
+  if (isNaN(n)) fail(`${label} returned non-numeric value: ${value}`);
+  return n;
+}
 
 // ── Config ───────────────────────────────────────────────────────────────
 const readonlyUrl = process.env.DATABASE_URL_READONLY;
@@ -69,10 +74,16 @@ if (IS_REAL) {
   if (upstreamWorkflowSha === "unknown") fail("UPSTREAM_WORKFLOW_SHA required in real mode.");
   if (upstreamRunId === "unknown") fail("UPSTREAM_RUN_ID required in real mode.");
   if (upstreamPrNumber === "unknown") fail("UPSTREAM_PR_NUMBER required in real mode.");
+  if (actualGitSha === "unknown") {
+    fail("Real mode requires valid git HEAD (git rev-parse failed).");
+  }
+  if (!expectedScriptHash) {
+    fail("EXPECTED_SCRIPT_SHA256 required in real mode.");
+  }
 }
 
 // ── Verify script integrity ──────────────────────────────────────────────
-if (IS_REAL && expectedScriptHash && expectedScriptHash !== SCRIPT_SHA256) {
+if (IS_REAL && expectedScriptHash !== SCRIPT_SHA256) {
   fail(`Script integrity check failed.\n  expected: ${expectedScriptHash}\n  actual:   ${SCRIPT_SHA256}`);
 }
 
@@ -160,8 +171,7 @@ const tableWriteCheck = psql(`
       AND pg_catalog.has_table_privilege(current_user, c.oid, p.privilege_type)
   ) t
 `);
-const tableWriteGrants = parseInt(tableWriteCheck, 10);
-if (isNaN(tableWriteGrants)) fail("tableWriteGrants query returned non-numeric value");
+const tableWriteGrants = safeParseInt(tableWriteCheck, "table write grants");
 
 // ── Column-level write privilege check ───────────────────────────────────
 const columnWriteCheck = psql(`
@@ -176,8 +186,7 @@ const columnWriteCheck = psql(`
       AND pg_catalog.has_column_privilege(current_user, c.oid, a.attname, p.privilege_type)
   ) t
 `);
-const columnWriteGrants = parseInt(columnWriteCheck, 10);
-if (isNaN(columnWriteGrants)) fail("columnWriteGrants query returned non-numeric value");
+const columnWriteGrants = safeParseInt(columnWriteCheck, "column write grants");
 
 if (tableWriteGrants > 0 || columnWriteGrants > 0) {
   fail(`Write grants detected. table=${tableWriteGrants}, column=${columnWriteGrants}`);
@@ -205,20 +214,38 @@ if (IS_REAL) {
 }
 
 // ── Required scope ───────────────────────────────────────────────────────
-const total = parseInt(psql('SELECT COUNT(*) FROM "Notification"'), 10);
-const readCount = parseInt(psql('SELECT COUNT(*) FROM "Notification" WHERE read = true'), 10);
-const unreadCount = parseInt(psql('SELECT COUNT(*) FROM "Notification" WHERE read = false'), 10);
-const orgWide = parseInt(psql('SELECT COUNT(*) FROM "Notification" WHERE "userId" IS NULL'), 10);
-const targeted = parseInt(psql('SELECT COUNT(*) FROM "Notification" WHERE "userId" IS NOT NULL'), 10);
-const distinctTypes = parseInt(psql('SELECT COUNT(DISTINCT type) FROM "Notification"'), 10);
+const total = safeParseInt(psql('SELECT COUNT(*) FROM "Notification"'), "notification count");
+const readCount = safeParseInt(
+  psql('SELECT COUNT(*) FROM "Notification" WHERE read = true'),
+  "read count"
+);
+const unreadCount = safeParseInt(
+  psql('SELECT COUNT(*) FROM "Notification" WHERE read = false'),
+  "unread count"
+);
+const orgWide = safeParseInt(
+  psql('SELECT COUNT(*) FROM "Notification" WHERE "userId" IS NULL'),
+  "org-wide notification count"
+);
+const targeted = safeParseInt(
+  psql('SELECT COUNT(*) FROM "Notification" WHERE "userId" IS NOT NULL'),
+  "targeted notification count"
+);
+const distinctTypes = safeParseInt(
+  psql('SELECT COUNT(DISTINCT type) FROM "Notification"'),
+  "distinct notification type count"
+);
 
 let receiptCount = 0;
 let distinctReceiptUsers = 0;
 try {
-  receiptCount = parseInt(psql('SELECT COUNT(*) FROM "NotificationReadReceipt"'), 10);
-  distinctReceiptUsers = parseInt(
+  receiptCount = safeParseInt(
+    psql('SELECT COUNT(*) FROM "NotificationReadReceipt"'),
+    "notification receipt count"
+  );
+  distinctReceiptUsers = safeParseInt(
     psql('SELECT COUNT(DISTINCT "userId") FROM "NotificationReadReceipt"'),
-    10
+    "distinct receipt user count"
   );
 } catch (err) {
   fail(`NotificationReadReceipt query failed (fail-closed): ${err.message}`);
