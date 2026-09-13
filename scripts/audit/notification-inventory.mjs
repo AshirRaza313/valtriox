@@ -3,14 +3,23 @@
 // TRUSTED audit harness — zero npm dependencies.
 // Uses psql CLI (pre-installed on ubuntu-latest runners) for PostgreSQL access.
 // This file is the immutable baseline; PRs cannot modify it after merge to main.
+//
+// Round 5 → Round 6 fixes (13 Sep 2026):
+// - Fixed `actualGitSha` undefined reference (was `harnessGitSha`)
+// - Fixed `writeGrants` undefined reference (was `tableWriteGrants`)
+// - Removed duplicate `grants_summary` key
+// - Removed unused `PR_HEAD_SHA` (binding via `upstream_workflow_sha`)
+// - Strict version fail-closed with regex match
+// - Explicit fail on missing UPSTREAM_* in real mode
 // ============================================================================
 
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { execSync, spawnSync } from "node:child_process";
-import { URL } from "node:url";
+import { URL, fileURLToPath } from "node:url";
 
-const SCRIPT_PATH = new URL(import.meta.url).pathname;
+// FIX: fileURLToPath handles Windows paths correctly (unlike .pathname).
+const SCRIPT_PATH = fileURLToPath(import.meta.url);
 const SCRIPT_SHA256 = createHash("sha256")
   .update(readFileSync(SCRIPT_PATH))
   .digest("hex");
@@ -30,7 +39,6 @@ function log(msg) {
 const readonlyUrl = process.env.DATABASE_URL_READONLY;
 if (!readonlyUrl) fail("DATABASE_URL_READONLY is required.");
 
-const prHeadSha = process.env.PR_HEAD_SHA || "unknown";
 const expectedVersion = process.env.PG_EXPECTED_VERSION;
 const expectedHost = process.env.PG_EXPECTED_HOST;
 const expectedPort = process.env.PG_EXPECTED_PORT || "5432";
@@ -38,23 +46,30 @@ const expectedDatabase = process.env.PG_EXPECTED_DATABASE || "postgres";
 const expectedUsername = process.env.PG_EXPECTED_USERNAME;
 const expectedScriptHash = process.env.EXPECTED_SCRIPT_SHA256;
 
-// ── Capture identities (separate, no equality requirement) ───────────────
-let harnessGitSha = "unknown";
+// ── Identity capture (FIX #1) ────────────────────────────────────────────
+// was: harnessGitSha computed but `actualGitSha` referenced later — now unified.
+let actualGitSha = "unknown";
 try {
-  harnessGitSha = execSync("git rev-parse HEAD", { encoding: "utf8" }).trim();
+  actualGitSha = execSync("git rev-parse HEAD", { encoding: "utf8" }).trim();
 } catch {}
 
 const upstreamWorkflowSha = process.env.UPSTREAM_WORKFLOW_SHA || "unknown";
 const upstreamRunId = process.env.UPSTREAM_RUN_ID || "unknown";
 const upstreamPrNumber = process.env.UPSTREAM_PR_NUMBER || "unknown";
 
-log(`Trusted harness SHA:  ${harnessGitSha}`);
+log(`Trusted harness SHA:   ${actualGitSha}`);
 log(`Upstream workflow SHA: ${upstreamWorkflowSha}`);
 log(`Upstream run ID:       ${upstreamRunId}`);
-
+log(`Upstream PR number:    ${upstreamPrNumber}`);
 log(`Audit Mode: ${AUDIT_MODE}${IS_REAL ? " (STRICT)" : " (smoke)"}`);
-log(`Verified HEAD SHA: ${actualGitSha}`);
 log(`Script SHA256: ${SCRIPT_SHA256.slice(0, 16)}...`);
+
+// ── Real-mode: enforce UPSTREAM_* presence (FIX #1b) ─────────────────────
+if (IS_REAL) {
+  if (upstreamWorkflowSha === "unknown") fail("UPSTREAM_WORKFLOW_SHA required in real mode.");
+  if (upstreamRunId === "unknown") fail("UPSTREAM_RUN_ID required in real mode.");
+  if (upstreamPrNumber === "unknown") fail("UPSTREAM_PR_NUMBER required in real mode.");
+}
 
 // ── Verify script integrity ──────────────────────────────────────────────
 if (IS_REAL && expectedScriptHash && expectedScriptHash !== SCRIPT_SHA256) {
@@ -92,6 +107,7 @@ const actualHash = hashIdentity({
 
 if (IS_REAL) {
   if (!expectedUsername) fail("PG_EXPECTED_USERNAME required in real mode.");
+  if (!expectedHost) fail("PG_EXPECTED_HOST required in real mode.");
   if (expectedHash !== actualHash) {
     fail(`Target identity mismatch.\n  expected_hash: ${expectedHash}\n  actual_hash:   ${actualHash}`);
   }
@@ -145,8 +161,9 @@ const tableWriteCheck = psql(`
   ) t
 `);
 const tableWriteGrants = parseInt(tableWriteCheck, 10);
+if (isNaN(tableWriteGrants)) fail("tableWriteGrants query returned non-numeric value");
 
-// ── Column-level write privilege check (fail-closed) ─────────────────────
+// ── Column-level write privilege check ───────────────────────────────────
 const columnWriteCheck = psql(`
   SELECT COUNT(*) FROM (
     SELECT 1
@@ -160,23 +177,34 @@ const columnWriteCheck = psql(`
   ) t
 `);
 const columnWriteGrants = parseInt(columnWriteCheck, 10);
+if (isNaN(columnWriteGrants)) fail("columnWriteGrants query returned non-numeric value");
 
 if (tableWriteGrants > 0 || columnWriteGrants > 0) {
   fail(`Write grants detected. table=${tableWriteGrants}, column=${columnWriteGrants}`);
 }
 log(`Checked table (${tableWriteGrants}) and column (${columnWriteGrants}) DML privileges verified.`);
 
-// ── Version check ────────────────────────────────────────────────────────
+// ── Version check (FIX #8 — strict fail-closed) ──────────────────────────
 const pgVersion = psql("SELECT version()");
 log(`PostgreSQL Version: ${pgVersion}`);
-if (IS_REAL && expectedVersion) {
-  if (!pgVersion.includes(expectedVersion)) {
-    fail(`Version mismatch. Expected "${expectedVersion}", got "${pgVersion}"`);
+
+let pgVersionMatch = null;
+if (IS_REAL) {
+  if (!expectedVersion) fail("PG_EXPECTED_VERSION required in real mode.");
+  // Strict pattern match: "PostgreSQL X.Y" exactly
+  const versionMatch = pgVersion.match(/PostgreSQL\s+(\d+\.\d+)/);
+  if (!versionMatch) {
+    fail(`Could not parse PostgreSQL version from: ${pgVersion}`);
   }
-  log(`✅ PostgreSQL version matches expected "${expectedVersion}"`);
+  const actualVersion = versionMatch[1];
+  if (actualVersion !== expectedVersion) {
+    fail(`Version mismatch. Expected "${expectedVersion}", got "${actualVersion}"`);
+  }
+  pgVersionMatch = true;
+  log(`✅ PostgreSQL version strictly matches expected "${expectedVersion}"`);
 }
 
-// ── Required scope: audience + type + read-receipt (fail-closed in real) ─
+// ── Required scope ───────────────────────────────────────────────────────
 const total = parseInt(psql('SELECT COUNT(*) FROM "Notification"'), 10);
 const readCount = parseInt(psql('SELECT COUNT(*) FROM "Notification" WHERE read = true'), 10);
 const unreadCount = parseInt(psql('SELECT COUNT(*) FROM "Notification" WHERE read = false'), 10);
@@ -202,27 +230,18 @@ log(`Org-wide: ${orgWide}, Targeted: ${targeted}`);
 log(`Distinct types: ${distinctTypes}`);
 log(`Read receipts: ${receiptCount}, distinct users: ${distinctReceiptUsers}`);
 
-// Real mode: preserve historical scope — must have audience/type diversity
 if (IS_REAL) {
   if (total === 0) fail("Real audit requires non-empty Notification table.");
   if (distinctTypes === 0) fail("Real audit requires at least one notification type.");
-  // Requires both org-wide and targeted (audience scope)
   if (orgWide === 0 && targeted === 0) fail("Real audit requires notification audience coverage.");
 }
 
-if (IS_REAL && total === 0) {
-  fail("Real audit requires non-empty notification table. Got 0 rows.");
-}
-
-// ── Receipt ──────────────────────────────────────────────────────────────
+// ── Receipt (FIX #3 — no duplicate grants_summary) ───────────────────────
 const receipt = {
   receipt_type: "PROTECTED_EXACT_HEAD_EXECUTION_RECEIPT",
   audit_mode: AUDIT_MODE,
   timestamp: new Date().toISOString(),
-  // Two separate identities:
-  // - harness_git_sha: the immutable trusted harness commit (main)
-  // - upstream_workflow_sha: the exact SHA that ran the upstream CI (PR head)
-  harness_git_sha: harnessGitSha,
+  harness_git_sha: actualGitSha,
   upstream_workflow_sha: upstreamWorkflowSha,
   upstream_run_id: upstreamRunId,
   upstream_pr_number: upstreamPrNumber,
@@ -237,15 +256,14 @@ const receipt = {
     has_project_ref: actualUsername.includes("."),
     is_localhost: actualHost === "localhost" || actualHost === "127.0.0.1",
   },
-  grants_summary: { write_grants: writeGrants },
-  pg_version: pgVersion,
-  pg_expected_version: expectedVersion || null,
-  pg_version_match: IS_REAL ? pgVersion.includes(expectedVersion || "") : null,
-  read_only_mode_status: String(readOnly).toLowerCase() === "on" ? "on" : "off",
   grants_summary: {
     table_write_grants: tableWriteGrants,
     column_write_grants: columnWriteGrants,
   },
+  pg_version: pgVersion,
+  pg_expected_version: expectedVersion || null,
+  pg_version_match: pgVersionMatch,
+  read_only_mode_status: String(readOnly).toLowerCase() === "on" ? "on" : "off",
   inventory_summary: {
     total_notifications: total,
     read_count: readCount,
