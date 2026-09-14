@@ -4,13 +4,19 @@
 // Uses psql CLI (pre-installed on ubuntu-latest runners) for PostgreSQL access.
 // This file is the immutable baseline; PRs cannot modify it after merge to main.
 //
-// Round 5 → Round 6 fixes (13 Sep 2026):
+// Round 5 → Round 8 fixes (13-14 Sep 2026):
 // - Fixed `actualGitSha` undefined reference (was `harnessGitSha`)
 // - Fixed `writeGrants` undefined reference (was `tableWriteGrants`)
 // - Removed duplicate `grants_summary` key
 // - Removed unused `PR_HEAD_SHA` (binding via `upstream_workflow_sha`)
 // - Strict version fail-closed with regex match
 // - Explicit fail on missing UPSTREAM_* in real mode
+// - Real mode rejects unknown Git HEAD + missing EXPECTED_SCRIPT_SHA256
+// - safeParseInt() strict numeric + range validation
+// - Core notification counts fetched in a single query (snapshot-consistent)
+//   NOTE: NotificationReadReceipt counts are fetched separately —
+//   overall inventory is NOT one atomic snapshot.
+// - Count invariants: total = read + unread, total = orgWide + targeted
 // ============================================================================
 
 import { createHash } from "node:crypto";
@@ -219,7 +225,9 @@ if (IS_REAL) {
   log(`✅ PostgreSQL version strictly matches expected "${expectedVersion}"`);
 }
 
-// ── Required scope (single snapshot-consistent query) ─────────────────────
+// ── Core notification counts — single snapshot-consistent query ──────────
+// NOTE: NotificationReadReceipt counts are fetched in separate queries below.
+// The overall inventory is NOT one atomic snapshot.
 const inventoryRow = psql(`
   SELECT
     (SELECT COUNT(*) FROM "Notification") AS total,
@@ -275,6 +283,7 @@ if (IS_REAL) {
 // ── Receipt (FIX #3 — no duplicate grants_summary) ───────────────────────
 const receipt = {
   receipt_type: "PROTECTED_EXACT_HEAD_EXECUTION_RECEIPT",
+  snapshot_scope: "core_notification_counts_only",
   audit_mode: AUDIT_MODE,
   timestamp: new Date().toISOString(),
   harness_git_sha: actualGitSha,
@@ -301,14 +310,18 @@ const receipt = {
   pg_version_match: pgVersionMatch,
   read_only_mode_status: String(readOnly).toLowerCase() === "on" ? "on" : "off",
   inventory_summary: {
+    // Core counts (single SQL query — snapshot-consistent)
     total_notifications: total,
     read_count: readCount,
     unread_count: unreadCount,
     org_wide: orgWide,
     targeted: targeted,
     distinct_types: distinctTypes,
+    core_counts_snapshot_consistent: true,
+    // Receipt counts (separate queries — NOT same snapshot)
     notification_read_receipts: receiptCount,
     distinct_receipt_users: distinctReceiptUsers,
+    receipt_counts_snapshot_consistent: false,
   },
 };
 
