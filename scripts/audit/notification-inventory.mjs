@@ -21,7 +21,7 @@
 
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
-import { execSync, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { URL, fileURLToPath } from "node:url";
 
 // FIX: fileURLToPath handles Windows paths correctly (unlike .pathname).
@@ -63,11 +63,32 @@ const expectedDatabase = process.env.PG_EXPECTED_DATABASE || "postgres";
 const expectedUsername = process.env.PG_EXPECTED_USERNAME;
 const expectedScriptHash = process.env.EXPECTED_SCRIPT_SHA256;
 
+// Configurable binaries (defaults for production)
+// PSQL_CMD allows e.g. "psql" or "node /path/to/mock-psql.mjs"
+function parseCmdEnv(value, fallback) {
+  if (!value) return fallback;
+  try {
+    const parsed = JSON.parse(value);
+    if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === "string") {
+      return parsed;
+    }
+  } catch {}
+  return [value];
+}
+const PSQL_CMD_PARTS = parseCmdEnv(process.env.PSQL_CMD, ["psql"]);
+const GIT_CMD_PARTS = parseCmdEnv(process.env.GIT_CMD, ["git"]);
+
 // ── Identity capture (FIX #1) ────────────────────────────────────────────
 // was: harnessGitSha computed but `actualGitSha` referenced later — now unified.
 let actualGitSha = "unknown";
 try {
-  actualGitSha = execSync("git rev-parse HEAD", { encoding: "utf8" }).trim();
+  const [bin, ...prefix] = GIT_CMD_PARTS;
+  const result = spawnSync(bin, [...prefix, "rev-parse", "HEAD"], {
+    encoding: "utf8",
+  });
+  if (result.status === 0 && result.stdout) {
+    actualGitSha = result.stdout.trim();
+  }
 } catch {}
 
 const upstreamWorkflowSha = process.env.UPSTREAM_WORKFLOW_SHA || "unknown";
@@ -153,13 +174,15 @@ const pgEnv = {
 };
 
 function psql(sql) {
-  const result = spawnSync("psql", ["-t", "-A", "-F", "\t", "-c", sql], {
+  const [bin, ...prefix] = PSQL_CMD_PARTS;
+  const args = [...prefix, "-t", "-A", "-F", "\t", "-c", sql];
+  const result = spawnSync(bin, args, {
     env: pgEnv,
     encoding: "utf8",
     maxBuffer: 10 * 1024 * 1024,
   });
   if (result.status !== 0) {
-    fail(`psql failed: ${result.stderr}`);
+    fail(`psql failed: ${result.stderr || result.error?.message || "unknown"}`);
   }
   return result.stdout.trim();
 }
