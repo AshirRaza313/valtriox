@@ -13,6 +13,8 @@ import { dirname, join } from "node:path";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const scriptPath = join(__dirname, "..", "notification-inventory.mjs");
+const mockPsqlPath = join(__dirname, "mock-psql.mjs");
+const mockGitPath = join(__dirname, "mock-git.mjs");
 
 function runScript(env, options = {}) {
   return spawnSync("node", [scriptPath], {
@@ -134,6 +136,8 @@ test("script self-hash computes (Windows path compatible)", () => {
     ...process.env,
     DATABASE_URL_READONLY: "postgresql://user:pass@127.0.0.1:5432/postgres",
     AUDIT_MODE: "ci-smoke",
+    PSQL_CMD: JSON.stringify([process.execPath, mockPsqlPath]),
+    GIT_CMD: JSON.stringify([process.execPath, mockGitPath]),
   };
   const result = spawnSync("node", [scriptPath], {
     env,
