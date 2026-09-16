@@ -2,9 +2,7 @@
 // ============================================================================
 // Find identical EN/UR values in src/lib/i18n.ts
 // ============================================================================
-// Purpose: Detect translation regressions where EN and UR values are the same.
-// Every identical key must appear in docs/urdu-glossary.md — otherwise it is
-// an untranslated string (regression).
+// Simple line-based parser — reliable for flat key-value structure.
 //
 // Usage: node scripts/find-identical-i18n.js
 // ============================================================================
@@ -20,40 +18,39 @@ if (!fs.existsSync(filePath)) {
 }
 
 const src = fs.readFileSync(filePath, "utf8");
+const lines = src.split(/\r?\n/);
 
-// Locate `en: {` and `ur: {` blocks
-const enStart = src.indexOf("  en: {");
-const urStart = src.indexOf("  ur: {");
+const en = {};
+const ur = {};
+let current = null;
 
-if (enStart === -1 || urStart === -1) {
-  console.error("ERROR: Could not find en:/ur: blocks in i18n.ts");
-  process.exit(1);
-}
+for (const line of lines) {
+  const t = line.trim();
 
-// en block ends just before ur:
-const enBlock = src.slice(enStart, urStart);
-
-// ur block ends at the top-level closing `\n};`
-const urEnd = src.indexOf("\n};", urStart);
-if (urEnd === -1) {
-  console.error("ERROR: Could not find end of ur: block");
-  process.exit(1);
-}
-const urBlock = src.slice(urStart, urEnd);
-
-// Parse `key: "value",` lines
-function parseBlock(block) {
-  const map = {};
-  const re = /^\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*:\s*"((?:[^"\\]|\\.)*)"\s*,?\s*$/gm;
-  let m;
-  while ((m = re.exec(block)) !== null) {
-    map[m[1]] = m[2];
+  // Detect start of en/ur blocks
+  if (/^en:\s*\{/.test(t)) {
+    current = en;
+    continue;
   }
-  return map;
-}
+  if (/^ur:\s*\{/.test(t)) {
+    current = ur;
+    continue;
+  }
 
-const en = parseBlock(enBlock);
-const ur = parseBlock(urBlock);
+  // Detect end of a block
+  if (current && /^\};?\s*$/.test(t)) {
+    current = null;
+    continue;
+  }
+
+  if (!current) continue;
+
+  // Match: keyName: "value",
+  const m = t.match(/^([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:\s*"((?:[^"\\]|\\.)*)"\s*,?\s*$/);
+  if (m) {
+    current[m[1]] = m[2];
+  }
+}
 
 const enKeys = Object.keys(en);
 const urKeys = Object.keys(ur);
@@ -61,7 +58,7 @@ const urKeys = Object.keys(ur);
 console.log(`EN keys: ${enKeys.length}`);
 console.log(`UR keys: ${urKeys.length}`);
 
-// Missing keys check
+// Missing keys
 const missingInUr = enKeys.filter((k) => !(k in ur));
 const missingInEn = urKeys.filter((k) => !(k in en));
 
@@ -85,12 +82,8 @@ for (const key of enKeys) {
 console.log(`\nIdentical EN/UR values: ${identical.length}\n`);
 console.log(JSON.stringify(identical, null, 2));
 
-// Exit non-zero if identical keys exist that are NOT in glossary
-// (Soft check — just exit 0 for now, but warn)
-if (identical.length > 0) {
-  console.log(
-    `\n⚠️  Verify each of the ${identical.length} identical keys is listed in docs/urdu-glossary.md`
-  );
-}
+console.log(
+  `\n⚠️  Verify each of the ${identical.length} identical keys is in docs/urdu-glossary.md`
+);
 
 process.exit(0);
