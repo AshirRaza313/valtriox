@@ -75,8 +75,22 @@ function parseCmdEnv(value, fallback) {
   } catch {}
   return [value];
 }
-const PSQL_CMD_PARTS = parseCmdEnv(process.env.PSQL_CMD, ["psql"]);
-const GIT_CMD_PARTS = parseCmdEnv(process.env.GIT_CMD, ["git"]);
+// ── Command overrides (isolated from real-mode trust boundary) ───────────
+// PSQL_CMD / GIT_CMD env vars are ONLY honored when AUDIT_ALLOW_CMD_OVERRIDE=1.
+// This prevents arbitrary binary substitution in production.
+// The real-mode CI workflow MUST NOT set AUDIT_ALLOW_CMD_OVERRIDE.
+const ALLOW_CMD_OVERRIDE = process.env.AUDIT_ALLOW_CMD_OVERRIDE === "1";
+
+if (IS_REAL && ALLOW_CMD_OVERRIDE) {
+  log("⚠️  AUDIT_ALLOW_CMD_OVERRIDE=1 — command overrides enabled (test mode)");
+}
+
+const PSQL_CMD_PARTS = ALLOW_CMD_OVERRIDE
+  ? parseCmdEnv(process.env.PSQL_CMD, ["psql"])
+  : ["psql"];
+const GIT_CMD_PARTS = ALLOW_CMD_OVERRIDE
+  ? parseCmdEnv(process.env.GIT_CMD, ["git"])
+  : ["git"];
 
 // ── Identity capture (FIX #1) ────────────────────────────────────────────
 // was: harnessGitSha computed but `actualGitSha` referenced later — now unified.

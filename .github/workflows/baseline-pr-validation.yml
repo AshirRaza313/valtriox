@@ -41,6 +41,8 @@ jobs:
       # ── NEW: Standalone harness crash-path tests ──
       - name: Harness crash-path tests (standalone)
         run: node scripts/audit/tests/crash-paths.test.mjs
+      - name: Harness receipt-construction tests (standalone)
+        run: node scripts/audit/tests/receipt-construction.test.mjs
 
   build:
     name: Build

@@ -138,6 +138,7 @@ test("script self-hash computes (Windows path compatible)", () => {
     AUDIT_MODE: "ci-smoke",
     PSQL_CMD: JSON.stringify([process.execPath, mockPsqlPath]),
     GIT_CMD: JSON.stringify([process.execPath, mockGitPath]),
+    AUDIT_ALLOW_CMD_OVERRIDE: "1",
   };
   const result = spawnSync("node", [scriptPath], {
     env,
