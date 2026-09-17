@@ -659,7 +659,7 @@ export function AuditLogPage() {
                 {t("noActivityFound")}
               </h3>
               <p className={cn("text-sm max-w-md", isDark ? "text-slate-400" : "text-muted-foreground")}>
-                {t("noActivityDesc")}
+                {t("noFilteredActivity")}
               </p>
             </CardContent>
           </Card>

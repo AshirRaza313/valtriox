@@ -48,6 +48,7 @@ const testEnv = {
   ...process.env,
   PSQL_CMD: JSON.stringify([process.execPath, mockPsqlPath]),
   GIT_CMD: JSON.stringify([process.execPath, mockGitPath]),
+  AUDIT_TEST_REAL: "1",
   AUDIT_ALLOW_CMD_OVERRIDE: "1",
   DATABASE_URL_READONLY:
     "postgresql://audit_readonly.testref:password@fake-host.example.com:5432/postgres",

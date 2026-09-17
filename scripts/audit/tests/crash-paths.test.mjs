@@ -76,6 +76,8 @@ test("real mode fails when UPSTREAM_WORKFLOW_SHA missing", () => {
   delete env.UPSTREAM_WORKFLOW_SHA;
   delete env.UPSTREAM_RUN_ID;
   delete env.UPSTREAM_PR_NUMBER;
+  delete env.AUDIT_ALLOW_CMD_OVERRIDE;
+  delete env.AUDIT_TEST_REAL;
 
   const result = spawnSync("node", [scriptPath], {
     env,
@@ -139,6 +141,7 @@ test("script self-hash computes (Windows path compatible)", () => {
     PSQL_CMD: JSON.stringify([process.execPath, mockPsqlPath]),
     GIT_CMD: JSON.stringify([process.execPath, mockGitPath]),
     AUDIT_ALLOW_CMD_OVERRIDE: "1",
+    AUDIT_TEST_REAL: "1",
   };
   const result = spawnSync("node", [scriptPath], {
     env,

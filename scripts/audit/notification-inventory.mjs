@@ -75,14 +75,27 @@ function parseCmdEnv(value, fallback) {
   } catch {}
   return [value];
 }
-// ── Command overrides (isolated from real-mode trust boundary) ───────────
-// PSQL_CMD / GIT_CMD env vars are ONLY honored when AUDIT_ALLOW_CMD_OVERRIDE=1.
-// This prevents arbitrary binary substitution in production.
-// The real-mode CI workflow MUST NOT set AUDIT_ALLOW_CMD_OVERRIDE.
+// ── Command overrides (FAIL-CLOSED in real mode) ─────────────────────────
+// PSQL_CMD / GIT_CMD env vars are honored only when:
+//   - AUDIT_ALLOW_CMD_OVERRIDE=1 is set, AND
+//   - either the mode is NOT real, OR AUDIT_TEST_REAL=1 explicitly flags a test run.
+//
+// In production real mode, AUDIT_ALLOW_CMD_OVERRIDE=1 causes immediate failure.
+// This prevents arbitrary binary substitution on the protected audit path.
 const ALLOW_CMD_OVERRIDE = process.env.AUDIT_ALLOW_CMD_OVERRIDE === "1";
+const IS_TEST_REAL = process.env.AUDIT_TEST_REAL === "1";
 
-if (IS_REAL && ALLOW_CMD_OVERRIDE) {
-  log("⚠️  AUDIT_ALLOW_CMD_OVERRIDE=1 — command overrides enabled (test mode)");
+if (IS_REAL && ALLOW_CMD_OVERRIDE && !IS_TEST_REAL) {
+  fail(
+    "AUDIT_ALLOW_CMD_OVERRIDE is forbidden in real mode. " +
+    "Protected evidence path must use fixed binaries (psql, git). " +
+    "If this is a test, set AUDIT_TEST_REAL=1 explicitly."
+  );
+}
+
+if (ALLOW_CMD_OVERRIDE) {
+  log("⚠️  Command override active (AUDIT_ALLOW_CMD_OVERRIDE=1)");
+  if (IS_TEST_REAL) log("    (test-real mode: AUDIT_TEST_REAL=1)");
 }
 
 const PSQL_CMD_PARTS = ALLOW_CMD_OVERRIDE
