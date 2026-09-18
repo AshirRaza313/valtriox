@@ -1,0 +1,51 @@
+=== Query 1: current_user ===
+  current_user  |  session_user  |  current_role  
+----------------+----------------+----------------
+ audit_readonly | audit_readonly | audit_readonly
+(1 row)
+
+=== Query 2: role memberships ===
+ role_name | member_of 
+-----------+-----------
+(0 rows)
+
+=== Query 3: database CREATE ===
+ datname  | can_create 
+----------+------------
+ postgres | f
+(1 row)
+
+=== Query 4: schema CREATE ===
+      nspname       | can_create 
+--------------------+------------
+ information_schema | f
+ extensions         | f
+ vault              | f
+ graphql_public     | f
+ graphql            | f
+ auth               | f
+ storage            | f
+ realtime           | f
+ public             | f
+(9 rows)
+
+=== Query 5: sequences USAGE ===
+ seq_name | can_use 
+----------+---------
+(0 rows)
+
+=== Query 6: views INSERT ===
+ view_name | can_insert 
+-----------+------------
+(0 rows)
+
+=== Query 7: foreign tables INSERT ===
+ ft_name | can_insert 
+---------+------------
+(0 rows)
+
+=== Query 8: SECURITY DEFINER functions ===
+ nspname | proname | prosecdef 
+---------+---------+-----------
+(0 rows)
+
