@@ -50,7 +50,7 @@ console.log("\nScanner fixture tests:\n");
 
 // ── Test 1: Clean fixture ───────────────────────────────────────────────
 test("clean fixture → exit 0, no duplicates, no missing", () => {
-  const { status, output } = runScanner("i18n-clean.ts");
+  const { status, output } = runScanner("i18n-clean.txt");
 
   if (status !== 0) {
     throw new Error(`expected exit 0, got ${status} — output: ${output.slice(0, 300)}`);
@@ -68,7 +68,7 @@ test("clean fixture → exit 0, no duplicates, no missing", () => {
 
 // ── Test 2: Duplicate fixture ───────────────────────────────────────────
 test("duplicate fixture → exit 1, duplicate detected", () => {
-  const { status, output } = runScanner("i18n-duplicate.ts");
+  const { status, output } = runScanner("i18n-duplicate.txt");
 
   if (status !== 1) {
     throw new Error(`expected exit 1, got ${status} — output: ${output.slice(0, 300)}`);
@@ -83,7 +83,7 @@ test("duplicate fixture → exit 1, duplicate detected", () => {
 
 // ── Test 3: Missing fixture ─────────────────────────────────────────────
 test("missing fixture → exit 1, missing key detected", () => {
-  const { status, output } = runScanner("i18n-missing.ts");
+  const { status, output } = runScanner("i18n-missing.txt");
 
   if (status !== 1) {
     throw new Error(`expected exit 1, got ${status} — output: ${output.slice(0, 300)}`);
