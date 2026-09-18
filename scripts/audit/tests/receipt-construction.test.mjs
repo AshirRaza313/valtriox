@@ -1,26 +1,21 @@
 #!/usr/bin/env node
 // ============================================================================
 // Extended test: successful receipt-construction path.
-// Uses PSQL_CMD / GIT_CMD env vars to point at mock scripts.
-// Works on Windows + Linux without PATH shims or ESM namespace assignment.
+// ============================================================================
+// Uses `run-with-mocks.mjs` which imports `runInventory()` and passes mock
+// commands via FUNCTION PARAMETERS. Production script has no override.
 // ============================================================================
 
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import {
-  readFileSync,
-  existsSync,
-  mkdtempSync,
-  rmSync,
-} from "node:fs";
+import { readFileSync, existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { createHash } from "node:crypto";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const scriptPath = join(__dirname, "..", "notification-inventory.mjs");
-const mockPsqlPath = join(__dirname, "mock-psql.mjs");
-const mockGitPath = join(__dirname, "mock-git.mjs");
+const wrapperPath = join(__dirname, "run-with-mocks.mjs");
+const realScriptPath = join(__dirname, "..", "notification-inventory.mjs");
 
 let passed = 0;
 let failed = 0;
@@ -41,15 +36,13 @@ console.log("\nExtended receipt-construction tests:\n");
 
 const workDir = mkdtempSync(join(tmpdir(), "audit-receipt-test-"));
 
-const scriptContent = readFileSync(scriptPath);
-const scriptHash = createHash("sha256").update(scriptContent).digest("hex");
+// Compute hash of the REAL script (not the wrapper) — that's what the
+// script hashes on startup via import.meta.url.
+const realScriptContent = readFileSync(realScriptPath);
+const scriptHash = createHash("sha256").update(realScriptContent).digest("hex");
 
 const testEnv = {
   ...process.env,
-  PSQL_CMD: JSON.stringify([process.execPath, mockPsqlPath]),
-  GIT_CMD: JSON.stringify([process.execPath, mockGitPath]),
-  AUDIT_TEST_REAL: "1",
-  AUDIT_ALLOW_CMD_OVERRIDE: "1",
   DATABASE_URL_READONLY:
     "postgresql://audit_readonly.testref:password@fake-host.example.com:5432/postgres",
   AUDIT_MODE: "real",
@@ -64,7 +57,7 @@ const testEnv = {
   UPSTREAM_PR_NUMBER: "15",
 };
 
-const runResult = spawnSync("node", [scriptPath], {
+const runResult = spawnSync("node", [wrapperPath], {
   cwd: workDir,
   env: testEnv,
   encoding: "utf8",
@@ -128,13 +121,13 @@ test("receipt includes snapshot_scope clarification", () => {
 test("receipt binds upstream workflow identity", () => {
   if (!receiptJson) throw new Error("Receipt not loaded");
   if (receiptJson.upstream_workflow_sha !== testEnv.UPSTREAM_WORKFLOW_SHA) {
-    throw new Error(`upstream_workflow_sha mismatch: ${receiptJson.upstream_workflow_sha}`);
+    throw new Error(`upstream_workflow_sha mismatch`);
   }
   if (receiptJson.upstream_run_id !== testEnv.UPSTREAM_RUN_ID) {
-    throw new Error(`upstream_run_id mismatch: ${receiptJson.upstream_run_id}`);
+    throw new Error(`upstream_run_id mismatch`);
   }
   if (receiptJson.upstream_pr_number !== testEnv.UPSTREAM_PR_NUMBER) {
-    throw new Error(`upstream_pr_number mismatch: ${receiptJson.upstream_pr_number}`);
+    throw new Error(`upstream_pr_number mismatch`);
   }
   if (receiptJson.evidence_binding !== "upstream_workflow_sha") {
     throw new Error(`evidence_binding wrong: ${receiptJson.evidence_binding}`);
@@ -181,10 +174,10 @@ test("grants_summary records zero table/column write grants", () => {
   const gs = receiptJson.grants_summary;
   if (!gs) throw new Error("grants_summary missing");
   if (gs.table_write_grants !== 0) {
-    throw new Error(`table_write_grants not 0: ${gs.table_write_grants}`);
+    throw new Error(`table_write_grants not 0`);
   }
   if (gs.column_write_grants !== 0) {
-    throw new Error(`column_write_grants not 0: ${gs.column_write_grants}`);
+    throw new Error(`column_write_grants not 0`);
   }
 });
 
