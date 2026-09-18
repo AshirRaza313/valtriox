@@ -21,7 +21,11 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const filePath = path.join(__dirname, "..", "src", "lib", "i18n.ts");
+// File path: optional CLI arg (for tests), default is src/lib/i18n.ts
+const argPath = process.argv[2];
+const filePath = argPath
+  ? path.resolve(argPath)
+  : path.join(__dirname, "..", "src", "lib", "i18n.ts");
 
 if (!fs.existsSync(filePath)) {
   console.error(`ERROR: i18n file not found: ${filePath}`);
