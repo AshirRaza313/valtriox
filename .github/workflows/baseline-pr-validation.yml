@@ -2,10 +2,15 @@ name: baseline-pr-validation
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, labeled]
     branches: [main]
 
 permissions:
   contents: read
+
+concurrency:
+  group: baseline-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
 jobs:
   typecheck:
@@ -24,11 +29,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
       - uses: actions/setup-node@v4
         with:
           node-version: 24
       - run: npm ci
       - run: npx vitest run --exclude "tests/integration/**"
+
+      # ── NEW: Standalone harness crash-path tests ──
+      - name: Harness crash-path tests (standalone)
+        run: node scripts/audit/tests/crash-paths.test.mjs
+      - name: Harness receipt-construction tests (standalone)
+        run: node scripts/audit/tests/receipt-construction.test.mjs
 
   build:
     name: Build
