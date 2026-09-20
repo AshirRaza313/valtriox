@@ -86,6 +86,18 @@ export async function runInventory(options = {}) {
   const AUDIT_MODE = (process.env.AUDIT_MODE || "ci-smoke").toLowerCase();
   const IS_REAL = AUDIT_MODE === "real";
 
+  // Round 12 R12-5: log verbosity control. In real mode, default to
+  // "minimal" so receipt JSON and aggregate counts never appear in
+  // public workflow logs. Explicit opt-in via AUDIT_LOG_VERBOSITY=full
+  // is required to restore full logging (only for private/diagnostic runs).
+  const requestedVerbosity = (process.env.AUDIT_LOG_VERBOSITY || "").toLowerCase();
+  const LOG_VERBOSITY = IS_REAL
+    ? requestedVerbosity === "full"
+      ? "full"
+      : "minimal"
+    : "full";
+  const IS_MINIMAL_LOG = LOG_VERBOSITY === "minimal";
+
   const readonlyUrl = process.env.DATABASE_URL_READONLY;
   if (!readonlyUrl) throw new AuditError("DATABASE_URL_READONLY is required.");
 
@@ -94,6 +106,7 @@ export async function runInventory(options = {}) {
   const expectedPort = process.env.PG_EXPECTED_PORT || "5432";
   const expectedDatabase = process.env.PG_EXPECTED_DATABASE || "postgres";
   const expectedUsername = process.env.PG_EXPECTED_USERNAME;
+  const expectedEffectiveRole = process.env.PG_EXPECTED_EFFECTIVE_ROLE;
   const expectedScriptHash = process.env.EXPECTED_SCRIPT_SHA256;
 
   // ── Trusted pin (immutable commit identity) ──────────────────────────────
@@ -111,16 +124,25 @@ const expectedPinSha = process.env.EXPECTED_PIN_SHA;
     }
   } catch {}
 
+  // ── Upstream (triggering baseline run) identity ─────────────────────────
   const upstreamWorkflowSha = process.env.UPSTREAM_WORKFLOW_SHA || "unknown";
   const upstreamRunId = process.env.UPSTREAM_RUN_ID || "unknown";
-  const upstreamPrNumber = process.env.UPSTREAM_PR_NUMBER || "unknown";
   const upstreamRunAttempt = process.env.UPSTREAM_RUN_ATTEMPT || "unknown";
+  const upstreamPrNumber = process.env.UPSTREAM_PR_NUMBER || "unknown";
+
+  // ── Trusted (current audit-harness run) identity ────────────────────────
+  // Round 12 R12-2: trusted run identity is bound separately from upstream
+  // identity, so receipts unambiguously identify both workflows.
+  const trustedRunId = process.env.TRUSTED_RUN_ID || "unknown";
+  const trustedRunAttempt = process.env.TRUSTED_RUN_ATTEMPT || "unknown";
 
   log(`Trusted harness SHA:   ${actualGitSha}`);
   log(`Upstream workflow SHA: ${upstreamWorkflowSha}`);
   log(`Upstream run ID:       ${upstreamRunId}`);
-  log(`Upstream PR number:    ${upstreamPrNumber}`);
   log(`Upstream run attempt:  ${upstreamRunAttempt}`);
+  log(`Upstream PR number:    ${upstreamPrNumber}`);
+  log(`Trusted run ID:        ${trustedRunId}`);
+  log(`Trusted run attempt:   ${trustedRunAttempt}`);
   log(`Audit Mode: ${AUDIT_MODE}${IS_REAL ? " (STRICT)" : " (smoke)"}`);
   log(`Script SHA256: ${SCRIPT_SHA256.slice(0, 16)}...`);
 
@@ -154,6 +176,12 @@ const expectedPinSha = process.env.EXPECTED_PIN_SHA;
     if (upstreamRunAttempt === "unknown") {
       throw new AuditError("UPSTREAM_RUN_ATTEMPT required in real mode.");
     }
+    if (trustedRunId === "unknown") {
+      throw new AuditError("TRUSTED_RUN_ID required in real mode.");
+    }
+    if (trustedRunAttempt === "unknown") {
+      throw new AuditError("TRUSTED_RUN_ATTEMPT required in real mode.");
+    }
     if (actualGitSha === "unknown") {
       throw new AuditError("Real mode requires valid git HEAD (git rev-parse failed).");
     }
@@ -171,6 +199,17 @@ const expectedPinSha = process.env.EXPECTED_PIN_SHA;
 
   // ── Parse + verify target identity ─────────────────────────────────────
   const parsed = new URL(readonlyUrl);
+
+  // Round 12 R12-3a: reject non-PostgreSQL URI schemes fail-closed.
+  // Follows existing repo pattern (scripts/baseline/safety-guard.cjs,
+  // scripts/baseline/capture-full-catalog.cjs).
+  if (parsed.protocol !== "postgres:" && parsed.protocol !== "postgresql:") {
+    throw new AuditError(
+      `Unsupported database URI protocol: "${parsed.protocol}". ` +
+      `Expected "postgres:" or "postgresql:".`
+    );
+  }
+
   const actualUsername = decodeURIComponent(parsed.username);
   const actualHost = parsed.hostname;
   const actualPort = parsed.port || "5432";
@@ -195,6 +234,9 @@ const expectedPinSha = process.env.EXPECTED_PIN_SHA;
   if (IS_REAL) {
     if (!expectedUsername) throw new AuditError("PG_EXPECTED_USERNAME required in real mode.");
     if (!expectedHost) throw new AuditError("PG_EXPECTED_HOST required in real mode.");
+    if (!expectedEffectiveRole) {
+      throw new AuditError("PG_EXPECTED_EFFECTIVE_ROLE required in real mode.");
+    }
     if (expectedHash !== actualHash) {
       throw new AuditError(
         `Target identity mismatch.\n  expected_hash: ${expectedHash}\n  actual_hash:   ${actualHash}`
@@ -208,6 +250,19 @@ const expectedPinSha = process.env.EXPECTED_PIN_SHA;
 
   // ── psql runner via injected command ───────────────────────────────────
   const sslmode = parsed.searchParams.get("sslmode") || "require";
+
+  // Round 12 R12-3b: reject weak sslmode values fail-closed.
+  // Reference: PostgreSQL libpq sslmode values.
+  //   disable / allow / prefer → weak (allow plaintext fallback or no TLS)
+  //   require / verify-ca / verify-full → acceptable (TLS enforced)
+  const ALLOWED_SSLMODES = new Set(["require", "verify-ca", "verify-full"]);
+  if (!ALLOWED_SSLMODES.has(sslmode)) {
+    throw new AuditError(
+      `Weak sslmode rejected: "${sslmode}". ` +
+      `Allowed: require, verify-ca, verify-full.`
+    );
+  }
+
   const pgEnv = {
     ...process.env,
     PGPASSWORD: decodeURIComponent(parsed.password),
@@ -224,9 +279,20 @@ const expectedPinSha = process.env.EXPECTED_PIN_SHA;
   const PSQL_TIMEOUT_MS = 30_000;
   const PSQL_MAX_BUFFER_BYTES = 10 * 1024 * 1024;
 
-  function psql(sql) {
+  // Round 12 R12-3d: every psql invocation runs inside an explicit
+  // `BEGIN READ ONLY; ... COMMIT;` transaction so PostgreSQL itself
+  // enforces read-only mode per-connection, not just the ambient
+  // session default. This closes the gap where only the first connection
+  // (role check) was verified.
+  //
+  // The ambient role-check query opts out via `readOnlyGuard: false` — it
+  // needs to read the session's true `transaction_read_only` value.
+  function psql(sql, { readOnlyGuard = true } = {}) {
     const [bin, ...prefix] = psqlCmd;
-    const args = [...prefix, "-t", "-A", "-F", "\t", "-c", sql];
+    const guardedSql = readOnlyGuard
+      ? `BEGIN READ ONLY;\n${sql}\nCOMMIT;`
+      : sql;
+    const args = [...prefix, "-t", "-A", "-F", "\t", "-c", guardedSql];
     const result = spawnSync(bin, args, {
       env: pgEnv,
       encoding: "utf8",
@@ -249,15 +315,35 @@ const expectedPinSha = process.env.EXPECTED_PIN_SHA;
     return result.stdout.trim();
   }
 
-  // ── Role check ─────────────────────────────────────────────────────────
+  // ── Role check (ambient session state — NO read-only guard) ────────────
   const roleLine = psql(
-    "SELECT current_user, session_user, current_setting('transaction_read_only')"
+    "SELECT current_user, session_user, current_setting('transaction_read_only')",
+    { readOnlyGuard: false }
   );
   const [currentUser, sessionUser, readOnly] = roleLine.split("\t");
   log(`Database role: current_user=${currentUser}, session_user=${sessionUser}`);
   log(`Read-only mode: ${readOnly}`);
   if (String(readOnly).toLowerCase() !== "on") {
     throw new AuditError("transaction_read_only is not on");
+  }
+
+  // Round 12 R12-3c: match returned role against expected effective role.
+  // Fail-closed on either mismatch so SET ROLE / session authorization
+  // side effects are surfaced.
+  if (IS_REAL) {
+    if (currentUser !== expectedEffectiveRole) {
+      throw new AuditError(
+        `Effective role mismatch (current_user). ` +
+        `Expected "${expectedEffectiveRole}", got "${currentUser}"`
+      );
+    }
+    if (sessionUser !== expectedEffectiveRole) {
+      throw new AuditError(
+        `Effective role mismatch (session_user). ` +
+        `Expected "${expectedEffectiveRole}", got "${sessionUser}"`
+      );
+    }
+    log(`✅ Effective role verified: ${expectedEffectiveRole}`);
   }
 
   // ── Schema binding check (explicit public schema) ──────────────────────
@@ -273,7 +359,45 @@ const expectedPinSha = process.env.EXPECTED_PIN_SHA;
   if (schemaCheck !== "t") {
     throw new AuditError("public schema not accessible");
   }
-  log("✅ Schema binding verified: public schema accessible");
+  log("✅ Schema qualification: public schema accessible");
+
+  // ── Relation-kind check (fail-closed object identity) ──────────────────
+  // Round 12 R12-4a: verify intended relations are ordinary or partitioned
+  // tables (relkind in ('r','p')). This is the strongest object-identity
+  // guarantee the harness supports. It is explicitly NOT a full object
+  // identity check (columns, constraints, defaults, indexes are not
+  // inspected) — that scope note is recorded in the receipt.
+  const relationKindRow = psql(`
+    SELECT c.relname, c.relkind
+    FROM pg_catalog.pg_class c
+    JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public'
+      AND c.relname IN ('Notification', 'NotificationReadReceipt')
+    ORDER BY c.relname
+  `);
+  const relationKindLines = relationKindRow.split("\n").filter(Boolean);
+  const expectedRelations = ["Notification", "NotificationReadReceipt"];
+  const actualKinds = {};
+  for (const line of relationKindLines) {
+    const [name, kind] = line.split("\t");
+    actualKinds[name] = kind;
+  }
+  for (const name of expectedRelations) {
+    if (!actualKinds[name]) {
+      throw new AuditError(`Expected relation public."${name}" not found.`);
+    }
+    if (actualKinds[name] !== "r" && actualKinds[name] !== "p") {
+      throw new AuditError(
+        `Unexpected relation kind for public."${name}": "${actualKinds[name]}". ` +
+        `Expected "r" (ordinary) or "p" (partitioned).`
+      );
+    }
+  }
+  log(
+    `✅ Relation kind verified: ${expectedRelations
+      .map((n) => `public."${n}"=${actualKinds[n]}`)
+      .join(", ")}`
+  );
 
   // ── Table-level write privilege check ──────────────────────────────────
   const tableWriteCheck = psql(`
@@ -380,11 +504,18 @@ const expectedPinSha = process.env.EXPECTED_PIN_SHA;
     );
   }
 
-  log(`\nTotal notifications: ${total}`);
-  log(`Read: ${readCount}, Unread: ${unreadCount}`);
-  log(`Org-wide: ${orgWide}, Targeted: ${targeted}`);
-  log(`Distinct types: ${distinctTypes}`);
-  log(`Read receipts: ${receiptCount}, distinct users: ${distinctReceiptUsers}`);
+  if (IS_MINIMAL_LOG) {
+    log(
+      `Inventory counts captured (aggregate values withheld in real mode; ` +
+      `see receipt artifact for details).`
+    );
+  } else {
+    log(`\nTotal notifications: ${total}`);
+    log(`Read: ${readCount}, Unread: ${unreadCount}`);
+    log(`Org-wide: ${orgWide}, Targeted: ${targeted}`);
+    log(`Distinct types: ${distinctTypes}`);
+    log(`Read receipts: ${receiptCount}, distinct users: ${distinctReceiptUsers}`);
+  }
 
   if (IS_REAL) {
     if (total === 0) throw new AuditError("Real audit requires non-empty Notification table.");
@@ -400,13 +531,20 @@ const expectedPinSha = process.env.EXPECTED_PIN_SHA;
   const receipt = {
     receipt_type: "PROTECTED_EXACT_HEAD_EXECUTION_RECEIPT",
     snapshot_scope: "core_notification_counts_only",
-    schema_binding: {
+    schema_qualification: {
       search_path: searchPath,
       public_schema_verified: true,
       objects_used: [
         'public."Notification"',
         'public."NotificationReadReceipt"',
       ],
+      relation_kinds: actualKinds,
+      relation_kind_verified: true,
+      scope_note:
+        "Qualification covers public schema accessibility and relation " +
+        "kind (relkind in {r, p}) only. It is NOT a full object identity " +
+        "check — columns, constraints, defaults, indexes, and row-level " +
+        "security policies are not inspected.",
     },
 
   // Trusted pin identity (mutually consistent identities)
@@ -422,10 +560,19 @@ const expectedPinSha = process.env.EXPECTED_PIN_SHA;
     upstream_run_id: upstreamRunId,
     upstream_run_attempt: upstreamRunAttempt,
     upstream_pr_number: upstreamPrNumber,
+    trusted_run_id: trustedRunId,
+    trusted_run_attempt: trustedRunAttempt,
     evidence_binding: "upstream_workflow_sha",
     script_sha256: SCRIPT_SHA256,
     script_hash_verified: IS_REAL ? SCRIPT_SHA256 === expectedScriptHash : null,
-    database_role: { current_user: currentUser, session_user: sessionUser },
+    database_role: {
+      current_user: currentUser,
+      session_user: sessionUser,
+      expected_effective_role: expectedEffectiveRole || null,
+      match: IS_REAL
+        ? currentUser === expectedEffectiveRole && sessionUser === expectedEffectiveRole
+        : null,
+    },
     target_identity: {
       expected_hash: expectedHash,
       actual_hash: actualHash,
@@ -462,10 +609,14 @@ const expectedPinSha = process.env.EXPECTED_PIN_SHA;
   const receiptHash = createHash("sha256").update(content).digest("hex");
   writeFileSync(receiptPath + ".sha256", receiptHash + "\n");
 
-  log("\n===================================================");
-  log(JSON.stringify(receipt, null, 2));
-  log("===================================================");
-  log(`Receipt saved: ${receiptPath}`);
+  if (IS_MINIMAL_LOG) {
+    log(`Receipt written to ${receiptPath} (contents not printed in real mode).`);
+  } else {
+    log("\n===================================================");
+    log(JSON.stringify(receipt, null, 2));
+    log("===================================================");
+    log(`Receipt saved: ${receiptPath}`);
+  }
 
   return { receipt, receiptPath, receiptHash };
 }

@@ -108,6 +108,28 @@ The timeout is detected explicitly via `result.signal === "SIGTERM" && result.st
 - Target identity is represented only as a SHA-256 hash; the raw username, host, port, and database values are not written to the receipt.
 - The receipt's `pin_identity`, `target_identity`, and `script_sha256` fields contain SHA-256 digests, not raw secret material.
 
+### Log Verbosity in Real Mode (Round 12 R12-5)
+
+In real mode (`AUDIT_MODE=real`), the harness defaults to **minimal logging**:
+
+| Output | Minimal (default in real) | Full (opt-in via `AUDIT_LOG_VERBOSITY=full`) |
+|--------|---------------------------|----------------------------------------------|
+| Status checks (✅/❌ lines) | Printed | Printed |
+| `pg_version` string | Printed | Printed |
+| `search_path` | Printed | Printed |
+| Receipt JSON dump | **Suppressed** | Printed |
+| Aggregate inventory counts (total, read, unread, etc.) | **Suppressed** | Printed |
+| Receipt file written to disk | ✅ (uploaded as artifact) | ✅ |
+
+Rationale: the repository is public. Aggregate Production counts and the full
+receipt (which includes bound identities, target hash, etc.) must not leak
+into public workflow logs. The receipt remains accessible via the protected
+artifact upload, where access is governed by repository permissions.
+
+Owner-approved exposure policy: minimal logging in real mode is the default;
+`AUDIT_LOG_VERBOSITY=full` is reserved for private diagnostic runs and must
+not be enabled in the protected path without an explicit review.
+
 ### Retention
 
 | Workflow | Artifact | Retention |

@@ -6,6 +6,9 @@
 //   (unset)              → default: successful run (backward-compatible)
 //   readonly_off         → transaction_read_only returns "off"   (N4)
 //   write_grants_table   → has_table_privilege returns "3"       (N5)
+//   wrong_relation_kind  → relkind query returns 'v' for one row (N11)
+//   psql_error_on_version → exit 1 with stderr on version query (N12)
+//   inconsistent_counts  → total != read+unread in inventory (N13)
 //   write_grants_column  → has_column_privilege returns "1"      (N5-variant)
 //   version_17_5         → version() returns PostgreSQL 17.5     (N6)
 //   schema_missing       → public schema check returns "f"
@@ -34,17 +37,32 @@ if (sqlLower.includes("current_user") && sqlLower.includes("transaction_read_onl
   sqlLower.includes("nspname = 'public'")
 ) {
   stdout = scenario === "schema_missing" ? "f\n" : "t\n";
+} else if (
+  sqlLower.includes("c.relname in") &&
+  sqlLower.includes("c.relkind")
+) {
+  stdout =
+    scenario === "wrong_relation_kind"
+      ? "Notification\tv\nNotificationReadReceipt\tr\n"
+      : "Notification\tr\nNotificationReadReceipt\tr\n";
 } else if (sqlLower.includes("has_table_privilege")) {
   stdout = scenario === "write_grants_table" ? "3\n" : "0\n";
 } else if (sqlLower.includes("has_column_privilege")) {
   stdout = scenario === "write_grants_column" ? "1\n" : "0\n";
 } else if (sqlLower.includes("select version()")) {
+  if (scenario === "psql_error_on_version") {
+    process.stderr.write("FATAL: connection lost\n");
+    process.exit(1);
+  }
   stdout =
     scenario === "version_17_5"
       ? "PostgreSQL 17.5 on aarch64-unknown-linux-gnu, compiled by gcc (GCC) 15.2.0, 64-bit\n"
       : "PostgreSQL 17.6 on aarch64-unknown-linux-gnu, compiled by gcc (GCC) 15.2.0, 64-bit\n";
 } else if (sqlLower.includes("as total") && sqlLower.includes("as read_count")) {
-  stdout = "100\t60\t40\t80\t20\t5\n";
+  stdout =
+    scenario === "inconsistent_counts"
+      ? "100\t50\t40\t80\t20\t5\n" // total=100, read+unread=90 → invariant fails
+      : "100\t60\t40\t80\t20\t5\n";
 } else if (
   sqlLower.includes("count(*)") &&
   sqlLower.includes("information_schema.role_table_grants")

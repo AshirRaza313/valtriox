@@ -57,12 +57,15 @@ function baseEnv() {
     PG_EXPECTED_PORT: "5432",
     PG_EXPECTED_DATABASE: "postgres",
     PG_EXPECTED_USERNAME: "audit_readonly.testref",
+    PG_EXPECTED_EFFECTIVE_ROLE: "audit_readonly",
     PG_EXPECTED_VERSION: "17.6",
     EXPECTED_SCRIPT_SHA256: scriptHash,
     UPSTREAM_WORKFLOW_SHA: UPSTREAM_SHA,
     UPSTREAM_RUN_ID: "1234567890",
     UPSTREAM_RUN_ATTEMPT: "1",
     UPSTREAM_PR_NUMBER: "15",
+    TRUSTED_RUN_ID: "9876543210",
+    TRUSTED_RUN_ATTEMPT: "1",
   };
 }
 
@@ -117,6 +120,135 @@ test("N3: unsafe connection (localhost) fails in real mode", () => {
   }
   if (!output.includes("Real audit requires non-localhost target.")) {
     throw new Error(`expected 'Real audit requires non-localhost target.' — got: ${output.slice(0, 400)}`);
+  }
+});
+
+// ── N9a: Invalid URI protocol (Round 12 R12-3a) ────────────────────────
+test("N9a: invalid URI protocol fails with 'Unsupported database URI protocol'", () => {
+  const env = baseEnv();
+  env.DATABASE_URL_READONLY =
+    "mysql://audit_readonly.testref:password@fake-host.example.com:5432/postgres";
+  const { status, output } = runWithEnv(env);
+  if (status !== 1) {
+    throw new Error(`expected exit 1, got ${status} — output: ${output.slice(0, 300)}`);
+  }
+  if (!output.includes("Unsupported database URI protocol")) {
+    throw new Error(
+      `expected 'Unsupported database URI protocol' — got: ${output.slice(0, 400)}`
+    );
+  }
+});
+
+// ── N9b: Weak sslmode (Round 12 R12-3b) ────────────────────────────────
+test("N9b: weak sslmode fails with 'Weak sslmode rejected'", () => {
+  const env = baseEnv();
+  env.DATABASE_URL_READONLY =
+    "postgresql://audit_readonly.testref:password@fake-host.example.com:5432/postgres?sslmode=disable";
+  const { status, output } = runWithEnv(env);
+  if (status !== 1) {
+    throw new Error(`expected exit 1, got ${status} — output: ${output.slice(0, 300)}`);
+  }
+  if (!output.includes("Weak sslmode rejected")) {
+    throw new Error(
+      `expected 'Weak sslmode rejected' — got: ${output.slice(0, 400)}`
+    );
+  }
+  if (!output.includes("disable")) {
+    throw new Error(`expected 'disable' in message — got: ${output.slice(0, 400)}`);
+  }
+});
+
+// ── N10: Returned role mismatch (Round 12 R12-3c) ──────────────────────
+test("N10: returned role mismatch fails with 'Effective role mismatch'", () => {
+  const env = baseEnv();
+  env.PG_EXPECTED_EFFECTIVE_ROLE = "wrong_expected_role"; // mock returns "audit_readonly"
+  const { status, output } = runWithEnv(env);
+  if (status !== 1) {
+    throw new Error(`expected exit 1, got ${status} — output: ${output.slice(0, 300)}`);
+  }
+  if (!output.includes("Effective role mismatch")) {
+    throw new Error(`expected 'Effective role mismatch' — got: ${output.slice(0, 400)}`);
+  }
+});
+
+// ── N11: Object-kind mismatch (Round 12 R12-4a) ────────────────────────
+test("N11: unexpected relation kind fails with 'Unexpected relation kind'", () => {
+  const env = baseEnv();
+  env.MOCK_PSQL_SCENARIO = "wrong_relation_kind"; // mock returns 'v' for Notification
+  const { status, output } = runWithEnv(env);
+  if (status !== 1) {
+    throw new Error(`expected exit 1, got ${status} — output: ${output.slice(0, 300)}`);
+  }
+  if (!output.includes("Unexpected relation kind")) {
+    throw new Error(
+      `expected 'Unexpected relation kind' — got: ${output.slice(0, 400)}`
+    );
+  }
+  if (!output.includes("Notification")) {
+    throw new Error(`expected 'Notification' in message — got: ${output.slice(0, 400)}`);
+  }
+});
+
+// ── N7: Missing EXPECTED_PIN_SHA (workflow env wiring) ─────────────────
+test("N7: missing EXPECTED_PIN_SHA fails with 'EXPECTED_PIN_SHA required'", () => {
+  const env = baseEnv();
+  delete env.EXPECTED_PIN_SHA;
+  const { status, output } = runWithEnv(env);
+  if (status !== 1) {
+    throw new Error(`expected exit 1, got ${status} — output: ${output.slice(0, 300)}`);
+  }
+  if (!output.includes("EXPECTED_PIN_SHA required in real mode.")) {
+    throw new Error(
+      `expected 'EXPECTED_PIN_SHA required in real mode.' — got: ${output.slice(0, 400)}`
+    );
+  }
+});
+
+// ── N8: Script hash mismatch ───────────────────────────────────────────
+test("N8: script hash mismatch fails with 'Script integrity check failed'", () => {
+  const env = baseEnv();
+  env.EXPECTED_SCRIPT_SHA256 = "0".repeat(64); // wrong hash
+  const { status, output } = runWithEnv(env);
+  if (status !== 1) {
+    throw new Error(`expected exit 1, got ${status} — output: ${output.slice(0, 300)}`);
+  }
+  if (!output.includes("Script integrity check failed")) {
+    throw new Error(
+      `expected 'Script integrity check failed' — got: ${output.slice(0, 400)}`
+    );
+  }
+});
+
+// ── N12: psql error (fail-closed on non-zero exit) ─────────────────────
+test("N12: psql error fails with 'psql failed'", () => {
+  const env = baseEnv();
+  env.MOCK_PSQL_SCENARIO = "psql_error_on_version"; // mock exits 1 on version query
+  const { status, output } = runWithEnv(env);
+  if (status !== 1) {
+    throw new Error(`expected exit 1, got ${status} — output: ${output.slice(0, 300)}`);
+  }
+  if (!output.includes("psql failed")) {
+    throw new Error(`expected 'psql failed' — got: ${output.slice(0, 400)}`);
+  }
+  if (!output.includes("FATAL: connection lost")) {
+    throw new Error(
+      `expected stderr text 'FATAL: connection lost' — got: ${output.slice(0, 400)}`
+    );
+  }
+});
+
+// ── N13: Inconsistent count totals ─────────────────────────────────────
+test("N13: inconsistent counts fail with 'Snapshot inconsistency'", () => {
+  const env = baseEnv();
+  env.MOCK_PSQL_SCENARIO = "inconsistent_counts"; // total=100, read+unread=90
+  const { status, output } = runWithEnv(env);
+  if (status !== 1) {
+    throw new Error(`expected exit 1, got ${status} — output: ${output.slice(0, 300)}`);
+  }
+  if (!output.includes("Snapshot inconsistency")) {
+    throw new Error(
+      `expected 'Snapshot inconsistency' — got: ${output.slice(0, 400)}`
+    );
   }
 });
 

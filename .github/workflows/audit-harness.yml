@@ -34,6 +34,7 @@ jobs:
       has_label: ${{ steps.check.outputs.has_label }}
       upstream_sha: ${{ steps.check.outputs.upstream_sha }}
       upstream_run_id: ${{ steps.check.outputs.upstream_run_id }}
+      upstream_run_attempt: ${{ steps.check.outputs.upstream_run_attempt }}
       upstream_pr_number: ${{ steps.check.outputs.upstream_pr_number }}
     steps:
       - id: check
@@ -43,10 +44,12 @@ jobs:
             // FIX #6 — Use IMMUTABLE workflow_run SHA, never refetch PR head.
             const runSha = context.payload.workflow_run.head_sha;
             const runId = String(context.payload.workflow_run.id);
+            const runAttempt = String(context.payload.workflow_run.run_attempt);
             const prs = context.payload.workflow_run.pull_requests || [];
 
             core.setOutput('upstream_sha', runSha);
             core.setOutput('upstream_run_id', runId);
+            core.setOutput('upstream_run_attempt', runAttempt);
 
             if (prs.length === 0) {
               core.setFailed('workflow_run has no PR context — cannot bind evidence');
@@ -105,11 +108,19 @@ jobs:
           PG_EXPECTED_USERNAME: ${{ secrets.PG_EXPECTED_USERNAME }}
           PG_EXPECTED_VERSION: ${{ secrets.PG_EXPECTED_VERSION }}
           EXPECTED_SCRIPT_SHA256: ${{ steps.script_hash.outputs.hash }}
+          # Round 12 R12-1 (P0): bind expected pin to the same immutable SHA
+          # used for checkout (fixes prior workflow-wiring gap — script
+          # required EXPECTED_PIN_SHA but workflow never passed it).
+          EXPECTED_PIN_SHA: ${{ secrets.TRUSTED_HARNESS_SHA }}
           # FIX #4 — UPSTREAM_* now passed from immutable workflow_run payload
           UPSTREAM_WORKFLOW_SHA: ${{ needs.detect-label.outputs.upstream_sha }}
           UPSTREAM_RUN_ID: ${{ needs.detect-label.outputs.upstream_run_id }}
-          UPSTREAM_RUN_ATTEMPT: ${{ github.run_attempt }}
+          UPSTREAM_RUN_ATTEMPT: ${{ needs.detect-label.outputs.upstream_run_attempt }}
           UPSTREAM_PR_NUMBER: ${{ needs.detect-label.outputs.upstream_pr_number }}
+          # Round 12 R12-2: distinguish trusted (current) audit run identity
+          # from upstream (triggering baseline) run identity.
+          TRUSTED_RUN_ID: ${{ github.run_id }}
+          TRUSTED_RUN_ATTEMPT: ${{ github.run_attempt }}
           AUDIT_MODE: real
         run: node scripts/audit/notification-inventory.mjs
 

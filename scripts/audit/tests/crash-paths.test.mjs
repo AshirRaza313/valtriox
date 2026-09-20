@@ -126,5 +126,26 @@ test("script self-hash computes (Windows path compatible)", () => {
   }
 });
 
+// ── Test 6: psql enforces per-connection read-only guard (R12-3d) ──────
+test("psql wraps every query in BEGIN READ ONLY (R12-3d)", () => {
+  const src = readFileSync(realScriptPath, "utf8");
+  // Guard must be present in the psql function
+  if (!src.includes("BEGIN READ ONLY;")) {
+    throw new Error("BEGIN READ ONLY guard missing from psql function");
+  }
+  // Guard must default to enabled
+  if (!/function psql\(sql, \{ readOnlyGuard = true \}/.test(src)) {
+    throw new Error("psql() readOnlyGuard default not `true`");
+  }
+});
+
+// ── Test 7: role check opts out of guard (R12-3d) ──────────────────────
+test("ambient role check opts out via readOnlyGuard: false (R12-3d)", () => {
+  const src = readFileSync(realScriptPath, "utf8");
+  if (!src.includes("readOnlyGuard: false")) {
+    throw new Error("role check does not opt out of read-only guard");
+  }
+});
+
 console.log(`\n${passed} passed, ${failed} failed\n`);
 process.exit(failed > 0 ? 1 : 0);

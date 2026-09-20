@@ -51,12 +51,15 @@ const testEnv = {
   PG_EXPECTED_PORT: "5432",
   PG_EXPECTED_DATABASE: "postgres",
   PG_EXPECTED_USERNAME: "audit_readonly.testref",
+  PG_EXPECTED_EFFECTIVE_ROLE: "audit_readonly",
   PG_EXPECTED_VERSION: "17.6",
   EXPECTED_SCRIPT_SHA256: scriptHash,
   UPSTREAM_WORKFLOW_SHA: "a".repeat(40),
   UPSTREAM_RUN_ID: "1234567890",
   UPSTREAM_RUN_ATTEMPT: "1",
   UPSTREAM_PR_NUMBER: "15",
+  TRUSTED_RUN_ID: "9876543210",
+  TRUSTED_RUN_ATTEMPT: "1",
 };
 
 const runResult = spawnSync("node", [wrapperPath], {
@@ -98,6 +101,33 @@ test("receipt SHA256 sidecar matches content hash", () => {
   }
 });
 
+test("receipt records schema_qualification + relation_kind_verified", () => {
+  if (!receiptJson) throw new Error("Receipt not loaded");
+  const sq = receiptJson.schema_qualification;
+  if (!sq) throw new Error("schema_qualification missing");
+  if (sq.public_schema_verified !== true) {
+    throw new Error("public_schema_verified not true");
+  }
+  if (sq.relation_kind_verified !== true) {
+    throw new Error("relation_kind_verified not true");
+  }
+  if (!sq.relation_kinds || sq.relation_kinds.Notification !== "r") {
+    throw new Error(
+      `relation_kinds.Notification not "r": ${JSON.stringify(sq.relation_kinds)}`
+    );
+  }
+  if (sq.relation_kinds.NotificationReadReceipt !== "r") {
+    throw new Error("relation_kinds.NotificationReadReceipt not 'r'");
+  }
+  if (typeof sq.scope_note !== "string" || !sq.scope_note.includes("NOT a full object identity")) {
+    throw new Error("scope_note missing or does not disclaim full identity");
+  }
+  // Old schema_binding field must be gone (renamed to schema_qualification)
+  if (receiptJson.schema_binding) {
+    throw new Error("legacy schema_binding field still present");
+  }
+});
+
 test("receipt has exactly one grants_summary object", () => {
   const receiptPath = join(workDir, "backups", "historical-rows-inventory-receipt.json");
   const content = readFileSync(receiptPath, "utf8");
@@ -130,6 +160,12 @@ test("receipt binds upstream workflow identity", () => {
   }
   if (receiptJson.upstream_run_attempt !== testEnv.UPSTREAM_RUN_ATTEMPT) {
     throw new Error(`upstream_run_attempt mismatch`);
+  }
+  if (receiptJson.trusted_run_id !== testEnv.TRUSTED_RUN_ID) {
+    throw new Error(`trusted_run_id mismatch`);
+  }
+  if (receiptJson.trusted_run_attempt !== testEnv.TRUSTED_RUN_ATTEMPT) {
+    throw new Error(`trusted_run_attempt mismatch`);
   }
   if (receiptJson.upstream_pr_number !== testEnv.UPSTREAM_PR_NUMBER) {
     throw new Error(`upstream_pr_number mismatch`);
@@ -183,6 +219,19 @@ test("grants_summary records zero table/column write grants", () => {
   }
   if (gs.column_write_grants !== 0) {
     throw new Error(`column_write_grants not 0`);
+  }
+});
+
+test("database_role binds expected effective role (Round 12 R12-3c)", () => {
+  if (!receiptJson) throw new Error("Receipt not loaded");
+  if (!receiptJson.database_role) throw new Error("database_role missing");
+  if (receiptJson.database_role.expected_effective_role !== "audit_readonly") {
+    throw new Error(
+      `expected_effective_role mismatch: ${receiptJson.database_role.expected_effective_role}`
+    );
+  }
+  if (receiptJson.database_role.match !== true) {
+    throw new Error(`database_role.match not true: ${receiptJson.database_role.match}`);
   }
 });
 

@@ -72,9 +72,11 @@ restricted outside the `public` schema. See **What IS NOT Checked** and
 
 ### In Scope
 
-- **Role cannot write to ordinary public tables**
-- **Role cannot write to partitioned public tables**
-- **Role cannot write to columns of these tables**
+- **Current-session, checked-scope claim:** In the current effective session, checked ordinary tables in schema `public` (`relkind = 'r'`) show zero table-level write grants for the checked privileges (INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER).
+- **Current-session, checked-scope claim:** In the current effective session, checked partitioned tables in schema `public` (`relkind = 'p'`) show zero table-level write grants for the same checked privileges.
+- **Current-session, checked-scope claim:** In the current effective session, checked columns of the above tables show zero column-level write grants for the checked privileges (INSERT, UPDATE, REFERENCES).
+
+> **Scope disclaimer:** The above claims describe only what the harness **verified** in the **current effective session** against **checked public objects**. They do **not** assert that the role is globally read-only, nor that it cannot write via un-checked paths (views, foreign tables, functions, sequences, other schemas, or objects outside the checked relation kinds). Refer to **What IS NOT Checked** and **Claim Guidance** below for the exact boundary.
 
 ### Out of Scope
 
