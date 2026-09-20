@@ -96,6 +96,9 @@ export async function runInventory(options = {}) {
   const expectedUsername = process.env.PG_EXPECTED_USERNAME;
   const expectedScriptHash = process.env.EXPECTED_SCRIPT_SHA256;
 
+  // ── Trusted pin (immutable commit identity) ──────────────────────────────
+const expectedPinSha = process.env.EXPECTED_PIN_SHA;
+
   // ── Git HEAD via injected command ──────────────────────────────────────
   let actualGitSha = "unknown";
   try {
@@ -111,13 +114,31 @@ export async function runInventory(options = {}) {
   const upstreamWorkflowSha = process.env.UPSTREAM_WORKFLOW_SHA || "unknown";
   const upstreamRunId = process.env.UPSTREAM_RUN_ID || "unknown";
   const upstreamPrNumber = process.env.UPSTREAM_PR_NUMBER || "unknown";
+  const upstreamRunAttempt = process.env.UPSTREAM_RUN_ATTEMPT || "unknown";
 
   log(`Trusted harness SHA:   ${actualGitSha}`);
   log(`Upstream workflow SHA: ${upstreamWorkflowSha}`);
   log(`Upstream run ID:       ${upstreamRunId}`);
   log(`Upstream PR number:    ${upstreamPrNumber}`);
+  log(`Upstream run attempt:  ${upstreamRunAttempt}`);
   log(`Audit Mode: ${AUDIT_MODE}${IS_REAL ? " (STRICT)" : " (smoke)"}`);
   log(`Script SHA256: ${SCRIPT_SHA256.slice(0, 16)}...`);
+
+  // ── Real-mode: pin identity fail-closed ──────────────────────────────────
+  if (IS_REAL) {
+    if (!expectedPinSha) {
+      throw new AuditError("EXPECTED_PIN_SHA required in real mode.");
+    }
+    if (actualGitSha === "unknown") {
+      throw new AuditError("Real mode requires valid git HEAD for pin verification.");
+    }
+    if (expectedPinSha !== actualGitSha) {
+      throw new AuditError(
+        `Pin identity mismatch.\n  expected_pin: ${expectedPinSha}\n  checked_out_head: ${actualGitSha}`
+      );
+    }
+    log(`✅ Pin identity verified (${actualGitSha.slice(0, 8)}...)`);
+  }
 
   // ── Real-mode: enforce UPSTREAM_* presence ─────────────────────────────
   if (IS_REAL) {
@@ -129,6 +150,9 @@ export async function runInventory(options = {}) {
     }
     if (upstreamPrNumber === "unknown") {
       throw new AuditError("UPSTREAM_PR_NUMBER required in real mode.");
+    }
+    if (upstreamRunAttempt === "unknown") {
+      throw new AuditError("UPSTREAM_RUN_ATTEMPT required in real mode.");
     }
     if (actualGitSha === "unknown") {
       throw new AuditError("Real mode requires valid git HEAD (git rev-parse failed).");
@@ -194,14 +218,29 @@ export async function runInventory(options = {}) {
     PGSSLMODE: sslmode,
   };
 
+  // Bounded psql execution (Round 11 R6):
+  //   - maxBuffer: 10 MB  — prevents unbounded stdout accumulation
+  //   - timeout:   30 s    — prevents indefinite hangs
+  const PSQL_TIMEOUT_MS = 30_000;
+  const PSQL_MAX_BUFFER_BYTES = 10 * 1024 * 1024;
+
   function psql(sql) {
     const [bin, ...prefix] = psqlCmd;
     const args = [...prefix, "-t", "-A", "-F", "\t", "-c", sql];
     const result = spawnSync(bin, args, {
       env: pgEnv,
       encoding: "utf8",
-      maxBuffer: 10 * 1024 * 1024,
+      maxBuffer: PSQL_MAX_BUFFER_BYTES,
+      timeout: PSQL_TIMEOUT_MS,
     });
+    // Explicit timeout handling — spawnSync sets signal=SIGTERM, status=null
+    // when the timeout fires. Without this, the generic error below would
+    // report the misleading "psql failed: unknown".
+    if (result.signal === "SIGTERM" && result.status === null) {
+      throw new AuditError(
+        `psql timed out after ${PSQL_TIMEOUT_MS}ms (SIGTERM)`
+      );
+    }
     if (result.status !== 0) {
       throw new AuditError(
         `psql failed: ${result.stderr || result.error?.message || "unknown"}`
@@ -220,6 +259,21 @@ export async function runInventory(options = {}) {
   if (String(readOnly).toLowerCase() !== "on") {
     throw new AuditError("transaction_read_only is not on");
   }
+
+  // ── Schema binding check (explicit public schema) ──────────────────────
+  const searchPath = psql("SHOW search_path");
+  log(`search_path: ${searchPath}`);
+  
+  const schemaCheck = psql(`
+    SELECT EXISTS (
+      SELECT 1 FROM pg_catalog.pg_namespace 
+      WHERE nspname = 'public'
+    )
+  `);
+  if (schemaCheck !== "t") {
+    throw new AuditError("public schema not accessible");
+  }
+  log("✅ Schema binding verified: public schema accessible");
 
   // ── Table-level write privilege check ──────────────────────────────────
   const tableWriteCheck = psql(`
@@ -281,12 +335,12 @@ export async function runInventory(options = {}) {
   // ── Core notification counts (single snapshot query) ───────────────────
   const inventoryRow = psql(`
     SELECT
-      (SELECT COUNT(*) FROM "Notification") AS total,
-      (SELECT COUNT(*) FROM "Notification" WHERE read = true) AS read_count,
-      (SELECT COUNT(*) FROM "Notification" WHERE read = false) AS unread_count,
-      (SELECT COUNT(*) FROM "Notification" WHERE "userId" IS NULL) AS org_wide,
-      (SELECT COUNT(*) FROM "Notification" WHERE "userId" IS NOT NULL) AS targeted,
-      (SELECT COUNT(DISTINCT type) FROM "Notification") AS distinct_types
+      (SELECT COUNT(*) FROM public."Notification") AS total,
+      (SELECT COUNT(*) FROM public."Notification" WHERE read = true) AS read_count,
+      (SELECT COUNT(*) FROM public."Notification" WHERE read = false) AS unread_count,
+      (SELECT COUNT(*) FROM public."Notification" WHERE "userId" IS NULL) AS org_wide,
+      (SELECT COUNT(*) FROM public."Notification" WHERE "userId" IS NOT NULL) AS targeted,
+      (SELECT COUNT(DISTINCT type) FROM public."Notification") AS distinct_types
   `);
   const [totalS, readS, unreadS, orgWideS, targetedS, typesS] = inventoryRow.split("\t");
 
@@ -313,11 +367,11 @@ export async function runInventory(options = {}) {
   let distinctReceiptUsers = 0;
   try {
     receiptCount = safeParseInt(
-      psql('SELECT COUNT(*) FROM "NotificationReadReceipt"'),
+      psql('SELECT COUNT(*) FROM public."NotificationReadReceipt"'),
       "notification receipt count"
     );
     distinctReceiptUsers = safeParseInt(
-      psql('SELECT COUNT(DISTINCT "userId") FROM "NotificationReadReceipt"'),
+      psql('SELECT COUNT(DISTINCT "userId") FROM public."NotificationReadReceipt"'),
       "distinct receipt user count"
     );
   } catch (err) {
@@ -346,11 +400,27 @@ export async function runInventory(options = {}) {
   const receipt = {
     receipt_type: "PROTECTED_EXACT_HEAD_EXECUTION_RECEIPT",
     snapshot_scope: "core_notification_counts_only",
+    schema_binding: {
+      search_path: searchPath,
+      public_schema_verified: true,
+      objects_used: [
+        'public."Notification"',
+        'public."NotificationReadReceipt"',
+      ],
+    },
+
+  // Trusted pin identity (mutually consistent identities)
+    pin_identity: {
+      expected_pin: expectedPinSha || null,
+      checked_out_head: actualGitSha,
+      match: IS_REAL ? expectedPinSha === actualGitSha : null,
+    },
     audit_mode: AUDIT_MODE,
     timestamp: new Date().toISOString(),
     harness_git_sha: actualGitSha,
     upstream_workflow_sha: upstreamWorkflowSha,
     upstream_run_id: upstreamRunId,
+    upstream_run_attempt: upstreamRunAttempt,
     upstream_pr_number: upstreamPrNumber,
     evidence_binding: "upstream_workflow_sha",
     script_sha256: SCRIPT_SHA256,

@@ -1,11 +1,21 @@
 # Audit Privilege Scope — Documentation
 
-**Last Updated:** 2026-09-15
+**Last Updated:** 2026-09-20
 **Related:** `scripts/audit/notification-inventory.mjs`
 
 ## Purpose
 
-This document defines the exact scope of the privilege verification performed by the trusted audit harness. It exists to prevent over-broad claims about "SELECT-only role" and to enable precise threat modeling.
+This document defines the exact scope of the privilege verification performed by the trusted audit harness. It exists to prevent over-broad claims about the audit role and to enable precise threat modeling.
+
+## Narrow Factual Statement
+
+> **In the current effective session, selected privileges on checked public objects are zero.**
+
+This is the strongest claim the harness currently supports. It is deliberately
+narrow and does **not** assert that the role is globally read-only, that it
+lacks `EXECUTE` on functions, that it cannot write via views, or that it is
+restricted outside the `public` schema. See **What IS NOT Checked** and
+**Claim Guidance** below for the exact boundary.
 
 ## What IS Checked
 
@@ -78,10 +88,13 @@ This document defines the exact scope of the privilege verification performed by
 
 | Claim | Safe? |
 |-------|-------|
+| "In the current effective session, selected privileges on checked public objects are zero." | ✅ **Safe — recommended wording** |
 | "Role has no table-level write grants on public ordinary/partitioned tables" | ✅ **Safe** |
 | "Role has no column-level write grants on public ordinary/partitioned tables" | ✅ **Safe** |
 | "Role is SELECT-only" | ❌ **Over-broad — avoid** |
+| "Role is read-only" | ❌ **Over-broad — avoid** |
 | "Role cannot write to any object" | ❌ **Over-broad — avoid** |
+| "Role has no write privileges globally" | ❌ **Over-broad — avoid** |
 
 ## Recommended Future Work
 

@@ -24,8 +24,24 @@ jobs:
       - run: npm ci
       - run: npx tsc --noEmit
 
+  # R4 (Round 11): Application unit tests run on the synthetic merge-ref
+  # (github.sha on pull_request events = merge commit of PR into base).
+  # Default checkout (no `ref:`) uses github.sha — merge-ref boundary.
   unit-tests:
-    name: Tests
+    name: Tests (merge-ref)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci
+      - run: npx vitest run --exclude "tests/integration/**"
+
+  # R4 (Round 11): Harness validation runs on the exact PR-head commit.
+  # Separate focused boundary from application tests above.
+  harness-validation:
+    name: Harness Validation (PR-head)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -35,14 +51,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - run: npm ci
-      - run: npx vitest run --exclude "tests/integration/**"
-
-      # ── NEW: Standalone harness crash-path tests ──
       - name: Harness crash-path tests (standalone)
         run: node scripts/audit/tests/crash-paths.test.mjs
       - name: Harness receipt-construction tests (standalone)
         run: node scripts/audit/tests/receipt-construction.test.mjs
+      - name: Harness negative-path tests (standalone)
+        run: node scripts/audit/tests/negative-paths.test.mjs
 
   build:
     name: Build
@@ -248,6 +262,7 @@ jobs:
     needs:
       - typecheck
       - unit-tests
+      - harness-validation
       - build
       - lint
       - integration-tests
@@ -259,6 +274,7 @@ jobs:
         env:
           TYPECHECK_RESULT: ${{ needs.typecheck.result }}
           TESTS_RESULT: ${{ needs.unit-tests.result }}
+          HARNESS_RESULT: ${{ needs.harness-validation.result }}
           BUILD_RESULT: ${{ needs.build.result }}
           LINT_RESULT: ${{ needs.lint.result }}
           INTEGRATION_RESULT: ${{ needs.integration-tests.result }}
@@ -267,6 +283,7 @@ jobs:
           for result in \
             "$TYPECHECK_RESULT" \
             "$TESTS_RESULT" \
+            "$HARNESS_RESULT" \
             "$BUILD_RESULT" \
             "$LINT_RESULT" \
             "$INTEGRATION_RESULT" \

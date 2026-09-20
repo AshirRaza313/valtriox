@@ -55,10 +55,14 @@ test("real mode fails when UPSTREAM_WORKFLOW_SHA missing", () => {
     ...process.env,
     DATABASE_URL_READONLY: "postgresql://user:pass@127.0.0.1:5432/postgres",
     AUDIT_MODE: "real",
+    EXPECTED_PIN_SHA: "b".repeat(40),   // ← YE ADD KARO (matches mock git SHA)
   };
   delete env.UPSTREAM_WORKFLOW_SHA;
   delete env.UPSTREAM_RUN_ID;
   delete env.UPSTREAM_PR_NUMBER;
+  delete env.UPSTREAM_RUN_ATTEMPT;
+  delete env.AUDIT_ALLOW_CMD_OVERRIDE;
+  delete env.AUDIT_TEST_REAL;
 
   const result = spawnSync("node", [wrapperPath], { env, encoding: "utf8" });
   const output = `${result.stdout || ""}${result.stderr || ""}`;

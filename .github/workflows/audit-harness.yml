@@ -108,6 +108,7 @@ jobs:
           # FIX #4 — UPSTREAM_* now passed from immutable workflow_run payload
           UPSTREAM_WORKFLOW_SHA: ${{ needs.detect-label.outputs.upstream_sha }}
           UPSTREAM_RUN_ID: ${{ needs.detect-label.outputs.upstream_run_id }}
+          UPSTREAM_RUN_ATTEMPT: ${{ github.run_attempt }}
           UPSTREAM_PR_NUMBER: ${{ needs.detect-label.outputs.upstream_pr_number }}
           AUDIT_MODE: real
         run: node scripts/audit/notification-inventory.mjs
@@ -115,7 +116,7 @@ jobs:
       - name: Upload receipt
         uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882  # v4.4.3
         with:
-          name: real-inventory-receipt-${{ needs.detect-label.outputs.upstream_sha }}-${{ github.run_id }}
+          name: real-inventory-receipt-${{ needs.detect-label.outputs.upstream_sha }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             backups/historical-rows-inventory-receipt.json
             backups/historical-rows-inventory-receipt.json.sha256

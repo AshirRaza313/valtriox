@@ -46,6 +46,7 @@ const testEnv = {
   DATABASE_URL_READONLY:
     "postgresql://audit_readonly.testref:password@fake-host.example.com:5432/postgres",
   AUDIT_MODE: "real",
+  EXPECTED_PIN_SHA: "b".repeat(40),   // ← YE ADD KARO (matches mock git SHA)
   PG_EXPECTED_HOST: "fake-host.example.com",
   PG_EXPECTED_PORT: "5432",
   PG_EXPECTED_DATABASE: "postgres",
@@ -54,6 +55,7 @@ const testEnv = {
   EXPECTED_SCRIPT_SHA256: scriptHash,
   UPSTREAM_WORKFLOW_SHA: "a".repeat(40),
   UPSTREAM_RUN_ID: "1234567890",
+  UPSTREAM_RUN_ATTEMPT: "1",
   UPSTREAM_PR_NUMBER: "15",
 };
 
@@ -125,6 +127,9 @@ test("receipt binds upstream workflow identity", () => {
   }
   if (receiptJson.upstream_run_id !== testEnv.UPSTREAM_RUN_ID) {
     throw new Error(`upstream_run_id mismatch`);
+  }
+  if (receiptJson.upstream_run_attempt !== testEnv.UPSTREAM_RUN_ATTEMPT) {
+    throw new Error(`upstream_run_attempt mismatch`);
   }
   if (receiptJson.upstream_pr_number !== testEnv.UPSTREAM_PR_NUMBER) {
     throw new Error(`upstream_pr_number mismatch`);
