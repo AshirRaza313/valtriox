@@ -57,6 +57,43 @@ jobs:
         run: node scripts/audit/tests/receipt-construction.test.mjs
       - name: Harness negative-path tests (standalone)
         run: node scripts/audit/tests/negative-paths.test.mjs
+      - name: Harness contract verification test (standalone)
+        run: node scripts/audit/tests/contract-verification.test.mjs
+
+  # R13-2: Real psql validation on disposable PostgreSQL (non-superuser role).
+  # Uses postgres:16 service — never touches production/protected DBs.
+  harness-real-psql:
+    name: Harness Real psql Validation (PR-head)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: superuser
+          POSTGRES_PASSWORD: superuser_pass
+          POSTGRES_DB: audit_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U superuser"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      TEST_DATABASE_URL: postgresql://superuser:superuser_pass@localhost:5432/audit_test
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+      - name: Verify psql available
+        run: psql --version
+      - name: Run real psql integration tests
+        run: node scripts/audit/tests/real-psql-integration.test.mjs
 
   build:
     name: Build
@@ -263,6 +300,7 @@ jobs:
       - typecheck
       - unit-tests
       - harness-validation
+      - harness-real-psql
       - build
       - lint
       - integration-tests
@@ -275,6 +313,7 @@ jobs:
           TYPECHECK_RESULT: ${{ needs.typecheck.result }}
           TESTS_RESULT: ${{ needs.unit-tests.result }}
           HARNESS_RESULT: ${{ needs.harness-validation.result }}
+          HARNESS_REAL_PSQL_RESULT: ${{ needs.harness-real-psql.result }}
           BUILD_RESULT: ${{ needs.build.result }}
           LINT_RESULT: ${{ needs.lint.result }}
           INTEGRATION_RESULT: ${{ needs.integration-tests.result }}
@@ -284,6 +323,7 @@ jobs:
             "$TYPECHECK_RESULT" \
             "$TESTS_RESULT" \
             "$HARNESS_RESULT" \
+            "$HARNESS_REAL_PSQL_RESULT" \
             "$BUILD_RESULT" \
             "$LINT_RESULT" \
             "$INTEGRATION_RESULT" \

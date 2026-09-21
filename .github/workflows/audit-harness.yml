@@ -112,6 +112,11 @@ jobs:
           # used for checkout (fixes prior workflow-wiring gap — script
           # required EXPECTED_PIN_SHA but workflow never passed it).
           EXPECTED_PIN_SHA: ${{ secrets.TRUSTED_HARNESS_SHA }}
+          # Round 13 R13-1: expected effective role for real-mode check.
+          # If secret is not set, GitHub resolves to empty string → script's
+          # existing real-mode gate fires fail-closed. Protected run remains
+          # blocked until role spelling is independently verified.
+          PG_EXPECTED_EFFECTIVE_ROLE: ${{ secrets.PG_EXPECTED_EFFECTIVE_ROLE }}
           # FIX #4 — UPSTREAM_* now passed from immutable workflow_run payload
           UPSTREAM_WORKFLOW_SHA: ${{ needs.detect-label.outputs.upstream_sha }}
           UPSTREAM_RUN_ID: ${{ needs.detect-label.outputs.upstream_run_id }}

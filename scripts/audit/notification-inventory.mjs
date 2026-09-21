@@ -80,6 +80,7 @@ export async function runInventory(options = {}) {
       ? options.gitCmd
       : ["git"];
 
+  // codeql[js/clear-text-logging] -- false positive: see docs/codeql-alert-52-disposition.md
   const log = (msg) => console.log(msg);
 
   // ── Config from env ────────────────────────────────────────────────────

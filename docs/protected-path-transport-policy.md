@@ -1,8 +1,8 @@
 # Protected Path Transport Policy
 
-**Last Updated:** 2026-09-20
+**Last Updated:** 2026-09-21
 
-**Related:** PR #15 (`audit-harness`), Round 11 R6 remediation
+**Related:** PR #15 (`audit-harness`), Round 11 R6 → Round 12 R12-5 → Round 13 R13-4
 
 **Scope:** Real-mode execution of `scripts/audit/notification-inventory.mjs` via `.github/workflows/audit-harness.yml`
 
@@ -25,9 +25,29 @@ This document defines the transport, binding, execution, and exposure controls t
 - Certificate chain verification (`verify-ca` / `verify-full`).
 - Blocking of IPv6 loopback (`::1`) or RFC1918 private ranges.
 
-### Recommendation for Operators
+### ⏳ Owner Decision Pending — TLS Server Verification
 
-`sslmode=require` encrypts but does **not** validate the server certificate chain. For full verification, set `sslmode=verify-full` in the `DATABASE_URL_READONLY` query string and ensure the relevant CA certificate is present on the runner. This is currently a documented recommendation, not a code-enforced constraint.
+`sslmode=require` encrypts but does **not** validate the server certificate
+chain. Full verification requires `sslmode=verify-full` (or `verify-ca`) plus
+a CA certificate on the runner.
+
+**Status:** **Owner decision pending.**
+
+The choice between `require` (current default) and `verify-full` is a
+policy decision that requires an explicit owner sign-off. Until decided:
+
+- The code defaults to `require` (encryption without cert-chain verification).
+- Weak modes (`disable`, `allow`, `prefer`) are fail-closed rejected (R12-3b).
+- `verify-ca` and `verify-full` are accepted if explicitly set on
+  `DATABASE_URL_READONLY`.
+
+**Owner action required:**
+1. Decide whether the protected path requires `verify-full`.
+2. If yes, provision a CA cert on the runner and update the secret URL to
+   include `sslmode=verify-full`.
+3. Record the decision here with date and reviewer.
+
+**Not an enforced constraint yet.** See Section 6 for the technical impact.
 
 ## 2. Trusted Workflow Binding
 
@@ -130,10 +150,32 @@ Owner-approved exposure policy: minimal logging in real mode is the default;
 `AUDIT_LOG_VERBOSITY=full` is reserved for private diagnostic runs and must
 not be enabled in the protected path without an explicit review.
 
+### ⏳ Owner Decision Pending — Receipt Artifact Visibility
+
+The protected-path receipt artifact (`real-inventory-receipt-...`) is uploaded
+via `actions/upload-artifact@v4`. **Its visibility depends on repository
+visibility**, which is a separate policy decision.
+
+**Current state:**
+- Repository visibility: **public** (needs confirmation via owner decision).
+- Artifact visibility: inherits repository-level access controls.
+- Artifact content: sanitized — SHA-256 digests for identities, no raw secrets.
+
+**Owner decision required:**
+1. Confirm whether the repository (and therefore the receipt artifact) is
+   intended to be public or private.
+2. If public: confirm that the receipt's contents (non-secret identifiers,
+   hashes, and aggregate-free scope note) are acceptable for public exposure.
+3. If restricted: move receipt artifacts to a private location or restrict
+   access via GitHub artifact permissions.
+
+**Not an enforced constraint yet.** Until the owner decides, the receipt
+artifact is accessible to anyone with repository read access.
+
 ### Retention
 
 | Workflow | Artifact | Retention |
-|---|---|---|
+|----------|----------|-----------|
 | `audit-harness.yml` (protected path) | `real-inventory-receipt-...` | 90 days |
 | `baseline-pr-validation.yml` (ordinary CI) | `catalog-comparison-...`, `path-b-*` | 30 days |
 
@@ -141,11 +183,19 @@ The protected-path retention is 90 days; ordinary CI uses 30 days.
 
 ## 6. Known Gaps / Not Enforced
 
-The following items are not currently enforced by code or workflow. They are listed for transparency and are candidates for a follow-up PR.
+The following items are **not currently enforced by code or workflow**.
+They are listed for transparency and are candidates for a follow-up PR.
+
+### Owner Decisions Pending
+
+| Item | Status | Owner action |
+|------|--------|--------------|
+| TLS server verification (`verify-full` vs `require`) | **Pending** | See Section 1 |
+| Receipt artifact visibility (public repo) | **Pending** | See Section 5 |
 
 | # | Gap | Impact | Mitigation today |
 |---|---|---|---|
-| 1 | `sslmode=require` default does not verify the certificate chain | MITM risk during transport if a hostile endpoint is reachable | Operator must set `sslmode=verify-full` in the connection URL |
+| 1 | `sslmode=require` default does not verify the certificate chain | MITM risk during transport if a hostile endpoint is reachable | **Owner decision pending** — see Section 1 |
 | 2 | Non-localhost check only blocks literal `"localhost"` / `"127.0.0.1"` | IPv6 `::1`, RFC1918 private ranges, and DNS aliases are not rejected | Relies on target-identity hash match (`PG_EXPECTED_HOST`) |
 | 3 | `current_role` not queried | `SET ROLE` side effects not detected | Only `current_user` / `session_user` are bound |
 | 4 | No role-membership inspection | Inherited privileges via group roles not enumerated | Write-grant checks (`has_table_privilege`) run as `current_user` and cover inherited privileges |
