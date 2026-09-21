@@ -60,11 +60,19 @@ const roEnv = makePsqlEnv(roUrl);
 function psql(sql, { guard = true, env = superEnv } = {}) {
   // Semicolon after ${sql} required — see R13-2b.
   const guardedSql = guard ? `BEGIN READ ONLY;\n${sql};\nCOMMIT;` : sql;
-  return spawnSync(
+  const result = spawnSync(
     "psql",
     ["-t", "-A", "-F", "\t", "-c", guardedSql],
     { env, encoding: "utf8", maxBuffer: 10 * 1024 * 1024, timeout: 30_000 }
   );
+  // R13-2c: mirror harness — strip BEGIN/COMMIT command tags.
+  if (guard && typeof result.stdout === "string") {
+    result.stdout = result.stdout
+      .split("\n")
+      .filter((line) => line !== "BEGIN" && line !== "COMMIT")
+      .join("\n");
+  }
+  return result;
 }
 
 // ── Test harness ────────────────────────────────────────────────────────

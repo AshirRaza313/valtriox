@@ -80,8 +80,8 @@ export async function runInventory(options = {}) {
       ? options.gitCmd
       : ["git"];
 
-  // codeql[js/clear-text-logging]
   // Disposition: false positive — see docs/codeql-alert-52-disposition.md
+  // codeql[js/clear-text-logging]
   const log = (msg) => console.log(msg);
 
   // ── Config from env ────────────────────────────────────────────────────
@@ -317,7 +317,19 @@ const expectedPinSha = process.env.EXPECTED_PIN_SHA;
         `psql failed: ${result.stderr || result.error?.message || "unknown"}`
       );
     }
-    return result.stdout.trim();
+    // Round 13 R13-2c: when readOnlyGuard wraps SQL with
+    // "BEGIN READ ONLY; ... COMMIT;", psql emits "BEGIN" and "COMMIT"
+    // command tags on stdout. Strip them so downstream parsers see only
+    // the actual query result. Discovered by real-psql integration tests —
+    // mock tests could not reproduce this (no real SQL parsing).
+    // Safe: our queries never return literal "BEGIN"/"COMMIT" data rows.
+    const stdout = readOnlyGuard
+      ? result.stdout
+          .split("\n")
+          .filter((line) => line !== "BEGIN" && line !== "COMMIT")
+          .join("\n")
+      : result.stdout;
+    return stdout.trim();
   }
 
   // ── Role check (ambient session state — NO read-only guard) ────────────
