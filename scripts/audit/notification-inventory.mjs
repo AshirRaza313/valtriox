@@ -80,7 +80,8 @@ export async function runInventory(options = {}) {
       ? options.gitCmd
       : ["git"];
 
-  // codeql[js/clear-text-logging] -- false positive: see docs/codeql-alert-52-disposition.md
+  // codeql[js/clear-text-logging]
+  // Disposition: false positive — see docs/codeql-alert-52-disposition.md
   const log = (msg) => console.log(msg);
 
   // ── Config from env ────────────────────────────────────────────────────
@@ -290,8 +291,11 @@ const expectedPinSha = process.env.EXPECTED_PIN_SHA;
   // needs to read the session's true `transaction_read_only` value.
   function psql(sql, { readOnlyGuard = true } = {}) {
     const [bin, ...prefix] = psqlCmd;
+    // Round 13 R13-2b: semicolon after ${sql} is required. Without it,
+    // psql parses "SQL\nCOMMIT;" as "SQL COMMIT;" → syntax error.
+    // Discovered by real-psql integration tests (mocks do not parse SQL).
     const guardedSql = readOnlyGuard
-      ? `BEGIN READ ONLY;\n${sql}\nCOMMIT;`
+      ? `BEGIN READ ONLY;\n${sql};\nCOMMIT;`
       : sql;
     const args = [...prefix, "-t", "-A", "-F", "\t", "-c", guardedSql];
     const result = spawnSync(bin, args, {

@@ -58,7 +58,8 @@ const superEnv = makePsqlEnv(superUrl);
 const roEnv = makePsqlEnv(roUrl);
 
 function psql(sql, { guard = true, env = superEnv } = {}) {
-  const guardedSql = guard ? `BEGIN READ ONLY;\n${sql}\nCOMMIT;` : sql;
+  // Semicolon after ${sql} required — see R13-2b.
+  const guardedSql = guard ? `BEGIN READ ONLY;\n${sql};\nCOMMIT;` : sql;
   return spawnSync(
     "psql",
     ["-t", "-A", "-F", "\t", "-c", guardedSql],
