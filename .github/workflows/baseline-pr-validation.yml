@@ -119,9 +119,12 @@ jobs:
             -out /tmp/pgssl/server.crt \
             -keyout /tmp/pgssl/server.key \
             -subj "/CN=test-db.local"
+          # PostgreSQL refuses to start if server.key has group/world access.
+          # Required permissions: 0600 (owner-only) or 0640 max if owned by root.
+          # We chown to postgres user (UID 999 in the official image) and use 0600.
+          chmod 600 /tmp/pgssl/server.key
           chmod 644 /tmp/pgssl/server.crt
-          chmod 644 /tmp/pgssl/server.key
-          sudo chown 999:999 /tmp/pgssl/server.crt /tmp/pgssl/server.key
+          sudo chown 999:999 /tmp/pgssl/server.key /tmp/pgssl/server.crt
 
       - name: Start PostgreSQL with SSL
         run: |
