@@ -1,6 +1,6 @@
 # Protected Path Transport Policy
 
-**Last Updated:** 2026-09-21
+**Last Updated:** 2026-09-22
 
 **Related:** PR #15 (`audit-harness`), Round 11 R6 → Round 12 R12-5 → Round 13 R13-4
 
@@ -85,19 +85,46 @@ backups/historical-rows-inventory-receipt.json.sha256
 
 ### Enforced
 
-- `current_user` and `session_user` are read from the database in a single query at the start of every run and recorded in the receipt under `database_role`.
+- **Effective role match (R12-3c):** `current_user` AND `session_user` are
+  read in a single query and **matched fail-closed** against the
+  `PG_EXPECTED_EFFECTIVE_ROLE` env var. Mismatch on either raises
+  `Effective role mismatch (current_user). ...` or
+  `Effective role mismatch (session_user). ...`
 
-- `current_setting('transaction_read_only')` must equal `on`.  
+- **Ambient read-only state:** `current_setting('transaction_read_only')`
+  must equal `on` on the role-check connection.
   Error: `transaction_read_only is not on`.
 
-- Target identity is verified via SHA-256 hash of `user@host:port/database` before any data query executes.  
+- **Per-connection read-only enforcement (R12-3d):** every psql invocation
+  (except the ambient role check) wraps its SQL in
+  `BEGIN READ ONLY; ...; COMMIT;` so PostgreSQL itself rejects writes on
+  every connection, not just the first.
+
+- **Target identity:** verified via SHA-256 hash of `user@host:port/database`
+  before any data query executes.
   Error: `Target identity mismatch.`
+
+- **Receipt fields:** `database_role` records `current_user`, `session_user`,
+  `expected_effective_role`, and `match` (boolean).
 
 ### Not Enforced (see Section 6)
 
 - `current_role` reconciliation (e.g., `SET ROLE` side effects).
 - Role membership / `pg_auth_members` inspection.
 - `SET SESSION AUTHORIZATION` detection.
+
+## 3b. Test Coverage Note (Round 14 R14-3)
+
+The audit harness has two integration test tiers against real PostgreSQL:
+
+| Test File | What it exercises | Scope |
+|-----------|-------------------|-------|
+| `real-psql-integration.test.mjs` | Raw `psql` CLI behavior — BEGIN/COMMIT tags, tab output, error propagation, read-only enforcement | **psql command layer only.** Uses a standalone `psql()` helper (a copy of the harness's logic), NOT `runInventory()`. |
+| `production-path.test.mjs` | Actual `runInventory()` end-to-end against a disposable SSL-enabled PostgreSQL | **Full production code path** — pin check, target identity, role binding, schema qualification, relation kind, grants, version, counts, receipt. |
+
+**Coverage claim (narrowed):** The real-psql test alone does **not** validate the production path — it validates the underlying psql command contract. Full production-path coverage requires `production-path.test.mjs`, which imports and calls `runInventory()`.
+
+Both tests run in CI, each with a disposable non-production database. Neither touches the protected or production database.
 
 ## 4. Bounded `psql` Execution
 
@@ -143,12 +170,33 @@ In real mode (`AUDIT_MODE=real`), the harness defaults to **minimal logging**:
 
 Rationale: the repository is public. Aggregate Production counts and the full
 receipt (which includes bound identities, target hash, etc.) must not leak
-into public workflow logs. The receipt remains accessible via the protected
-artifact upload, where access is governed by repository permissions.
+into public workflow logs or public artifacts. The receipt file is uploaded
+as a build artifact, so its contents are also subject to repository visibility.
 
-Owner-approved exposure policy: minimal logging in real mode is the default;
-`AUDIT_LOG_VERBOSITY=full` is reserved for private diagnostic runs and must
-not be enabled in the protected path without an explicit review.
+**Exposure status — Owner decision pending:**
+
+- Minimal logging in real mode is the code-level default (R12-5).
+- Receipt artifact visibility is governed by repository visibility.
+- Owner decision on public-repo artifact exposure is **pending** (see
+  "Receipt Artifact Visibility" below).
+
+**Correction (R14-2):** Prior revisions of this document implied the
+exposure policy was "owner-approved" and the receipt was "aggregate-free".
+Both claims were **inaccurate**. The actual state: the receipt includes raw
+aggregate counts unless `AUDIT_RECEIPT_REDACT=false` is explicitly set, and
+the owner has not yet decided whether public artifact exposure is acceptable.
+
+**Count redaction (R14-2):** In real mode, receipt `inventory_summary`
+counts are **redacted by default** (`AUDIT_RECEIPT_REDACT` unset → redacted).
+The redacted form:
+
+```json
+"inventory_summary": {
+  "_redacted": true,
+  "_reason": "Aggregate counts withheld from public receipt artifact...",
+  "core_counts_snapshot_consistent": true,
+  "receipt_counts_snapshot_consistent": false
+}
 
 ### ⏳ Owner Decision Pending — Receipt Artifact Visibility
 
@@ -159,13 +207,21 @@ visibility**, which is a separate policy decision.
 **Current state:**
 - Repository visibility: **public** (needs confirmation via owner decision).
 - Artifact visibility: inherits repository-level access controls.
-- Artifact content: sanitized — SHA-256 digests for identities, no raw secrets.
+- Artifact content (R14-2 default): sanitized — SHA-256 digests for
+  identities, no raw secrets, and aggregate counts redacted
+  (`inventory_summary._redacted: true`).
+- Artifact content (if `AUDIT_RECEIPT_REDACT=false` set): contains raw
+  aggregate counts. The protected workflow does not set this env var.
 
 **Owner decision required:**
 1. Confirm whether the repository (and therefore the receipt artifact) is
    intended to be public or private.
-2. If public: confirm that the receipt's contents (non-secret identifiers,
-   hashes, and aggregate-free scope note) are acceptable for public exposure.
+2. If public: confirm that the receipt's contents are acceptable for public
+   exposure. Current default (R14-2): identities are SHA-256 hashes, no raw
+   secrets, and aggregate counts are redacted
+   (`inventory_summary._redacted: true`). If `AUDIT_RECEIPT_REDACT=false` is
+   ever set, the receipt will contain raw aggregate counts — this must not be
+   enabled in the protected path without explicit owner review.
 3. If restricted: move receipt artifacts to a private location or restrict
    access via GitHub artifact permissions.
 

@@ -1,0 +1,272 @@
+#!/usr/bin/env node
+// ============================================================================
+// Production-path integration test — Round 14 R14-3
+// ============================================================================
+// Expert Round 13 feedback: "Real-psql tests production helper ki copy
+// chalate hain, actual runInventory path nahi. Coverage claim ko narrow
+// karo aur production-path evidence do."
+//
+// This file exercises the ACTUAL runInventory() function end-to-end:
+//   - Imports runInventory from ../notification-inventory.mjs
+//   - Passes psqlCmd = ["psql"] (real psql subprocess)
+//   - Passes gitCmd = [node, mock-git.mjs] (mock git for HEAD)
+//   - Sets all required real-mode env vars
+//   - Executes full audit path: pin → target → role → schema → relkind
+//     → grants → version → counts → receipt
+//   - Verifies receipt JSON + file artifacts
+//
+// Local dev: SKIPs if TEST_DATABASE_URL not set.
+//
+// CI setup (see baseline-pr-validation.yml harness-production-path job):
+//   - docker postgres:16 with SSL enabled (self-signed cert)
+//   - DB audit_test; role audit_r14_ro with default_transaction_read_only=on
+//   - Hosts alias test-db.local → 127.0.0.1 (non-localhost check)
+// ============================================================================
+
+import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+import { readFileSync, existsSync, rmSync } from "node:fs";
+import { createHash } from "node:crypto";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const mockGitPath = join(__dirname, "mock-git.mjs");
+const realScriptPath = join(__dirname, "..", "notification-inventory.mjs");
+
+const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL;
+if (!TEST_DATABASE_URL) {
+  console.log("\nSKIP: TEST_DATABASE_URL not set (local dev / no DB).\n");
+  process.exit(0);
+}
+
+const parsedSuper = new URL(TEST_DATABASE_URL);
+const DB_NAME = parsedSuper.pathname.replace(/^\//, "");
+
+let passed = 0;
+let failed = 0;
+
+function test(name, fn) {
+  try {
+    fn();
+    console.log(`  ✓ ${name}`);
+    passed++;
+  } catch (err) {
+    console.error(`  ✗ ${name}`);
+    console.error(`    ${err.message}`);
+    failed++;
+  }
+}
+
+function assertEq(actual, expected, label) {
+  if (actual !== expected) {
+    throw new Error(
+      `${label}: expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`
+    );
+  }
+}
+
+function assertTrue(cond, label) {
+  if (!cond) throw new Error(`${label}: expected true`);
+}
+
+// Superuser psql (setup/cleanup) — bypasses harness
+function superPsql(sql) {
+  return spawnSync(
+    "psql",
+    ["-t", "-A", "-F", "\t", "-c", sql],
+    {
+      env: {
+        PATH: process.env.PATH || "",
+        HOME: process.env.HOME || "",
+        PGPASSWORD: decodeURIComponent(parsedSuper.password),
+        PGUSER: decodeURIComponent(parsedSuper.username),
+        PGHOST: parsedSuper.hostname,
+        PGPORT: parsedSuper.port || "5432",
+        PGDATABASE: DB_NAME,
+        PGSSLMODE: "require",
+      },
+      encoding: "utf8",
+      maxBuffer: 10 * 1024 * 1024,
+      timeout: 30_000,
+    }
+  );
+}
+
+console.log("\nProduction-path integration test (Round 14 R14-3):\n");
+
+const ROLE_NAME = "audit_r14_ro";
+const ROLE_PASSWORD = "audit_r14_ro_pass_xyz";
+
+// ── Setup: schema, role, data, read-only default ────────────────────────
+const setupSql = `
+  DROP TABLE IF EXISTS public."NotificationReadReceipt";
+  DROP TABLE IF EXISTS public."Notification";
+  DROP ROLE IF EXISTS ${ROLE_NAME};
+  CREATE TABLE public."Notification" (
+    id int PRIMARY KEY,
+    read boolean NOT NULL,
+    "userId" text,
+    type text NOT NULL
+  );
+  CREATE TABLE public."NotificationReadReceipt" (
+    id int PRIMARY KEY,
+    "userId" text NOT NULL
+  );
+  INSERT INTO public."Notification" VALUES
+    (1, true, NULL, 'system'),
+    (2, false, 'user1', 'mention'),
+    (3, true, 'user2', 'comment'),
+    (4, false, 'user1', 'mention');
+  INSERT INTO public."NotificationReadReceipt" VALUES
+    (1, 'user1'),
+    (2, 'user2');
+  CREATE ROLE ${ROLE_NAME} LOGIN PASSWORD '${ROLE_PASSWORD}';
+  GRANT CONNECT ON DATABASE "${DB_NAME}" TO ${ROLE_NAME};
+  GRANT USAGE ON SCHEMA public TO ${ROLE_NAME};
+  GRANT SELECT ON ALL TABLES IN SCHEMA public TO ${ROLE_NAME};
+  ALTER ROLE ${ROLE_NAME} SET default_transaction_read_only = on;
+`;
+
+const setupResult = superPsql(setupSql);
+if (setupResult.status !== 0) {
+  console.error("SETUP FAILED:");
+  console.error(setupResult.stderr);
+  process.exit(1);
+}
+
+// ── Query actual PostgreSQL version ────────────────────────────────────
+const versionResult = superPsql("SELECT version()");
+const versionMatch = versionResult.stdout.match(/PostgreSQL\s+(\d+\.\d+)/);
+if (!versionMatch) {
+  console.error("Could not determine PostgreSQL version:", versionResult.stdout);
+  process.exit(1);
+}
+const pgVersion = versionMatch[1];
+
+// ── Compute script hash (matches harness's self-hash) ──────────────────
+const scriptHash = createHash("sha256")
+  .update(readFileSync(realScriptPath))
+  .digest("hex");
+
+// ── Build read-only role URL with sslmode=require ──────────────────────
+const roUrl = new URL(TEST_DATABASE_URL);
+roUrl.username = ROLE_NAME;
+roUrl.password = ROLE_PASSWORD;
+roUrl.searchParams.set("sslmode", "require");
+
+// ── Set env for runInventory (real mode) ───────────────────────────────
+delete process.env.MOCK_PSQL_SCENARIO;
+process.env.DATABASE_URL_READONLY = roUrl.toString();
+process.env.AUDIT_MODE = "real";
+// R14-2: this test asserts raw count values, so opt out of default redaction.
+// Production workflow does not set this → redaction is default.
+process.env.AUDIT_RECEIPT_REDACT = "false";
+process.env.EXPECTED_PIN_SHA = "b".repeat(40);
+process.env.PG_EXPECTED_HOST = parsedSuper.hostname;
+process.env.PG_EXPECTED_PORT = parsedSuper.port || "5432";
+process.env.PG_EXPECTED_DATABASE = DB_NAME;
+process.env.PG_EXPECTED_USERNAME = ROLE_NAME;
+process.env.PG_EXPECTED_EFFECTIVE_ROLE = ROLE_NAME;
+process.env.PG_EXPECTED_VERSION = pgVersion;
+process.env.EXPECTED_SCRIPT_SHA256 = scriptHash;
+process.env.UPSTREAM_WORKFLOW_SHA = "a".repeat(40);
+process.env.UPSTREAM_RUN_ID = "1234567890";
+process.env.UPSTREAM_RUN_ATTEMPT = "1";
+process.env.UPSTREAM_PR_NUMBER = "15";
+process.env.TRUSTED_RUN_ID = "9876543210";
+process.env.TRUSTED_RUN_ATTEMPT = "1";
+
+// ── Clean any prior receipt ────────────────────────────────────────────
+const receiptPath = join(process.cwd(), "backups", "historical-rows-inventory-receipt.json");
+if (existsSync(receiptPath)) {
+  try { rmSync(receiptPath); } catch {}
+  try { rmSync(receiptPath + ".sha256"); } catch {}
+}
+
+// ── Import runInventory AFTER env setup ────────────────────────────────
+const { runInventory } = await import("../notification-inventory.mjs");
+
+let runResult;
+let runError;
+try {
+  runResult = await runInventory({
+    psqlCmd: ["psql"],
+    gitCmd: ["node", mockGitPath],
+  });
+} catch (err) {
+  runError = err;
+}
+
+// ── Assertions ─────────────────────────────────────────────────────────
+test("runInventory completes without error (full production path)", () => {
+  if (runError) {
+    throw new Error(`runInventory threw: ${runError.name}: ${runError.message}`);
+  }
+  if (!runResult || !runResult.receipt) {
+    throw new Error("runInventory returned no receipt");
+  }
+});
+
+test("receipt pin_identity.match === true (R1 path)", () => {
+  const pin = runResult.receipt.pin_identity;
+  assertEq(pin.match, true, "pin_identity.match");
+  assertEq(pin.expected_pin, "b".repeat(40), "expected_pin");
+});
+
+test("receipt binds upstream + trusted run identity (R12-2 path)", () => {
+  const r = runResult.receipt;
+  assertEq(r.upstream_run_id, "1234567890", "upstream_run_id");
+  assertEq(r.upstream_run_attempt, "1", "upstream_run_attempt");
+  assertEq(r.trusted_run_id, "9876543210", "trusted_run_id");
+  assertEq(r.trusted_run_attempt, "1", "trusted_run_attempt");
+});
+
+test("receipt database_role.match === true (R12-3c path)", () => {
+  const dr = runResult.receipt.database_role;
+  assertEq(dr.current_user, ROLE_NAME, "current_user");
+  assertEq(dr.session_user, ROLE_NAME, "session_user");
+  assertEq(dr.expected_effective_role, ROLE_NAME, "expected_effective_role");
+  assertEq(dr.match, true, "match");
+});
+
+test("receipt schema_qualification + relation_kind_verified (R12-4a path)", () => {
+  const sq = runResult.receipt.schema_qualification;
+  assertTrue(sq, "schema_qualification present");
+  assertEq(sq.public_schema_verified, true, "public_schema_verified");
+  assertEq(sq.relation_kind_verified, true, "relation_kind_verified");
+  assertEq(sq.relation_kinds.Notification, "r", "Notification relkind");
+  assertEq(sq.relation_kinds.NotificationReadReceipt, "r", "Receipt relkind");
+});
+
+test("receipt grants_summary zero write grants (real DB, R12-3b path)", () => {
+  const gs = runResult.receipt.grants_summary;
+  assertEq(gs.table_write_grants, 0, "table_write_grants");
+  assertEq(gs.column_write_grants, 0, "column_write_grants");
+});
+
+test("receipt inventory counts snapshot-consistent (real DB)", () => {
+  const inv = runResult.receipt.inventory_summary;
+  assertEq(inv.total_notifications, 4, "total_notifications");
+  assertEq(inv.read_count, 2, "read_count");
+  assertEq(inv.unread_count, 2, "unread_count");
+  assertEq(inv.org_wide, 1, "org_wide");
+  assertEq(inv.targeted, 3, "targeted");
+  assertEq(inv.distinct_types, 3, "distinct_types");
+  assertEq(inv.notification_read_receipts, 2, "receipt_count");
+  assertEq(inv.distinct_receipt_users, 2, "distinct_receipt_users");
+});
+
+test("receipt file + SHA256 sidecar written", () => {
+  assertTrue(existsSync(receiptPath), "receipt file exists");
+  assertTrue(existsSync(receiptPath + ".sha256"), "sha256 sidecar exists");
+});
+
+// ── Cleanup ────────────────────────────────────────────────────────────
+superPsql(`
+  DROP TABLE IF EXISTS public."NotificationReadReceipt";
+  DROP TABLE IF EXISTS public."Notification";
+  DROP ROLE IF EXISTS ${ROLE_NAME};
+`);
+
+console.log(`\n${passed} passed, ${failed} failed\n`);
+process.exit(failed > 0 ? 1 : 0);

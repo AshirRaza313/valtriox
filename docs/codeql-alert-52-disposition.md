@@ -3,8 +3,15 @@
 **Alert:** `js/clear-text-logging` (CWE-532)
 **Location:** `scripts/audit/notification-inventory.mjs:83`
 **Date reviewed:** 2026-09-21
-**Reviewer:** Ashir Raza
-**Disposition:** **False positive — dismissed with justification**
+**Author self-review:** Ashir Raza (PR author — NOT an independent reviewer)
+**Disposition:** **False positive — author self-dismissed with justification**
+
+> **Framing note:** This dismissal was performed by the PR author
+> (`AshirRaza313`) as a self-review of CodeQL's data-flow analysis. It is
+> **not** an independent security approval. The GitHub API dismissal
+> record (`dismissed_by: AshirRaza313`, `dismissed_reason: "false positive"`)
+> reflects author action only. Independent security review, if required,
+> remains a separate pending gate.
 
 ## Data-Flow Review
 
@@ -37,8 +44,9 @@ All values passed to `log()` are non-sensitive public identifiers:
 - `PGPASSWORD` — never passed
 - `DATABASE_URL_READONLY` (raw string) — never passed
 - `EXPECTED_PIN_SHA`, `EXPECTED_SCRIPT_SHA256` — only in receipt file
-- Aggregate counts — suppressed via `AUDIT_LOG_VERBOSITY` (R12-5)
-- Receipt JSON — suppressed in real mode (R12-5)
+- Aggregate counts — suppressed from logs via `AUDIT_LOG_VERBOSITY` (R12-5)
+  and redacted from the receipt by default via `AUDIT_RECEIPT_REDACT` (R14-2)
+- Receipt JSON — suppressed from logs in real mode (R12-5)
 
 ## Mitigations Already in Place
 

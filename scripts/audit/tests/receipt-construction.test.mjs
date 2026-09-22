@@ -46,6 +46,9 @@ const testEnv = {
   DATABASE_URL_READONLY:
     "postgresql://audit_readonly.testref:password@fake-host.example.com:5432/postgres",
   AUDIT_MODE: "real",
+  // R14-2: tests explicitly opt out of count redaction to assert raw values.
+  // Production workflow does not set this → redaction is default.
+  AUDIT_RECEIPT_REDACT: "false",
   EXPECTED_PIN_SHA: "b".repeat(40),   // ← YE ADD KARO (matches mock git SHA)
   PG_EXPECTED_HOST: "fake-host.example.com",
   PG_EXPECTED_PORT: "5432",
@@ -68,7 +71,19 @@ const runResult = spawnSync("node", [wrapperPath], {
   encoding: "utf8",
 });
 
+// R14-2: second run with redaction default ON (no AUDIT_RECEIPT_REDACT set).
+const workDirRedact = mkdtempSync(join(tmpdir(), "audit-receipt-redact-"));
+const redactEnv = { ...testEnv };
+delete redactEnv.AUDIT_RECEIPT_REDACT;
+
+const runResultRedact = spawnSync("node", [wrapperPath], {
+  cwd: workDirRedact,
+  env: redactEnv,
+  encoding: "utf8",
+});
+
 let receiptJson;
+let redactedReceiptJson;
 
 test("successful run completes without crash (exit 0)", () => {
   if (runResult.status !== 0) {
@@ -235,8 +250,42 @@ test("database_role binds expected effective role (Round 12 R12-3c)", () => {
   }
 });
 
+test("R14-2: default real-mode run redacts counts (no opt-out env)", () => {
+  if (runResultRedact.status !== 0) {
+    throw new Error(
+      `redact run expected exit 0, got ${runResultRedact.status}: ` +
+        `${(runResultRedact.stderr || "").slice(0, 400)}`
+    );
+  }
+  const p = join(
+    workDirRedact,
+    "backups",
+    "historical-rows-inventory-receipt.json"
+  );
+  if (!existsSync(p)) {
+    throw new Error(`redacted receipt not found at ${p}`);
+  }
+  redactedReceiptJson = JSON.parse(readFileSync(p, "utf8"));
+  const inv = redactedReceiptJson.inventory_summary;
+  if (inv._redacted !== true) {
+    throw new Error(`inventory_summary._redacted not true: ${inv._redacted}`);
+  }
+  if (inv.total_notifications !== undefined) {
+    throw new Error("total_notifications should be undefined (redacted)");
+  }
+  if (inv.read_count !== undefined) {
+    throw new Error("read_count should be undefined (redacted)");
+  }
+  if (inv.core_counts_snapshot_consistent !== true) {
+    throw new Error("core_counts_snapshot_consistent should remain true");
+  }
+});
+
 try {
   rmSync(workDir, { recursive: true, force: true });
+} catch {}
+try {
+  rmSync(workDirRedact, { recursive: true, force: true });
 } catch {}
 
 console.log(`\n${passed} passed, ${failed} failed\n`);

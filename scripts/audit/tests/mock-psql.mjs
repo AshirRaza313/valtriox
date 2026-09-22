@@ -12,6 +12,7 @@
 //   write_grants_column  → has_column_privilege returns "1"      (N5-variant)
 //   version_17_5         → version() returns PostgreSQL 17.5     (N6)
 //   schema_missing       → public schema check returns "f"
+//   env_dump             → print PG* env vars (for R14-1 test)
 //
 // When MOCK_PSQL_SCENARIO is unset, behavior is identical to the
 // pre-Round-11 mock (so existing tests remain green).
@@ -24,7 +25,16 @@ const scenario = process.env.MOCK_PSQL_SCENARIO || "";
 
 let stdout = "";
 
-if (sqlLower.includes("current_user") && sqlLower.includes("transaction_read_only")) {
+if (scenario === "env_dump") {
+  // Dump PG* env vars for R14-1 verification
+  const pgVars = Object.keys(process.env)
+    .filter((k) => k.startsWith("PG"))
+    .sort();
+  for (const k of pgVars) {
+    process.stdout.write(`${k}=<redacted>\n`);
+  }
+  process.exit(0);
+} else if (sqlLower.includes("current_user") && sqlLower.includes("transaction_read_only")) {
   stdout =
     scenario === "readonly_off"
       ? "audit_readonly\taudit_readonly\toff\n"

@@ -189,6 +189,70 @@ test("N11: unexpected relation kind fails with 'Unexpected relation kind'", () =
   }
 });
 
+// ── N14: Inherited PGHOSTADDR cannot redirect connection (R14-1) ──────
+test("N14: inherited PGHOSTADDR/PGSERVICE/PGOPTIONS stripped from psql env", () => {
+  const env = baseEnv();
+  env.MOCK_PSQL_SCENARIO = "env_dump"; // mock prints its own PG* env vars
+  env.PGHOSTADDR = "192.0.2.1";        // TEST-NET-1, non-routable
+  env.PGSERVICE = "malicious_service";
+  env.PGOPTIONS = "-c search_path=malicious";
+  // Note: runInventory will fail at role-check parsing because env_dump
+  // overrides ALL psql query responses. Status is irrelevant — we only
+  // inspect the mock's stdout for leaked PG* variable NAMES. The mock
+  // prints every PG* var it receives; if PGHOSTADDR/PGSERVICE/PGOPTIONS
+  // leak through, their names appear in the output.
+  const { output } = runWithEnv(env);
+  if (output.includes("PGHOSTADDR")) {
+    throw new Error(
+      `PGHOSTADDR leaked into psql env — vulnerability not fixed: ` +
+      output.slice(0, 400)
+    );
+  }
+  if (output.includes("PGSERVICE")) {
+    throw new Error(
+      `PGSERVICE leaked into psql env — vulnerability not fixed: ` +
+      output.slice(0, 400)
+    );
+  }
+  if (output.includes("PGOPTIONS")) {
+    throw new Error(
+      `PGOPTIONS leaked into psql env — vulnerability not fixed: ` +
+      output.slice(0, 400)
+    );
+  }
+});
+
+// ── N14b: source-level verification of fail-closed pgEnv (R14-1) ──────
+test("N14b: pgEnv construction uses allowlist, not process.env spread", () => {
+  const src = readFileSync(
+    join(__dirname, "..", "notification-inventory.mjs"),
+    "utf8"
+  );
+  // 1. No process.env spread in pgEnv construction
+  if (/const pgEnv = \{\s*\.\.\.process\.env/.test(src)) {
+    throw new Error("pgEnv still spreads process.env — fail-closed not applied");
+  }
+  // 2. SAFE_PASSTHROUGH allowlist present
+  if (!src.includes("SAFE_PASSTHROUGH")) {
+    throw new Error("SAFE_PASSTHROUGH allowlist missing");
+  }
+  // 3. PGHOSTADDR must NOT appear in the allowlist
+  const allowMatch = src.match(/SAFE_PASSTHROUGH\s*=\s*\[([\s\S]*?)\]/);
+  if (!allowMatch) {
+    throw new Error("SAFE_PASSTHROUGH array literal not found");
+  }
+  if (allowMatch[1].includes("PGHOSTADDR")) {
+    throw new Error("PGHOSTADDR must NOT be in SAFE_PASSTHROUGH allowlist");
+  }
+  if (allowMatch[1].includes("PGSERVICE")) {
+    throw new Error("PGSERVICE must NOT be in SAFE_PASSTHROUGH allowlist");
+  }
+  // 4. isMockPsql guard present
+  if (!src.includes("isMockPsql")) {
+    throw new Error("isMockPsql guard missing (test-only passthrough)");
+  }
+});
+
 // ── N7: Missing EXPECTED_PIN_SHA (workflow env wiring) ─────────────────
 test("N7: missing EXPECTED_PIN_SHA fails with 'EXPECTED_PIN_SHA required'", () => {
   const env = baseEnv();

@@ -254,9 +254,6 @@ const expectedPinSha = process.env.EXPECTED_PIN_SHA;
   const sslmode = parsed.searchParams.get("sslmode") || "require";
 
   // Round 12 R12-3b: reject weak sslmode values fail-closed.
-  // Reference: PostgreSQL libpq sslmode values.
-  //   disable / allow / prefer → weak (allow plaintext fallback or no TLS)
-  //   require / verify-ca / verify-full → acceptable (TLS enforced)
   const ALLOWED_SSLMODES = new Set(["require", "verify-ca", "verify-full"]);
   if (!ALLOWED_SSLMODES.has(sslmode)) {
     throw new AuditError(
@@ -265,15 +262,53 @@ const expectedPinSha = process.env.EXPECTED_PIN_SHA;
     );
   }
 
-  const pgEnv = {
-    ...process.env,
-    PGPASSWORD: decodeURIComponent(parsed.password),
-    PGUSER: actualUsername,
-    PGHOST: actualHost,
-    PGPORT: actualPort,
-    PGDATABASE: actualDatabase,
-    PGSSLMODE: sslmode,
-  };
+  // Round 14 R14-1: fail-closed psql env construction.
+  //
+  // Inherited libpq env vars can redirect the connection away from the
+  // identity-verified target:
+  //   - PGHOSTADDR overrides PGHOST (PostgreSQL docs: "If both host and
+  //     hostaddr are specified, the value for hostaddr gives the server
+  //     network address.")
+  //   - PGSERVICE / PGSERVICEFILE can load connection params from a
+  //     service file, overriding host/user/db.
+  //   - PGOPTIONS, PGSSLCERT, PGSSLKEY, PGSSLROOTCERT, PGCHANNELBINDING,
+  //     PGTARGETSESSIONATTRS can all affect connection behavior.
+  //
+  // Reference: CVE-2018-10915 (libpq connection security bypass via
+  // host/hostaddr from untrusted input).
+  //
+  // Mitigation: build env from an explicit allowlist instead of spreading
+  // process.env. Only operational vars that psql legitimately needs are
+  // passed through; all PG* vars are set explicitly from the verified URL.
+  const SAFE_PASSTHROUGH = [
+    "PATH", "HOME", "LANG", "LC_ALL", "LC_MESSAGES",
+    "TZ", "TERM", "USER", "LOGNAME", "SHELL",
+  ];
+
+  const pgEnv = {};
+  for (const key of SAFE_PASSTHROUGH) {
+    if (process.env[key] !== undefined) {
+      pgEnv[key] = process.env[key];
+    }
+  }
+
+  // Test-only passthrough: MOCK_PSQL_SCENARIO controls mock-psql.mjs
+  // scenarios (N4/N5/N6/N11/N12/N13 tests). It is passed through ONLY
+  // when the injected psql command is NOT the real "psql" CLI — production
+  // uses psqlCmd = ["psql"] and can never reach this branch. Real psql
+  // ignores MOCK_PSQL_SCENARIO entirely, so this preserves fail-closed
+  // isolation on the production path.
+  const isMockPsql = !(psqlCmd.length === 1 && psqlCmd[0] === "psql");
+  if (isMockPsql && process.env.MOCK_PSQL_SCENARIO !== undefined) {
+    pgEnv.MOCK_PSQL_SCENARIO = process.env.MOCK_PSQL_SCENARIO;
+  }
+
+  pgEnv.PGPASSWORD = decodeURIComponent(parsed.password);
+  pgEnv.PGUSER = actualUsername;
+  pgEnv.PGHOST = actualHost;
+  pgEnv.PGPORT = actualPort;
+  pgEnv.PGDATABASE = actualDatabase;
+  pgEnv.PGSSLMODE = sslmode;
 
   // Bounded psql execution (Round 11 R6):
   //   - maxBuffer: 10 MB  — prevents unbounded stdout accumulation
@@ -544,6 +579,15 @@ const expectedPinSha = process.env.EXPECTED_PIN_SHA;
     }
   }
 
+  // Round 14 R14-2: redact aggregate counts from receipt by default in real
+  // mode. The receipt artifact is uploaded to a public repository, so
+  // production aggregate counts must not leak. Set AUDIT_RECEIPT_REDACT=false
+  // only in controlled environments (tests, private diagnostics) — the
+  // protected workflow does not set this env var, so redaction is the default.
+  const REDACT_COUNTS =
+    IS_REAL &&
+    (process.env.AUDIT_RECEIPT_REDACT || "true").toLowerCase() !== "false";
+
   // ── Receipt ────────────────────────────────────────────────────────────
   const receipt = {
     receipt_type: "PROTECTED_EXACT_HEAD_EXECUTION_RECEIPT",
@@ -605,18 +649,28 @@ const expectedPinSha = process.env.EXPECTED_PIN_SHA;
     pg_expected_version: expectedVersion || null,
     pg_version_match: pgVersionMatch,
     read_only_mode_status: String(readOnly).toLowerCase() === "on" ? "on" : "off",
-    inventory_summary: {
-      total_notifications: total,
-      read_count: readCount,
-      unread_count: unreadCount,
-      org_wide: orgWide,
-      targeted: targeted,
-      distinct_types: distinctTypes,
-      core_counts_snapshot_consistent: true,
-      notification_read_receipts: receiptCount,
-      distinct_receipt_users: distinctReceiptUsers,
-      receipt_counts_snapshot_consistent: false,
-    },
+    inventory_summary: REDACT_COUNTS
+      ? {
+          _redacted: true,
+          _reason:
+            "Aggregate counts withheld from public receipt artifact. " +
+            "See docs/protected-path-transport-policy.md Section 5 " +
+            "(owner decision on artifact visibility pending).",
+          core_counts_snapshot_consistent: true,
+          receipt_counts_snapshot_consistent: false,
+        }
+      : {
+          total_notifications: total,
+          read_count: readCount,
+          unread_count: unreadCount,
+          org_wide: orgWide,
+          targeted: targeted,
+          distinct_types: distinctTypes,
+          core_counts_snapshot_consistent: true,
+          notification_read_receipts: receiptCount,
+          distinct_receipt_users: distinctReceiptUsers,
+          receipt_counts_snapshot_consistent: false,
+        },
   };
 
   mkdirSync("backups", { recursive: true });

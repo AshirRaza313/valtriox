@@ -95,6 +95,74 @@ jobs:
       - name: Run real psql integration tests
         run: node scripts/audit/tests/real-psql-integration.test.mjs
 
+  # R14-3: Production-path test — calls the ACTUAL runInventory() against a
+  # disposable SSL-enabled PostgreSQL. Narrow coverage claim vs real-psql
+  # test (which validates psql command behavior only).
+  harness-production-path:
+    name: Harness Production-Path (PR-head)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Generate self-signed SSL cert for test postgres
+        run: |
+          mkdir -p /tmp/pgssl
+          openssl req -new -x509 -days 1 -nodes \
+            -out /tmp/pgssl/server.crt \
+            -keyout /tmp/pgssl/server.key \
+            -subj "/CN=test-db.local"
+          chmod 644 /tmp/pgssl/server.crt
+          chmod 644 /tmp/pgssl/server.key
+          sudo chown 999:999 /tmp/pgssl/server.crt /tmp/pgssl/server.key
+
+      - name: Start PostgreSQL with SSL
+        run: |
+          docker run -d --name pg-r14 \
+            -e POSTGRES_USER=superuser \
+            -e POSTGRES_PASSWORD=superuser_pass \
+            -e POSTGRES_DB=audit_test \
+            -p 5432:5432 \
+            -v /tmp/pgssl:/etc/postgresql-certs:ro \
+            postgres:16 \
+            -c ssl=on \
+            -c ssl_cert_file=/etc/postgresql-certs/server.crt \
+            -c ssl_key_file=/etc/postgresql-certs/server.key
+
+      - name: Wait for postgres ready
+        run: |
+          for i in {1..30}; do
+            if pg_isready -h localhost -p 5432 -U superuser; then
+              echo "postgres ready"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "postgres failed to become ready"
+          docker logs pg-r14
+          exit 1
+
+      - name: Add hosts alias for non-localhost test
+        run: |
+          echo "127.0.0.1 test-db.local" | sudo tee -a /etc/hosts
+          getent hosts test-db.local
+
+      - name: Run production-path integration test
+        env:
+          TEST_DATABASE_URL: postgresql://superuser:superuser_pass@test-db.local:5432/audit_test
+        run: node scripts/audit/tests/production-path.test.mjs
+
+      - name: Stop postgres (always)
+        if: always()
+        run: docker stop pg-r14 || true
+
   build:
     name: Build
     runs-on: ubuntu-latest
@@ -301,6 +369,7 @@ jobs:
       - unit-tests
       - harness-validation
       - harness-real-psql
+      - harness-production-path
       - build
       - lint
       - integration-tests
@@ -314,6 +383,7 @@ jobs:
           TESTS_RESULT: ${{ needs.unit-tests.result }}
           HARNESS_RESULT: ${{ needs.harness-validation.result }}
           HARNESS_REAL_PSQL_RESULT: ${{ needs.harness-real-psql.result }}
+          HARNESS_PRODUCTION_PATH_RESULT: ${{ needs.harness-production-path.result }}
           BUILD_RESULT: ${{ needs.build.result }}
           LINT_RESULT: ${{ needs.lint.result }}
           INTEGRATION_RESULT: ${{ needs.integration-tests.result }}
@@ -324,6 +394,7 @@ jobs:
             "$TESTS_RESULT" \
             "$HARNESS_RESULT" \
             "$HARNESS_REAL_PSQL_RESULT" \
+            "$HARNESS_PRODUCTION_PATH_RESULT" \
             "$BUILD_RESULT" \
             "$LINT_RESULT" \
             "$INTEGRATION_RESULT" \
