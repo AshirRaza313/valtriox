@@ -28,6 +28,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { readFileSync, existsSync, rmSync } from "node:fs";
 import { createHash } from "node:crypto";
+import { assertDisposableTarget } from "./disposable-target-guard.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const mockGitPath = join(__dirname, "mock-git.mjs");
@@ -38,6 +39,10 @@ if (!TEST_DATABASE_URL) {
   console.log("\nSKIP: TEST_DATABASE_URL not set (local dev / no DB).\n");
   process.exit(0);
 }
+
+// Round 15 R15-1: refuse destructive DDL against non-disposable targets.
+// Must be called BEFORE any DROP/CREATE statement. Fail-closed.
+assertDisposableTarget(TEST_DATABASE_URL);
 
 const parsedSuper = new URL(TEST_DATABASE_URL);
 const DB_NAME = parsedSuper.pathname.replace(/^\//, "");

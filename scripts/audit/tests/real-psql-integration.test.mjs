@@ -21,6 +21,7 @@
 // ============================================================================
 
 import { spawnSync } from "node:child_process";
+import { assertDisposableTarget } from "./disposable-target-guard.mjs";
 
 const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL;
 
@@ -28,6 +29,10 @@ if (!TEST_DATABASE_URL) {
   console.log("\nSKIP: TEST_DATABASE_URL not set (local dev / no DB).\n");
   process.exit(0);
 }
+
+// Round 15 R15-1: refuse destructive DDL against non-disposable targets.
+// Must be called BEFORE any DROP/CREATE statement. Fail-closed.
+assertDisposableTarget(TEST_DATABASE_URL);
 
 // ── Setup: derive superuser + readonly role URLs ────────────────────────
 const superUrl = new URL(TEST_DATABASE_URL);

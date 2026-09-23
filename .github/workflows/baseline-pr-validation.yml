@@ -59,6 +59,8 @@ jobs:
         run: node scripts/audit/tests/negative-paths.test.mjs
       - name: Harness contract verification test (standalone)
         run: node scripts/audit/tests/contract-verification.test.mjs
+      - name: Disposable-target guard test (standalone)
+        run: node scripts/audit/tests/disposable-target-guard.test.mjs
 
   # R13-2: Real psql validation on disposable PostgreSQL (non-superuser role).
   # Uses postgres:16 service — never touches production/protected DBs.
