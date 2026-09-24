@@ -109,11 +109,10 @@ backups/historical-rows-inventory-receipt.json.sha256
 
 ### Not Enforced (see Section 6)
 
-- `current_role` reconciliation (e.g., `SET ROLE` side effects).
 - Role membership / `pg_auth_members` inspection.
 - `SET SESSION AUTHORIZATION` detection.
 
-Note: PostgreSQL's `current_role` is a synonym for `current_user`. The R12-3c check against `current_user` already covers `SET ROLE` side effects on the role-check connection; no separate `current_role` query is needed.
+Note on `current_role`: PostgreSQL's `current_role` is a synonym for `current_user`. The R12-3c check against `current_user` already covers `SET ROLE` side effects on the role-check connection; no separate `current_role` query is needed. (R16-5 correction: an earlier revision of this document listed `current_role` reconciliation as "not enforced," which contradicted this note — the enforcement exists via the `current_user` check; the misleading bullet has been removed.)
 
 ## 3b. Test Coverage Note (Round 14 R14-3)
 
@@ -252,16 +251,18 @@ They are listed for transparency and are candidates for a follow-up PR.
 
 ### Owner Decisions Pending
 
-The following items are **owner-controlled gates**. They are not enforced by code and cannot be progressed from this PR branch — each requires an explicit owner (or independent custodian) action outside this PR.
+The following items are **owner-controlled gates**. They are not enforced by code and cannot be progressed from this PR branch — each requires an explicit owner action outside this PR. No independent
+custodian relationship or credential-custody evidence is currently established.
 
 | Item | Status | Owner action |
 |------|--------|--------------|
 | TLS server verification (`verify-full` vs `require`) | **Pending owner-controlled gate** | Owner — see Section 1 |
 | Receipt artifact visibility (public repo) | **Pending owner-controlled gate** | Owner — see Section 5 |
-| `PG_EXPECTED_EFFECTIVE_ROLE` value | **Pending owner-controlled gate** | Independent custodian — no real value configured in this PR |
-| production-audit secret config | **Pending owner-controlled gate** | Separate authorization — secret provisioning outside this PR |
+| `PG_EXPECTED_EFFECTIVE_ROLE` value | **Pending owner-controlled gate** | Owner action required — no independent custodian relationship currently established; the value will be set via the owner-controlled secret path once that path exists |
+| production-audit secret config | **Pending owner-controlled gate** | Separate authorization — the `production-audit` GitHub Environment exists (required reviewer: `@abdulnafa`, `prevent_self_review: true`), but the secret itself is environment-scoped, not repository-level; provisioning remains a separate authorization |
 | `TRUSTED_HARNESS_SHA` re-pin | **Pending owner-controlled gate** | Post-merge — pin advances only after merge |
-| Admin-bypass disable (branch protection) | **Pending owner-controlled gate** | Repository admin (@abdulnafa) — settings change outside code |
+| GitHub Environment protection rules (`production-audit`) | **Pending owner-controlled gate** | Repository admin (@abdulnafa) — the environment currently has `can_admins_bypass: true`, which lets an admin bypass the `required_reviewers` gate and weakens the independent-reviewer guarantee; disabling this is an admin-side settings change |
+| Protected workflow run authorization (`audit-harness.yml`) | **Pending owner-controlled gate** | Expert (@abdulnafa) — the protected workflow has not been run for this PR; authorization is withheld and will be granted separately after the ordinary-CI path is accepted |
 
 | # | Gap | Impact | Mitigation today |
 |---|---|---|---|

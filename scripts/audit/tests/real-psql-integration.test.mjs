@@ -47,16 +47,61 @@ roUrl.password = ROLE_PASSWORD;
 const TEST_TABLE = "test_r13_readonly_enforcement";
 
 // ── psql runner (mirrors harness: -t -A -F \t + optional BEGIN READ ONLY) ──
+// R16-1: Fail-closed env isolation (mirrors notification-inventory.mjs R14-1).
+// Ambient PG* vars are NEVER inherited — only an explicit operational allowlist
+// plus the URL-derived PG* values. Prevents PGHOSTADDR/PGSERVICE/PGOPTIONS/etc.
+// from overriding the URL target after assertDisposableTarget() has passed.
+const SAFE_PASSTHROUGH = [
+  "PATH", "Path", "HOME", "LANG", "LC_ALL", "LC_MESSAGES",
+  "TZ", "TERM", "USER", "LOGNAME", "SHELL",
+];
+
 function makePsqlEnv(urlObj) {
-  return {
-    ...process.env,
-    PGPASSWORD: decodeURIComponent(urlObj.password),
-    PGUSER: decodeURIComponent(urlObj.username),
-    PGHOST: urlObj.hostname,
-    PGPORT: urlObj.port || "5432",
-    PGDATABASE: urlObj.pathname.replace(/^\//, ""),
-    PGSSLMODE: "prefer",
-  };
+  const env = {};
+  for (const key of SAFE_PASSTHROUGH) {
+    if (process.env[key] !== undefined) {
+      env[key] = process.env[key];
+    }
+  }
+  env.PGPASSWORD = decodeURIComponent(urlObj.password);
+  env.PGUSER = decodeURIComponent(urlObj.username);
+  env.PGHOST = urlObj.hostname;
+  env.PGPORT = urlObj.port || "5432";
+  env.PGDATABASE = urlObj.pathname.replace(/^\//, "");
+  env.PGSSLMODE = "prefer";
+  return env;
+}
+
+// R16-1: Independent runtime verification — before any DDL, ask the
+// actual connected server what address it reports. If it is not a
+// disposable/loopback address, refuse to proceed. This is a belt-
+// and-suspenders safety net in case env isolation is ever bypassed.
+const DISPOSABLE_SERVER_ADDRS = new Set([
+  "127.0.0.1",
+  "::1",
+  "::ffff:127.0.0.1",
+]);
+
+function verifyActualServerIsDisposable(env, label) {
+  const r = spawnSync(
+    "psql",
+    ["-t", "-A", "-c", "SELECT COALESCE(host(inet_server_addr()), '')"],
+    { env, encoding: "utf8", maxBuffer: 1024 * 1024, timeout: 10_000 }
+  );
+  if (r.status !== 0) {
+    throw new Error(
+      `Independent target verification (${label}) failed — cannot query server. stderr=` +
+      String(r.stderr).trim()
+    );
+  }
+  const addr = r.stdout.trim();
+  if (!DISPOSABLE_SERVER_ADDRS.has(addr)) {
+    throw new Error(
+      `Independent target verification (${label}) FAILED — actual server address ` +
+      JSON.stringify(addr) + ` is not in the disposable allowlist ` +
+      `(${[...DISPOSABLE_SERVER_ADDRS].join(", ")}). Refusing to run DDL.`
+    );
+  }
 }
 
 const superEnv = makePsqlEnv(superUrl);
@@ -126,6 +171,11 @@ const setupSql = `
   CREATE TABLE ${TEST_TABLE} (id int);
   GRANT SELECT, INSERT ON ${TEST_TABLE} TO ${ROLE_NAME};
 `;
+// R16-1: Fail-closed BEFORE any DDL. Verify both the superuser and
+// readonly connections resolve to a disposable server address.
+verifyActualServerIsDisposable(superEnv, "superuser");
+verifyActualServerIsDisposable(roEnv, "readonly");
+
 const setup = psql(setupSql, { guard: false });
 if (setup.status !== 0) {
   console.error("SETUP FAILED:");
@@ -209,6 +259,41 @@ test("N-h: SELECT inside guard mode works for readonly role", () => {
   assertEq(r.status, 0, "exit code");
   const count = Number(r.stdout.trim());
   assertTrue(count >= 1, `count >= 1 (got ${count})`);
+});
+
+// ── R16-2: Hostile ambient override must not redirect the connection ──
+test("N-i: hostile ambient PGHOSTADDR is stripped (env isolation)", () => {
+  const saved = process.env.PGHOSTADDR;
+  process.env.PGHOSTADDR = "192.0.2.1"; // TEST-NET-1, guaranteed unroutable
+  try {
+    const freshEnv = makePsqlEnv(superUrl);
+    assertTrue(
+      freshEnv.PGHOSTADDR === undefined,
+      "PGHOSTADDR must NOT propagate to psql env (fail-closed isolation)"
+    );
+  } finally {
+    if (saved === undefined) delete process.env.PGHOSTADDR;
+    else process.env.PGHOSTADDR = saved;
+  }
+});
+
+test("N-j: hostile ambient PGHOSTADDR does not redirect psql (integration)", () => {
+  const saved = process.env.PGHOSTADDR;
+  process.env.PGHOSTADDR = "192.0.2.1"; // TEST-NET-1, unroutable
+  try {
+    // Rebuild env fresh with hostile ambient in place.
+    const freshEnv = makePsqlEnv(superUrl);
+    // If PGHOSTADDR leaked, psql would try 192.0.2.1 and time out.
+    // Success proves override was blocked before the connection.
+    const r = spawnSync("psql", ["-t", "-A", "-c", "SELECT 1 AS n"], {
+      env: freshEnv, encoding: "utf8", timeout: 10_000,
+    });
+    assertEq(r.status, 0, "psql succeeded against correct target (override blocked)");
+    assertEq(r.stdout.trim(), "1", "stdout");
+  } finally {
+    if (saved === undefined) delete process.env.PGHOSTADDR;
+    else process.env.PGHOSTADDR = saved;
+  }
 });
 
 // ── Cleanup (as superuser) ──────────────────────────────────────────────
