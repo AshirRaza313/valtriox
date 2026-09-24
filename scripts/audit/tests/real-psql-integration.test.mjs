@@ -73,14 +73,35 @@ function makePsqlEnv(urlObj) {
 }
 
 // R16-1: Independent runtime verification — before any DDL, ask the
-// actual connected server what address it reports. If it is not a
-// disposable/loopback address, refuse to proceed. This is a belt-
-// and-suspenders safety net in case env isolation is ever bypassed.
-const DISPOSABLE_SERVER_ADDRS = new Set([
-  "127.0.0.1",
-  "::1",
-  "::ffff:127.0.0.1",
-]);
+// actual connected server what address it reports. If the address is not
+// loopback, RFC1918 private, IPv4 link-local, or IPv6 ULA / link-local
+// (i.e., if it looks publicly routable and could be production), refuse
+// to proceed. Belt-and-suspenders safety net in case env isolation is
+// ever bypassed.
+//
+// Note: CI service containers commonly report their Docker bridge IP
+// (e.g. 172.18.0.2), not 127.0.0.1, so the original loopback-only
+// allowlist was too narrow. The boundary is now: reject anything that
+// looks publicly routable.
+function isDisposableServerAddress(addr) {
+  if (typeof addr !== "string" || addr.length === 0) return false;
+  // IPv4 loopback 127.0.0.0/8
+  if (/^127\./.test(addr)) return true;
+  // IPv4 RFC1918: 10/8, 172.16/12, 192.168/16
+  if (/^10\./.test(addr)) return true;
+  if (/^192\.168\./.test(addr)) return true;
+  if (/^172\.(1[6-9]|2[0-9]|3[01])\./.test(addr)) return true;
+  // IPv4 link-local 169.254.0.0/16
+  if (/^169\.254\./.test(addr)) return true;
+  // IPv6 loopback and v4-mapped loopback
+  if (addr === "::1") return true;
+  if (/^::ffff:127\./.test(addr)) return true;
+  // IPv6 ULA fc00::/7
+  if (/^f[cd][0-9a-f]{2}:/i.test(addr)) return true;
+  // IPv6 link-local fe80::/10
+  if (/^fe[89ab][0-9a-f]:/i.test(addr)) return true;
+  return false;
+}
 
 function verifyActualServerIsDisposable(env, label) {
   const r = spawnSync(
@@ -90,16 +111,15 @@ function verifyActualServerIsDisposable(env, label) {
   );
   if (r.status !== 0) {
     throw new Error(
-      `Independent target verification (${label}) failed — cannot query server. stderr=` +
+      "Independent target verification (" + label + ") failed — cannot query server. stderr=" +
       String(r.stderr).trim()
     );
   }
   const addr = r.stdout.trim();
-  if (!DISPOSABLE_SERVER_ADDRS.has(addr)) {
+  if (!isDisposableServerAddress(addr)) {
     throw new Error(
-      `Independent target verification (${label}) FAILED — actual server address ` +
-      JSON.stringify(addr) + ` is not in the disposable allowlist ` +
-      `(${[...DISPOSABLE_SERVER_ADDRS].join(", ")}). Refusing to run DDL.`
+      "Independent target verification (" + label + ") FAILED — actual server address " +
+      JSON.stringify(addr) + " is not loopback/private/link-local and may be production. Refusing to run DDL."
     );
   }
 }
