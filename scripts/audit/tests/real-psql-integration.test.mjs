@@ -191,10 +191,14 @@ const setupSql = `
   CREATE TABLE ${TEST_TABLE} (id int);
   GRANT SELECT, INSERT ON ${TEST_TABLE} TO ${ROLE_NAME};
 `;
-// R16-1: Fail-closed BEFORE any DDL. Verify both the superuser and
-// readonly connections resolve to a disposable server address.
+// R16-1: Fail-closed BEFORE any DDL. Verify the superuser connection
+// resolves to a disposable server address. The readonly connection
+// uses the same PGHOST/PGPORT as superuser (only PGUSER/PGPASSWORD
+// differ), so verifying the superuser's actual server address is
+// sufficient to prove the target for all connections in this test.
+// The readonly role does not exist yet at this point anyway (it is
+// created by setupSql below).
 verifyActualServerIsDisposable(superEnv, "superuser");
-verifyActualServerIsDisposable(roEnv, "readonly");
 
 const setup = psql(setupSql, { guard: false });
 if (setup.status !== 0) {
