@@ -28,7 +28,10 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { readFileSync, existsSync, rmSync } from "node:fs";
 import { createHash } from "node:crypto";
-import { assertDisposableTarget } from "./disposable-target-guard.mjs";
+import {
+  assertDisposableTarget,
+  buildMarkerVerificationDoBlock,
+} from "./disposable-target-guard.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const mockGitPath = join(__dirname, "mock-git.mjs");
@@ -40,9 +43,11 @@ if (!TEST_DATABASE_URL) {
   process.exit(0);
 }
 
-// Round 15 R15-1: refuse destructive DDL against non-disposable targets.
-// Must be called BEFORE any DROP/CREATE statement. Fail-closed.
-assertDisposableTarget(TEST_DATABASE_URL);
+// Round 17 R17-4b: disposable-target identity is proven by a per-run marker
+// injected by the CI workflow (see "Mark database as disposable for this run"
+// step in baseline-pr-validation.yml). Network-address classification removed.
+const EXPECTED_MARKER = process.env.DISPOSABLE_DB_MARKER;
+assertDisposableTarget(TEST_DATABASE_URL, { expectedMarker: EXPECTED_MARKER });
 
 const parsedSuper = new URL(TEST_DATABASE_URL);
 const DB_NAME = parsedSuper.pathname.replace(/^\//, "");
@@ -97,13 +102,39 @@ function superPsql(sql) {
   );
 }
 
+// R17-4b: single-transaction psql for setup. Combined with the marker DO
+// block, this binds the disposable-target attestation to the same psql
+// process AND transaction that executes the DDL ? eliminating the
+// target-switch / second-connection gap (expert Round 16 P0 #2).
+function superPsqlTx(sql) {
+  return spawnSync(
+    "psql",
+    ["-t", "-A", "-F", "\t", "-v", "ON_ERROR_STOP=1", "-1", "-c", sql],
+    {
+      env: {
+        PATH: process.env.PATH || "",
+        HOME: process.env.HOME || "",
+        PGPASSWORD: decodeURIComponent(parsedSuper.password),
+        PGUSER: decodeURIComponent(parsedSuper.username),
+        PGHOST: parsedSuper.hostname,
+        PGPORT: parsedSuper.port || "5432",
+        PGDATABASE: DB_NAME,
+        PGSSLMODE: "require",
+      },
+      encoding: "utf8",
+      maxBuffer: 10 * 1024 * 1024,
+      timeout: 30_000,
+    }
+  );
+}
 console.log("\nProduction-path integration test (Round 14 R14-3):\n");
 
 const ROLE_NAME = "audit_r14_ro";
 const ROLE_PASSWORD = "audit_r14_ro_pass_xyz";
 
 // ── Setup: schema, role, data, read-only default ────────────────────────
-const setupSql = `
+const markerDoBlock = buildMarkerVerificationDoBlock(EXPECTED_MARKER);
+const setupSql = markerDoBlock + "\n" + `
   DROP TABLE IF EXISTS public."NotificationReadReceipt";
   DROP TABLE IF EXISTS public."Notification";
   DROP ROLE IF EXISTS ${ROLE_NAME};
@@ -132,7 +163,7 @@ const setupSql = `
   ALTER ROLE ${ROLE_NAME} SET default_transaction_read_only = on;
 `;
 
-const setupResult = superPsql(setupSql);
+const setupResult = superPsqlTx(setupSql);
 if (setupResult.status !== 0) {
   console.error("SETUP FAILED:");
   console.error(setupResult.stderr);

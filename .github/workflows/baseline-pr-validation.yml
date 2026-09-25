@@ -169,6 +169,16 @@ jobs:
           echo "127.0.0.1 test-db.local" | sudo tee -a /etc/hosts
           getent hosts test-db.local
 
+      - name: Mark database as disposable for this run
+        run: |
+          MARKER="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          PGPASSWORD=superuser_pass psql -h localhost -p 5432 -U superuser -d audit_test -v ON_ERROR_STOP=1 -c "
+            CREATE TABLE IF NOT EXISTS __disposable_marker (marker text PRIMARY KEY);
+            DELETE FROM __disposable_marker;
+            INSERT INTO __disposable_marker (marker) VALUES ('${MARKER}');
+          "
+          echo "DISPOSABLE_DB_MARKER=${MARKER}" >> "$GITHUB_ENV"
+          echo "Marker injected: ${MARKER}"
       - name: Run production-path integration test
         env:
           TEST_DATABASE_URL: postgresql://superuser:superuser_pass@test-db.local:5432/audit_test
