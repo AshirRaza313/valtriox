@@ -21,7 +21,10 @@
 // ============================================================================
 
 import { spawnSync } from "node:child_process";
-import { assertDisposableTarget } from "./disposable-target-guard.mjs";
+import {
+  assertDisposableTarget,
+  buildMarkerVerificationDoBlock,
+} from "./disposable-target-guard.mjs";
 
 const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL;
 
@@ -32,7 +35,10 @@ if (!TEST_DATABASE_URL) {
 
 // Round 15 R15-1: refuse destructive DDL against non-disposable targets.
 // Must be called BEFORE any DROP/CREATE statement. Fail-closed.
-assertDisposableTarget(TEST_DATABASE_URL);
+// Round 17 R17-1: disposable-target identity is proven by a per-run marker
+// injected by the CI workflow. Network-address classification is removed.
+const EXPECTED_MARKER = process.env.DISPOSABLE_DB_MARKER;
+assertDisposableTarget(TEST_DATABASE_URL, { expectedMarker: EXPECTED_MARKER });
 
 // ── Setup: derive superuser + readonly role URLs ────────────────────────
 const superUrl = new URL(TEST_DATABASE_URL);
@@ -70,58 +76,6 @@ function makePsqlEnv(urlObj) {
   env.PGDATABASE = urlObj.pathname.replace(/^\//, "");
   env.PGSSLMODE = "prefer";
   return env;
-}
-
-// R16-1: Independent runtime verification — before any DDL, ask the
-// actual connected server what address it reports. If the address is not
-// loopback, RFC1918 private, IPv4 link-local, or IPv6 ULA / link-local
-// (i.e., if it looks publicly routable and could be production), refuse
-// to proceed. Belt-and-suspenders safety net in case env isolation is
-// ever bypassed.
-//
-// Note: CI service containers commonly report their Docker bridge IP
-// (e.g. 172.18.0.2), not 127.0.0.1, so the original loopback-only
-// allowlist was too narrow. The boundary is now: reject anything that
-// looks publicly routable.
-function isDisposableServerAddress(addr) {
-  if (typeof addr !== "string" || addr.length === 0) return false;
-  // IPv4 loopback 127.0.0.0/8
-  if (/^127\./.test(addr)) return true;
-  // IPv4 RFC1918: 10/8, 172.16/12, 192.168/16
-  if (/^10\./.test(addr)) return true;
-  if (/^192\.168\./.test(addr)) return true;
-  if (/^172\.(1[6-9]|2[0-9]|3[01])\./.test(addr)) return true;
-  // IPv4 link-local 169.254.0.0/16
-  if (/^169\.254\./.test(addr)) return true;
-  // IPv6 loopback and v4-mapped loopback
-  if (addr === "::1") return true;
-  if (/^::ffff:127\./.test(addr)) return true;
-  // IPv6 ULA fc00::/7
-  if (/^f[cd][0-9a-f]{2}:/i.test(addr)) return true;
-  // IPv6 link-local fe80::/10
-  if (/^fe[89ab][0-9a-f]:/i.test(addr)) return true;
-  return false;
-}
-
-function verifyActualServerIsDisposable(env, label) {
-  const r = spawnSync(
-    "psql",
-    ["-t", "-A", "-c", "SELECT COALESCE(host(inet_server_addr()), '')"],
-    { env, encoding: "utf8", maxBuffer: 1024 * 1024, timeout: 10_000 }
-  );
-  if (r.status !== 0) {
-    throw new Error(
-      "Independent target verification (" + label + ") failed — cannot query server. stderr=" +
-      String(r.stderr).trim()
-    );
-  }
-  const addr = r.stdout.trim();
-  if (!isDisposableServerAddress(addr)) {
-    throw new Error(
-      "Independent target verification (" + label + ") FAILED — actual server address " +
-      JSON.stringify(addr) + " is not loopback/private/link-local and may be production. Refusing to run DDL."
-    );
-  }
 }
 
 const superEnv = makePsqlEnv(superUrl);
@@ -182,25 +136,105 @@ function assertContains(haystack, needle, label) {
 }
 
 console.log("\nReal psql integration tests (Round 13 R13-2):\n");
+// ── R17-3: Negative pre-tests — run BEFORE any real DDL ────────
+// Expert Round 16 concern (P0 #3): "Negative test setup DDL se pehle
+// hostile/non-disposable target introduce kare aur prove kare ke zero
+// destructive statements chalin aur known target state unchanged rahi."
 
-// ── Setup (as superuser, no guard) ──────────────────────────────────────
-const setupSql = `
-  DROP TABLE IF EXISTS ${TEST_TABLE};
-  DROP ROLE IF EXISTS ${ROLE_NAME};
-  CREATE ROLE ${ROLE_NAME} LOGIN PASSWORD '${ROLE_PASSWORD}';
-  CREATE TABLE ${TEST_TABLE} (id int);
-  GRANT SELECT, INSERT ON ${TEST_TABLE} TO ${ROLE_NAME};
-`;
-// R16-1: Fail-closed BEFORE any DDL. Verify the superuser connection
-// resolves to a disposable server address. The readonly connection
-// uses the same PGHOST/PGPORT as superuser (only PGUSER/PGPASSWORD
-// differ), so verifying the superuser's actual server address is
-// sufficient to prove the target for all connections in this test.
-// The readonly role does not exist yet at this point anyway (it is
-// created by setupSql below).
-verifyActualServerIsDisposable(superEnv, "superuser");
+// Helper: snapshot the public-schema table list (sorted, stable).
+function captureTargetState(env) {
+  const r = spawnSync(
+    "psql",
+    ["-t", "-A", "-c",
+      "SELECT COALESCE(string_agg(tablename, ',' ORDER BY tablename), '') " +
+      "FROM pg_tables WHERE schemaname = 'public'"],
+    { env, encoding: "utf8", maxBuffer: 1024 * 1024, timeout: 10_000 }
+  );
+  if (r.status !== 0) {
+    throw new Error("captureTargetState failed: " + String(r.stderr).trim());
+  }
+  return r.stdout.trim();
+}
 
-const setup = psql(setupSql, { guard: false });
+const targetStateBefore = captureTargetState(superEnv);
+console.log("Negative pre-tests (before setup DDL):");
+console.log("  baseline public tables: " + (targetStateBefore || "(none)"));
+console.log("");
+
+test("R17-3a: missing DISPOSABLE_DB_MARKER refused before any DDL", () => {
+  let threw = null;
+  try {
+    assertDisposableTarget(TEST_DATABASE_URL, { expectedMarker: undefined });
+  } catch (err) {
+    threw = err;
+  }
+  assertTrue(threw !== null, "guard should refuse when marker is missing");
+  const after = captureTargetState(superEnv);
+  assertEq(after, targetStateBefore, "target state unchanged after refusal");
+});
+
+test("R17-3b: wrong marker aborts transaction before DDL (state unchanged)", () => {
+  const hostileMarker = "hostile-marker-" + Date.now();
+  const doBlock = buildMarkerVerificationDoBlock(hostileMarker);
+  const hostileAttempt = [
+    doBlock,
+    "CREATE TABLE __r17_3_hostile_should_not_exist (id int);",
+  ].join("\n");
+  const r = spawnSync(
+    "psql",
+    ["-t", "-A", "-v", "ON_ERROR_STOP=1", "-1", "-c", hostileAttempt],
+    { env: superEnv, encoding: "utf8", maxBuffer: 1024 * 1024, timeout: 10_000 }
+  );
+  assertTrue(r.status !== 0, "psql should fail on marker mismatch");
+  assertContains(String(r.stderr).toLowerCase(), "disposable marker", "stderr should mention marker");
+  const after = captureTargetState(superEnv);
+  assertEq(after, targetStateBefore, "target state unchanged — no destructive DDL ran");
+});
+
+test("R17-3c: hostile PGHOSTADDR cannot redirect the setup connection", () => {
+  const saved = process.env.PGHOSTADDR;
+  process.env.PGHOSTADDR = "192.0.2.1"; // TEST-NET-1, unroutable
+  try {
+    const freshEnv = makePsqlEnv(superUrl);
+    const r = spawnSync(
+      "psql",
+      ["-t", "-A", "-c", "SELECT current_database()"],
+      { env: freshEnv, encoding: "utf8", maxBuffer: 1024 * 1024, timeout: 10_000 }
+    );
+    assertEq(r.status, 0, "psql connected despite hostile ambient");
+    assertEq(r.stdout.trim(), "audit_test", "connected DB is the disposable DB, not redirected");
+    const after = captureTargetState(freshEnv);
+    assertEq(after, targetStateBefore, "target state unchanged — env isolation held");
+  } finally {
+    if (saved === undefined) delete process.env.PGHOSTADDR;
+    else process.env.PGHOSTADDR = saved;
+  }
+});
+
+
+// ── Setup (as superuser) ────────────────────────────────────────
+// R17-2: Marker verification and destructive DDL are folded into a SINGLE
+// psql -c invocation with `-1` (single transaction) and `ON_ERROR_STOP=1`.
+// If the marker DO block raises, the transaction is aborted before any
+// DDL statement runs. This eliminates the target-switch / second-connection
+// gap flagged in Round 16 review (P0 #2): the connection that attests the
+// disposable marker is the same connection that executes the DDL.
+const markerDoBlock = buildMarkerVerificationDoBlock(EXPECTED_MARKER);
+
+const setupSql = [
+  markerDoBlock,
+  `DROP TABLE IF EXISTS ${TEST_TABLE};`,
+  `DROP ROLE IF EXISTS ${ROLE_NAME};`,
+  `CREATE ROLE ${ROLE_NAME} LOGIN PASSWORD '${ROLE_PASSWORD}';`,
+  `CREATE TABLE ${TEST_TABLE} (id int);`,
+  `GRANT SELECT, INSERT ON ${TEST_TABLE} TO ${ROLE_NAME};`,
+].join("\n");
+
+const setup = spawnSync(
+  "psql",
+  ["-t", "-A", "-F", "\t", "-v", "ON_ERROR_STOP=1", "-1", "-c", setupSql],
+  { env: superEnv, encoding: "utf8", maxBuffer: 10 * 1024 * 1024, timeout: 30_000 }
+);
 if (setup.status !== 0) {
   console.error("SETUP FAILED:");
   console.error(setup.stderr);

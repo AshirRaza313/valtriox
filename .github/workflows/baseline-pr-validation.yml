@@ -94,6 +94,16 @@ jobs:
           sudo apt-get install -y postgresql-client
       - name: Verify psql available
         run: psql --version
+      - name: Mark database as disposable for this run
+        run: |
+          MARKER="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          PGPASSWORD=superuser_pass psql -h localhost -p 5432 -U superuser -d audit_test -v ON_ERROR_STOP=1 -c "
+            CREATE TABLE IF NOT EXISTS __disposable_marker (marker text PRIMARY KEY);
+            DELETE FROM __disposable_marker;
+            INSERT INTO __disposable_marker (marker) VALUES ('${MARKER}');
+          "
+          echo "DISPOSABLE_DB_MARKER=${MARKER}" >> "$GITHUB_ENV"
+          echo "Marker injected: ${MARKER}"
       - name: Run real psql integration tests
         run: node scripts/audit/tests/real-psql-integration.test.mjs
 
