@@ -92,6 +92,20 @@ jobs:
           sudo apt-get install -y postgresql-client
       - name: Verify psql available
         run: psql --version
+      - name: Generate per-run role name
+        run: |
+          ROLE_NAME="audit_ro_${GITHUB_RUN_ID}_${GITHUB_RUN_ATTEMPT}_$(openssl rand -hex 4)"
+          echo "TEST_ROLE_NAME=${ROLE_NAME}" >> "$GITHUB_ENV"
+          echo "Per-run role name: ${ROLE_NAME}"
+      - name: Capture trusted cluster identity
+        run: |
+          CLUSTER_ID=$(PGPASSWORD=superuser_pass psql -h localhost -p 5432 -U superuser -d audit_test -t -A -c "SELECT system_identifier::text FROM pg_control_system()")
+          if [ -z "$CLUSTER_ID" ]; then
+            echo "Failed to capture cluster identity" >&2
+            exit 1
+          fi
+          echo "TRUSTED_CLUSTER_ID=${CLUSTER_ID}" >> "$GITHUB_ENV"
+          echo "Trusted cluster captured: ${CLUSTER_ID}"
       - name: Provision fresh disposable database for this run
         run: |
           DB_NAME="audit_${GITHUB_RUN_ID}_${GITHUB_RUN_ATTEMPT}_$(openssl rand -hex 6)"
@@ -164,6 +178,20 @@ jobs:
           echo "127.0.0.1 test-db.local" | sudo tee -a /etc/hosts
           getent hosts test-db.local
 
+      - name: Generate per-run role name
+        run: |
+          ROLE_NAME="audit_ro_${GITHUB_RUN_ID}_${GITHUB_RUN_ATTEMPT}_$(openssl rand -hex 4)"
+          echo "TEST_ROLE_NAME=${ROLE_NAME}" >> "$GITHUB_ENV"
+          echo "Per-run role name: ${ROLE_NAME}"
+      - name: Capture trusted cluster identity
+        run: |
+          CLUSTER_ID=$(PGPASSWORD=superuser_pass psql -h localhost -p 5432 -U superuser -d audit_test -t -A -c "SELECT system_identifier::text FROM pg_control_system()")
+          if [ -z "$CLUSTER_ID" ]; then
+            echo "Failed to capture cluster identity" >&2
+            exit 1
+          fi
+          echo "TRUSTED_CLUSTER_ID=${CLUSTER_ID}" >> "$GITHUB_ENV"
+          echo "Trusted cluster captured: ${CLUSTER_ID}"
       - name: Provision fresh disposable database for this run
         run: |
           DB_NAME="audit_${GITHUB_RUN_ID}_${GITHUB_RUN_ATTEMPT}_$(openssl rand -hex 6)"

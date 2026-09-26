@@ -110,4 +110,41 @@ export function buildDbNameVerificationDoBlock(expectedDbName) {
   ].join("\n");
 }
 
-export const __test__ = { buildDbNameVerificationDoBlock };
+// Returns a SQL DO block that asserts the current cluster's system
+// identifier matches the expected value. system_identifier is a stable,
+// initdb-generated 64-bit value that uniquely identifies a PostgreSQL
+// cluster (not just a database). It is immutable for the life of the
+// cluster and requires superuser (or pg_read_all_stats) to read.
+//
+// Because roles in PostgreSQL are cluster-wide, proving which cluster
+// the mutation will run against is critical: a fresh database name can
+// exist on any cluster, so cluster identity is the trustworthy anchor.
+// Embed this at the top of the SAME psql -1 transaction as the DDL —
+// a mismatch aborts before any mutation runs.
+export function buildClusterVerificationDoBlock(expectedClusterId) {
+  if (
+    !expectedClusterId ||
+    typeof expectedClusterId !== "string" ||
+    expectedClusterId.trim().length === 0
+  ) {
+    throw new Error("buildClusterVerificationDoBlock: expectedClusterId is empty");
+  }
+  const trimmed = expectedClusterId.trim();
+  if (!/^[0-9]+$/.test(trimmed)) {
+    throw new Error(
+      "buildClusterVerificationDoBlock: expectedClusterId must be a decimal integer (got " +
+      JSON.stringify(expectedClusterId) + ")"
+    );
+  }
+  return [
+    "DO $",
+    "DECLARE actual_id text;",
+    "BEGIN",
+    "  SELECT system_identifier::text INTO actual_id FROM pg_control_system();",
+    "  IF actual_id IS NULL OR actual_id <> '" + trimmed + "' THEN",
+    "    RAISE EXCEPTION 'Cluster mismatch: expected " + trimmed + ", got %', actual_id;",
+    "  END IF;",
+    "END $;",
+  ].join("\n");
+}
+export const __test__ = { buildDbNameVerificationDoBlock, buildClusterVerificationDoBlock };

@@ -13,6 +13,7 @@
 import {
   assertDisposableTarget,
   buildDbNameVerificationDoBlock,
+  buildClusterVerificationDoBlock,
 } from "./disposable-target-guard.mjs";
 
 let passed = 0;
@@ -149,5 +150,36 @@ test("buildDbNameVerificationDoBlock rejects empty dbname", () => {
   );
 });
 
+// ── Positive: cluster verification DO block ────────────
+test("buildClusterVerificationDoBlock embeds expected cluster id", () => {
+  const sql = buildClusterVerificationDoBlock("7381530940514998842");
+  if (!sql.includes("7381530940514998842")) throw new Error("cluster id not embedded");
+  if (!sql.includes("RAISE EXCEPTION")) throw new Error("no raise");
+  if (!sql.includes("pg_control_system")) throw new Error("no pg_control_system");
+});
+
+test("buildClusterVerificationDoBlock rejects empty", () => {
+  expectThrow(
+    () => buildClusterVerificationDoBlock(""),
+    /expectedClusterId is empty/,
+    "empty cluster id"
+  );
+});
+
+test("buildClusterVerificationDoBlock rejects undefined", () => {
+  expectThrow(
+    () => buildClusterVerificationDoBlock(undefined),
+    /expectedClusterId is empty/,
+    "undefined cluster id"
+  );
+});
+
+test("buildClusterVerificationDoBlock rejects non-numeric", () => {
+  expectThrow(
+    () => buildClusterVerificationDoBlock("123abc"),
+    /must be a decimal integer/,
+    "non-numeric cluster id"
+  );
+});
 console.log(`\n${passed} passed, ${failed} failed\n`);
 process.exit(failed > 0 ? 1 : 0);
