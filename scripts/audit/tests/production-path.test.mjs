@@ -169,7 +169,6 @@ const clusterDoBlock = buildClusterVerificationDoBlock(TRUSTED_CLUSTER_ID);
 const setupSql = dbNameDoBlock + "\n" + clusterDoBlock + "\n" + `
   DROP TABLE IF EXISTS public."NotificationReadReceipt";
   DROP TABLE IF EXISTS public."Notification";
-  DROP ROLE IF EXISTS ${ROLE_NAME};
   CREATE TABLE public."Notification" (
     id int PRIMARY KEY,
     read boolean NOT NULL,
@@ -194,6 +193,21 @@ const setupSql = dbNameDoBlock + "\n" + clusterDoBlock + "\n" + `
   GRANT SELECT ON ALL TABLES IN SCHEMA public TO ${ROLE_NAME};
   ALTER ROLE ${ROLE_NAME} SET default_transaction_read_only = on;
 `;
+
+// R20-1d: fail-closed if role already exists (same policy as real-psql).
+const roleExistsCheck = superPsql(
+  `SELECT 1 FROM pg_roles WHERE rolname = '${ROLE_NAME}'`
+);
+if (roleExistsCheck.status !== 0) {
+  console.error("FAIL: cannot query pg_roles:");
+  console.error(redactSecrets(roleExistsCheck.stderr));
+  process.exit(1);
+}
+if (roleExistsCheck.stdout.trim() === "1") {
+  console.error(`FAIL-CLOSED: role ${ROLE_NAME} already exists on this cluster.`);
+  console.error("Refusing to DROP (would cascade). Aborting to preserve fail-closed semantics.");
+  process.exit(1);
+}
 
 const setupResult = superPsqlTx(setupSql);
 if (setupResult.status !== 0) {

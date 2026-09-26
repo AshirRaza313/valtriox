@@ -426,11 +426,30 @@ const setupSql = [
   dbNameDoBlock,
   clusterDoBlock,
   `DROP TABLE IF EXISTS ${TEST_TABLE};`,
-  `DROP ROLE IF EXISTS ${ROLE_NAME};`,
   `CREATE ROLE ${ROLE_NAME} LOGIN PASSWORD '${ROLE_PASSWORD}';`,
   `CREATE TABLE ${TEST_TABLE} (id int);`,
   `GRANT SELECT, INSERT ON ${TEST_TABLE} TO ${ROLE_NAME};`,
 ].join("\n");
+
+// R20-1d: fail-closed if role already exists.
+// Per-run names are unique by design, but if a collision occurs,
+// DROP ROLE would be destructive (cascades via DROP OWNED). Abort
+// instead of silently cleaning up.
+const roleExistsCheck = spawnSync(
+  "psql",
+  ["-t", "-A", "-c", `SELECT 1 FROM pg_roles WHERE rolname = '${ROLE_NAME}'`],
+  { env: superEnv, encoding: "utf8", maxBuffer: 1024 * 1024, timeout: 10_000 }
+);
+if (roleExistsCheck.status !== 0) {
+  console.error("FAIL: cannot query pg_roles:");
+  console.error(redactSecrets(roleExistsCheck.stderr));
+  process.exit(1);
+}
+if (roleExistsCheck.stdout.trim() === "1") {
+  console.error(`FAIL-CLOSED: role ${ROLE_NAME} already exists on this cluster.`);
+  console.error("Refusing to DROP (would cascade). Aborting to preserve fail-closed semantics.");
+  process.exit(1);
+}
 
 const setup = spawnSync(
   "psql",
@@ -664,6 +683,37 @@ test("R19-1a: wrong cluster + matching DB name aborts before DDL (state unchange
   assertContains(String(r.stderr).toLowerCase(), "cluster mismatch", "stderr should mention cluster mismatch");
   const after = captureTargetState(superEnv);
   assertEq(after, targetStateBeforeCleanup, "state unchanged — no DDL ran");
+});
+
+test("R20-1c: independent-source cluster ID mismatch aborts before DDL", () => {
+  // R20-1c: Threat model — pg_controldata (filesystem read) captured a
+  // legitimate cluster ID, but the container was swapped between capture
+  // and DDL. The stored ID is self-consistent (it was really captured),
+  // yet does not match the actual mutation target. Verification via
+  // pg_control_system() must still abort.
+  const independentWrongId = (BigInt(TRUSTED_CLUSTER_ID) + 9999999999n).toString();
+  const wrongGuard = buildClusterVerificationDoBlock(independentWrongId);
+  const attempt = [
+    wrongGuard,
+    "CREATE TABLE __r20_1c_should_not_exist (id int);",
+  ].join("\n");
+  const r = spawnSync(
+    "psql",
+    ["-t", "-A", "-v", "ON_ERROR_STOP=1", "-1", "-c", attempt],
+    { env: superEnv, encoding: "utf8", maxBuffer: 10 * 1024 * 1024, timeout: 10_000 }
+  );
+  assertTrue(r.status !== 0, "psql should fail on wrong cluster ID");
+  assertContains(
+    String(r.stderr).toLowerCase(),
+    "cluster mismatch",
+    "stderr should mention cluster mismatch"
+  );
+  // Cleanup sentinel if by some bug it was created
+  spawnSync(
+    "psql",
+    ["-t", "-A", "-c", "DROP TABLE IF EXISTS __r20_1c_should_not_exist"],
+    { env: superEnv, encoding: "utf8", timeout: 10_000 }
+  );
 });
 
 // ── Cleanup (as superuser) ──────────────────────────────────────────────
