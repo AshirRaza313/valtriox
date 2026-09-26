@@ -304,8 +304,11 @@ test("receipt file + SHA256 sidecar written", () => {
 // transaction aborts before any DROP — closing the R17 cleanup gap.
 const cleanupDbNameDoBlock = buildDbNameVerificationDoBlock(EXPECTED_DB_NAME);
 const cleanupSql = cleanupDbNameDoBlock + "\n" + `
+  REVOKE ALL PRIVILEGES ON DATABASE "${DB_NAME}" FROM ${ROLE_NAME};
+  REVOKE ALL PRIVILEGES ON SCHEMA public FROM ${ROLE_NAME};
   DROP TABLE IF EXISTS public."NotificationReadReceipt";
   DROP TABLE IF EXISTS public."Notification";
+  DROP OWNED BY ${ROLE_NAME};
   DROP ROLE IF EXISTS ${ROLE_NAME};
 `;
 const cleanupResult = superPsqlTx(cleanupSql);

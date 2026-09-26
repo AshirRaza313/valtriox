@@ -223,7 +223,7 @@ test("R17-3c: hostile PGHOSTADDR cannot redirect the setup connection", () => {
       { env: freshEnv, encoding: "utf8", maxBuffer: 1024 * 1024, timeout: 10_000 }
     );
     assertEq(r.status, 0, "psql connected despite hostile ambient");
-    assertEq(r.stdout.trim(), "audit_test", "connected DB is the disposable DB, not redirected");
+    assertEq(r.stdout.trim(), EXPECTED_DB_NAME, "connected DB is the disposable DB, not redirected");
     const after = captureTargetState(freshEnv);
     assertEq(after, targetStateBefore, "target state unchanged — env isolation held");
   } finally {
