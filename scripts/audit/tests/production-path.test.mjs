@@ -34,6 +34,10 @@ import {
   buildDbNameVerificationDoBlock,
   buildClusterVerificationDoBlock,
 } from "./disposable-target-guard.mjs";
+import {
+  buildCleanupGuard,
+  buildCleanupSequence,
+} from "../cleanup-runner.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const mockGitPath = join(__dirname, "mock-git.mjs");
@@ -319,20 +323,20 @@ test("receipt file + SHA256 sidecar written", () => {
 });
 
 // ── Cleanup ────────────────────────────────────────────────────────────
-// R18-1: cleanup also fails-closed through the same guarded pattern as
-// setup (superPsqlTx = -1 -v ON_ERROR_STOP=1). DB name DO block + DROP
-// statements combined in a single transaction. On marker mismatch the
-// transaction aborts before any DROP — closing the R17 cleanup gap.
-const cleanupDbNameDoBlock = buildDbNameVerificationDoBlock(EXPECTED_DB_NAME);
-const cleanupClusterDoBlock = buildClusterVerificationDoBlock(TRUSTED_CLUSTER_ID);
-const cleanupSql = cleanupDbNameDoBlock + "\n" + cleanupClusterDoBlock + "\n" + `
-  REVOKE ALL PRIVILEGES ON DATABASE "${DB_NAME}" FROM ${ROLE_NAME};
-  REVOKE ALL PRIVILEGES ON SCHEMA public FROM ${ROLE_NAME};
-  DROP TABLE IF EXISTS public."NotificationReadReceipt";
-  DROP TABLE IF EXISTS public."Notification";
-  DROP OWNED BY ${ROLE_NAME};
-  DROP ROLE IF EXISTS ${ROLE_NAME};
-`;
+// R19-5: cleanup uses the shared runner (scripts/audit/cleanup-runner.mjs)
+// so this file exercises the EXACT same production cleanup sequence that
+// real-psql-integration.test.mjs uses — no drift, no reduced copies.
+// The runner composes both guard DO blocks (DB name + cluster ID) into the
+// same transaction, so a mismatch aborts before any REVOKE/DROP runs.
+const cleanupSql = buildCleanupSequence({
+  roleName: ROLE_NAME,
+  dbName: DB_NAME,
+  tableNames: ['public."NotificationReadReceipt"', 'public."Notification"'],
+  guardDoBlocks: buildCleanupGuard({
+    expectedDbName: EXPECTED_DB_NAME,
+    expectedClusterId: TRUSTED_CLUSTER_ID,
+  }),
+});
 const cleanupResult = superPsqlTx(cleanupSql);
 if (cleanupResult.status !== 0) {
   console.error("CLEANUP FAILED:");

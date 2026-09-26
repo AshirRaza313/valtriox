@@ -26,6 +26,10 @@ import {
   buildDbNameVerificationDoBlock,
   buildClusterVerificationDoBlock,
 } from "./disposable-target-guard.mjs";
+import {
+  buildCleanupGuard,
+  buildCleanupSequence,
+} from "../cleanup-runner.mjs";
 
 const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL;
 
@@ -165,45 +169,159 @@ console.log("\nReal psql integration tests (Round 13 R13-2):\n");
 // hostile/non-disposable target introduce kare aur prove kare ke zero
 // destructive statements chalin aur known target state unchanged rahi."
 
-// Helper: comprehensive snapshot of the target database state.
-// R18-3: capture ALL non-system state that destructive DDL could touch —
-// tables, roles, grants, and column definitions — not just public table
-// names. The snapshot is a deterministic, ordered string that can be
-// compared before/after each negative-path test.
+// R19-4: comprehensive snapshot of the target database state.
+// Captures all 18 non-system categories that destructive DDL could touch:
+// tables, columns, roles, table_grants, row_counts, row_counts_approx,
+// database_grants, schema_grants, role_attributes, memberships, ownership,
+// defaults, constraints, indexes, triggers, rls, sequences, views.
+//
+// Expert Round 18 noted the previous "comprehensive snapshot" claim was
+// unsupported (only 4 categories captured). V2 addresses that by adding
+// the 13 expert-requested categories + 1 defence-in-depth category
+// (row_counts_approx via pg_class.reltuples).
+//
+// The result is a deterministic, ordered string that can be compared
+// before/after each negative-path test. Every query fails loudly on error
+// (no silent skip) — a failed query throws, which propagates up and aborts
+// the test, preserving fail-closed semantics.
 function captureTargetState(env) {
   const queries = [
+    // ── V1 categories (names preserved) ─────────────────────────
     ["tables",
      "SELECT COALESCE(string_agg(schemaname||'.'||tablename, '|' ORDER BY 1), '') " +
      "FROM pg_tables WHERE schemaname NOT IN ('pg_catalog','information_schema')"],
+    ["columns",
+     "SELECT COALESCE(string_agg(table_schema||'.'||table_name||'.'||column_name||':'||data_type, '|' ORDER BY 1),'') " +
+     "FROM information_schema.columns " +
+     "WHERE table_schema NOT IN ('pg_catalog','information_schema')"],
     ["roles",
      "SELECT COALESCE(string_agg(rolname, '|' ORDER BY 1), '') " +
      "FROM pg_roles WHERE rolname NOT LIKE 'pg_%'"],
-    ["grants",
+    ["table_grants",
      "SELECT COALESCE(string_agg(table_schema||'.'||table_name||':'||grantee||':'||privilege_type, '|' ORDER BY 1), '') " +
      "FROM information_schema.role_table_grants " +
      "WHERE table_schema NOT IN ('pg_catalog','information_schema')"],
-    ["columns",
-     "SELECT COALESCE(string_agg(table_schema||'.'||table_name||'.'||column_name||':'||data_type, '|' ORDER BY 1), '') " +
-     "FROM information_schema.columns " +
-     "WHERE table_schema NOT IN ('pg_catalog','information_schema')"],
+    // ── R19-4 new categories — expert's 13 missing ──────────────
+    ["row_counts",
+     // Exact count(*) per user table via query_to_xml (single-query,
+     // deterministic, no dynamic SQL from Node).
+     "SELECT COALESCE(string_agg(schemaname||'.'||tablename||'='||" +
+     "  COALESCE((xpath('/row/c/text()', query_to_xml(" +
+     "    format('SELECT count(*) AS c FROM %I.%I', schemaname, tablename)," +
+     "    false, true, '')))[1]::text, '?'), '|' ORDER BY 1), '') " +
+     "FROM pg_tables WHERE schemaname NOT IN ('pg_catalog','information_schema')"],
+    ["row_counts_approx",
+     // pg_class.reltuples — cheap approximate, defence in depth.
+     "SELECT COALESCE(string_agg(n.nspname||'.'||c.relname||'='||c.reltuples::bigint::text, '|' ORDER BY 1), '') " +
+     "FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace " +
+     "WHERE c.relkind = 'r' AND n.nspname NOT IN ('pg_catalog','information_schema')"],
+    ["database_grants",
+     "SELECT COALESCE(string_agg(datname||'|'||grantee||'|'||privilege_type, '||' ORDER BY 1,2,3), '') " +
+     "FROM (SELECT d.datname, COALESCE(r.rolname, 'PUBLIC') AS grantee, a.privilege_type " +
+     "      FROM pg_database d " +
+     "      CROSS JOIN LATERAL aclexplode(COALESCE(d.datacl, acldefault('d', d.datdba))) a " +
+     "      LEFT JOIN pg_roles r ON r.oid = a.grantee " +
+     "      WHERE d.datname NOT LIKE 'template%') sub"],
+    ["schema_grants",
+     "SELECT COALESCE(string_agg(nspname||'|'||COALESCE(rolname, 'PUBLIC')||'|'||privilege_type, '||' ORDER BY 1,2,3), '') " +
+     "FROM (SELECT n.nspname, r.rolname, a.privilege_type " +
+     "      FROM pg_namespace n " +
+     "      CROSS JOIN LATERAL aclexplode(COALESCE(n.nspacl, acldefault('n', n.nspowner))) a " +
+     "      LEFT JOIN pg_roles r ON r.oid = a.grantee " +
+     "      WHERE n.nspname NOT IN ('pg_catalog','information_schema','pg_toast')) sub"],
+    ["role_attributes",
+     "SELECT COALESCE(string_agg(" +
+     "  rolname||'|super='||rolsuper||'|createdb='||rolcreatedb||'|createrole='||rolcreaterole" +
+     "  ||'|inherit='||rolinherit||'|login='||rolcanlogin||'|replication='||rolreplication" +
+     "  ||'|bypassrls='||rolbypassrls||'|connlimit='||rolconnlimit" +
+     "  ||'|validuntil='||COALESCE(rolvaliduntil::text,'null')" +
+     "  , '||' ORDER BY 1), '') " +
+     "FROM pg_roles WHERE rolname NOT LIKE 'pg_%'"],
+    ["memberships",
+     "SELECT COALESCE(string_agg(" +
+     "  m.roleid::regrole::text||'<-'||m.member::regrole::text||'|admin='||m.admin_option" +
+     "  , '||' ORDER BY 1), '') " +
+     "FROM pg_auth_members m"],
+    ["ownership",
+     "SELECT COALESCE(string_agg(" +
+     "  n.nspname||'.'||c.relname||'|owner='||pg_get_userbyid(c.relowner)" +
+     "  , '||' ORDER BY 1), '') " +
+     "FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace " +
+     "WHERE n.nspname NOT IN ('pg_catalog','information_schema','pg_toast') " +
+     "  AND c.relkind IN ('r','v','m','S','f','p')"],
+    ["defaults",
+     "SELECT COALESCE(string_agg(" +
+     "  n.nspname||'.'||c.relname||'.'||a.attname||'='||pg_get_expr(ad.adbin, ad.adrelid)" +
+     "  , '||' ORDER BY 1), '') " +
+     "FROM pg_attrdef ad " +
+     "JOIN pg_class c ON c.oid = ad.adrelid " +
+     "JOIN pg_namespace n ON n.oid = c.relnamespace " +
+     "JOIN pg_attribute a ON a.attrelid = c.oid AND a.attnum = ad.adnum " +
+     "WHERE n.nspname NOT IN ('pg_catalog','information_schema','pg_toast')"],
+    ["constraints",
+     "SELECT COALESCE(string_agg(" +
+     "  n.nspname||'.'||c.relname||'|'||con.conname||'|'||con.contype||'|'||pg_get_constraintdef(con.oid)" +
+     "  , '||' ORDER BY 1), '') " +
+     "FROM pg_constraint con " +
+     "JOIN pg_class c ON c.oid = con.conrelid " +
+     "JOIN pg_namespace n ON n.oid = c.relnamespace " +
+     "WHERE n.nspname NOT IN ('pg_catalog','information_schema','pg_toast')"],
+    ["indexes",
+     "SELECT COALESCE(string_agg(" +
+     "  schemaname||'.'||tablename||'|'||indexname||'|'||indexdef" +
+     "  , '||' ORDER BY 1), '') " +
+     "FROM pg_indexes " +
+     "WHERE schemaname NOT IN ('pg_catalog','information_schema','pg_toast')"],
+    ["triggers",
+     "SELECT COALESCE(string_agg(" +
+     "  n.nspname||'.'||c.relname||'|'||t.tgname||'|'||pg_get_triggerdef(t.oid)" +
+     "  , '||' ORDER BY 1), '') " +
+     "FROM pg_trigger t " +
+     "JOIN pg_class c ON c.oid = t.tgrelid " +
+     "JOIN pg_namespace n ON n.oid = c.relnamespace " +
+     "WHERE NOT t.tgisinternal " +
+     "  AND n.nspname NOT IN ('pg_catalog','information_schema','pg_toast')"],
+    ["rls",
+     "SELECT COALESCE(string_agg(" +
+     "  schemaname||'.'||tablename||'|'||policyname||'|'||cmd" +
+     "  ||'|'||COALESCE(qual,'')||'|'||COALESCE(with_check,'')" +
+     "  , '||' ORDER BY 1), '') " +
+     "FROM pg_policies " +
+     "WHERE schemaname NOT IN ('pg_catalog','information_schema','pg_toast')"],
+    ["sequences",
+     "SELECT COALESCE(string_agg(" +
+     "  schemaname||'.'||sequencename||'|start='||start_value" +
+     "  ||'|min='||min_value||'|max='||max_value" +
+     "  ||'|inc='||increment_by||'|cycle='||cycle||'|cache='||cache_size" +
+     "  , '||' ORDER BY 1), '') " +
+     "FROM pg_sequences " +
+     "WHERE schemaname NOT IN ('pg_catalog','information_schema','pg_toast')"],
+    ["views",
+     "SELECT COALESCE(string_agg(" +
+     "  schemaname||'.'||viewname||'|'||definition" +
+     "  , '||' ORDER BY 1), '') " +
+     "FROM pg_views " +
+     "WHERE schemaname NOT IN ('pg_catalog','information_schema','pg_toast')"],
   ];
   const parts = [];
   for (const [label, q] of queries) {
     const r = spawnSync(
       "psql",
       ["-t", "-A", "-c", q],
-      { env, encoding: "utf8", maxBuffer: 10 * 1024 * 1024, timeout: 10_000 }
+      { env, encoding: "utf8", maxBuffer: 10 * 1024 * 1024, timeout: 30_000 }
     );
     if (r.status !== 0) {
+      // Fail-closed: a single query failure aborts snapshot capture.
+      // No silent skip, no fallback to V1.
       throw new Error("captureTargetState(" + label + ") failed: " + String(r.stderr).trim());
     }
     parts.push(label + "=" + r.stdout.trim());
   }
-  return parts.join("\\n");
+  return parts.join("\n");
 }
 const targetStateBefore = captureTargetState(superEnv);
 console.log("Negative pre-tests (before setup DDL):");
-console.log("  baseline state: captured (tables + roles + grants + columns)");
+console.log("  baseline state: captured (18 categories — R19-4 comprehensive snapshot)");
 console.log("");
 
 test("R17-3a: missing DISPOSABLE_DB_NAME refused before any DDL", () => {
@@ -256,6 +374,34 @@ test("R17-3c: hostile PGHOSTADDR cannot redirect the setup connection", () => {
   }
 });
 
+// ── R19-4: Snapshot self-tests (determinism + detection) ────────
+test("R19-4a: snapshot is deterministic (same input → identical output)", () => {
+  const a = captureTargetState(superEnv);
+  const b = captureTargetState(superEnv);
+  assertEq(a, b, "snapshot must be deterministic across two consecutive captures");
+});
+
+test("R19-4b: snapshot detects a newly created table and returns to prior state after drop", () => {
+  const before = captureTargetState(superEnv);
+  const createR = spawnSync(
+    "psql",
+    ["-t", "-A", "-v", "ON_ERROR_STOP=1", "-c",
+     "CREATE TABLE __r19_4_snapshot_sentinel (id int);"],
+    { env: superEnv, encoding: "utf8", maxBuffer: 1024 * 1024, timeout: 10_000 }
+  );
+  assertEq(createR.status, 0, "sentinel table created");
+  const during = captureTargetState(superEnv);
+  assertTrue(during !== before, "snapshot must detect newly created table");
+  const dropR = spawnSync(
+    "psql",
+    ["-t", "-A", "-v", "ON_ERROR_STOP=1", "-c",
+     "DROP TABLE __r19_4_snapshot_sentinel;"],
+    { env: superEnv, encoding: "utf8", maxBuffer: 1024 * 1024, timeout: 10_000 }
+  );
+  assertEq(dropR.status, 0, "sentinel table dropped");
+  const after = captureTargetState(superEnv);
+  assertEq(after, before, "snapshot returns to prior state after drop");
+});
 
 // ── Setup (as superuser) ────────────────────────────────────────
 // R17-2: DB name verification and destructive DDL are folded into a SINGLE
@@ -401,44 +547,94 @@ test("N-j: hostile ambient PGHOSTADDR does not redirect psql (integration)", () 
   }
 });
 
-// ── R18-4: Wrong-identity tests for cleanup sequence ─────────
-// Expert Round 17 (Checkpoint 3): actual cleanup sequence ke wrong-identity
-// tests do. Setup sequence wrong-identity tests are R17-3a/b/c above.
-// These tests verify the cleanup guard fails-closed BEFORE any DROP, using
-// the comprehensive snapshot (R18-3) as evidence of unchanged state.
+// ── R19-5: Exact-path wrong-identity tests for cleanup ────────
+// Expert Round 18 (P0 Blocker #3):
+//   "Real-psql test reduced copied cleanup sequence chalata hai.
+//    Actual production cleanup mein REVOKE, DROP OWNED aur DROP ROLE
+//    ka different sequence hai. Missing-identity test sirf guard call
+//    karta hai; actual cleanup attempt nahi karta."
+//
+// These tests exercise the EXACT production cleanup path via the shared
+// runner (scripts/audit/cleanup-runner.mjs), not a reduced copy. Each
+// case proves complete unchanged state via the V2 comprehensive snapshot.
 
 const targetStateBeforeCleanup = captureTargetState(superEnv);
-console.log("\nR18-4: Cleanup wrong-identity tests:\n");
+console.log("\nR19-5: Cleanup wrong-identity tests (exact production path):\n");
 
-test("R18-4a: cleanup with wrong DB_NAME aborts before DROP (state unchanged)", () => {
+test("R19-5a: wrong DB name aborts before any REVOKE/DROP (state unchanged)", () => {
   const wrongDbName = "audit_wrong_" + Date.now();
-  const wrongDoBlock = buildDbNameVerificationDoBlock(wrongDbName);
-  const wrongCleanupSql = [
-    wrongDoBlock,
-    `DROP TABLE IF EXISTS ${TEST_TABLE};`,
-    `DROP ROLE IF EXISTS ${ROLE_NAME};`,
-  ].join("\n");
+  const wrongGuard = buildCleanupGuard({
+    expectedDbName: wrongDbName,
+    expectedClusterId: TRUSTED_CLUSTER_ID,
+  });
+  const cleanupSql = buildCleanupSequence({
+    roleName: ROLE_NAME,
+    dbName: EXPECTED_DB_NAME,
+    tableNames: [TEST_TABLE],
+    guardDoBlocks: wrongGuard,
+  });
   const r = spawnSync(
     "psql",
-    ["-t", "-A", "-F", "\t", "-v", "ON_ERROR_STOP=1", "-1", "-c", wrongCleanupSql],
-    { env: superEnv, encoding: "utf8", maxBuffer: 10 * 1024 * 1024, timeout: 10_000 }
+    ["-t", "-A", "-F", "\t", "-v", "ON_ERROR_STOP=1", "-1", "-c", cleanupSql],
+    { env: superEnv, encoding: "utf8", maxBuffer: 10 * 1024 * 1024, timeout: 30_000 }
   );
   assertTrue(r.status !== 0, "psql should fail on DB name mismatch");
-  assertContains(String(r.stderr).toLowerCase(), "disposable db name mismatch", "stderr should mention mismatch");
+  assertContains(
+    String(r.stderr).toLowerCase(),
+    "disposable db name mismatch",
+    "stderr should mention mismatch"
+  );
   const after = captureTargetState(superEnv);
-  assertEq(after, targetStateBeforeCleanup, "state unchanged \u2014 no DROP ran");
+  assertEq(after, targetStateBeforeCleanup, "state unchanged - no REVOKE/DROP ran");
 });
 
-test("R18-4b: missing DISPOSABLE_DB_NAME refused before any DDL", () => {
+test("R19-5b: missing role identity refuses before DDL (state unchanged)", () => {
+  const guard = buildCleanupGuard({
+    expectedDbName: EXPECTED_DB_NAME,
+    expectedClusterId: TRUSTED_CLUSTER_ID,
+  });
   let threw = null;
   try {
-    assertDisposableTarget(TEST_DATABASE_URL, { expectedDbName: undefined });
+    buildCleanupSequence({
+      roleName: undefined,
+      dbName: EXPECTED_DB_NAME,
+      tableNames: [TEST_TABLE],
+      guardDoBlocks: guard,
+    });
   } catch (err) {
     threw = err;
   }
-  assertTrue(threw !== null, "guard should refuse when DB name is missing");
+  assertTrue(threw !== null, "buildCleanupSequence must refuse missing roleName");
+  // No SQL was emitted, so no DDL ran.
   const after = captureTargetState(superEnv);
-  assertEq(after, targetStateBeforeCleanup, "state unchanged after refusal");
+  assertEq(after, targetStateBeforeCleanup, "state unchanged - no DDL emitted");
+});
+
+test("R19-5c: wrong cluster ID aborts before any REVOKE/DROP (state unchanged)", () => {
+  const wrongClusterId = (BigInt(TRUSTED_CLUSTER_ID) ^ 1n).toString();
+  const wrongGuard = buildCleanupGuard({
+    expectedDbName: EXPECTED_DB_NAME,
+    expectedClusterId: wrongClusterId,
+  });
+  const cleanupSql = buildCleanupSequence({
+    roleName: ROLE_NAME,
+    dbName: EXPECTED_DB_NAME,
+    tableNames: [TEST_TABLE],
+    guardDoBlocks: wrongGuard,
+  });
+  const r = spawnSync(
+    "psql",
+    ["-t", "-A", "-F", "\t", "-v", "ON_ERROR_STOP=1", "-1", "-c", cleanupSql],
+    { env: superEnv, encoding: "utf8", maxBuffer: 10 * 1024 * 1024, timeout: 30_000 }
+  );
+  assertTrue(r.status !== 0, "psql should fail on cluster mismatch");
+  assertContains(
+    String(r.stderr).toLowerCase(),
+    "cluster mismatch",
+    "stderr should mention cluster mismatch"
+  );
+  const after = captureTargetState(superEnv);
+  assertEq(after, targetStateBeforeCleanup, "state unchanged - no REVOKE/DROP ran");
 });
 
 test("R19-1a: wrong cluster + matching DB name aborts before DDL (state unchanged)", () => {
