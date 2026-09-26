@@ -260,7 +260,7 @@ function captureTargetState(env) {
      "WHERE n.nspname NOT IN ('pg_catalog','information_schema','pg_toast')"],
     ["constraints",
      "SELECT COALESCE(string_agg(" +
-     "  n.nspname||'.'||c.relname||'|'||con.conname||'|'||con.contype||'|'||pg_get_constraintdef(con.oid)" +
+     "  n.nspname||'.'||c.relname||'|'||con.conname||'|'||con.contype::text||'|'||pg_get_constraintdef(con.oid)" +
      "  , '||' ORDER BY 1), '') " +
      "FROM pg_constraint con " +
      "JOIN pg_class c ON c.oid = con.conrelid " +

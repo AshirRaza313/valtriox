@@ -137,14 +137,14 @@ export function buildClusterVerificationDoBlock(expectedClusterId) {
     );
   }
   return [
-    "DO $",
+    "DO $$",
     "DECLARE actual_id text;",
     "BEGIN",
     "  SELECT system_identifier::text INTO actual_id FROM pg_control_system();",
     "  IF actual_id IS NULL OR actual_id <> '" + trimmed + "' THEN",
     "    RAISE EXCEPTION 'Cluster mismatch: expected " + trimmed + ", got %', actual_id;",
     "  END IF;",
-    "END $;",
+    "END $$;",
   ].join("\n");
 }
 export const __test__ = { buildDbNameVerificationDoBlock, buildClusterVerificationDoBlock };
