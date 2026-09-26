@@ -1,0 +1,140 @@
+name: audit-harness
+
+# ============================================================================
+# TRUSTED audit workflow — runs from main (base branch), NOT from PR.
+# Uses workflow_run trigger so the workflow definition cannot be modified
+# by any PR.
+#
+# Round 6 fixes (13 Sep 2026):
+# - UPSTREAM_* env vars now passed from workflow_run payload (FIX #4)
+# - Immutable SHA binding — no PR refetch (FIX #6)
+# - Concurrency includes repo + PR number (FIX #9)
+# ============================================================================
+
+on:
+  workflow_run:
+    workflows: ["baseline-pr-validation"]
+    types: [completed]
+
+# FIX #9 — Concurrency keyed on repo + PR number (fork-safe)
+concurrency:
+  group: audit-harness-${{ github.repository }}-${{ github.event.workflow_run.pull_requests[0].number || github.event.workflow_run.head_branch }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  detect-label:
+    name: Detect run-real-audit label
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    outputs:
+      has_label: ${{ steps.check.outputs.has_label }}
+      upstream_sha: ${{ steps.check.outputs.upstream_sha }}
+      upstream_run_id: ${{ steps.check.outputs.upstream_run_id }}
+      upstream_run_attempt: ${{ steps.check.outputs.upstream_run_attempt }}
+      upstream_pr_number: ${{ steps.check.outputs.upstream_pr_number }}
+    steps:
+      - id: check
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
+        with:
+          script: |
+            // FIX #6 — Use IMMUTABLE workflow_run SHA, never refetch PR head.
+            const runSha = context.payload.workflow_run.head_sha;
+            const runId = String(context.payload.workflow_run.id);
+            const runAttempt = String(context.payload.workflow_run.run_attempt);
+            const prs = context.payload.workflow_run.pull_requests || [];
+
+            core.setOutput('upstream_sha', runSha);
+            core.setOutput('upstream_run_id', runId);
+            core.setOutput('upstream_run_attempt', runAttempt);
+
+            if (prs.length === 0) {
+              core.setFailed('workflow_run has no PR context — cannot bind evidence');
+              return;
+            }
+            if (prs.length > 1) {
+              core.setFailed(`workflow_run has ${prs.length} PRs — ambiguous association`);
+              return;
+            }
+
+            const prNumber = String(prs[0].number);
+            core.setOutput('upstream_pr_number', prNumber);
+
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prs[0].number,
+            });
+            const hasLabel = pr.labels.some(l => l.name === 'run-real-audit');
+            core.setOutput('has_label', hasLabel ? 'true' : 'false');
+            core.info(`PR #${prNumber} — run-real-audit=${hasLabel} — immutable run SHA=${runSha}`);
+
+  real-inventory-audit:
+    name: Real Inventory Audit (Trusted)
+    needs: detect-label
+    if: needs.detect-label.outputs.has_label == 'true'
+    runs-on: ubuntu-latest
+    environment: production-audit
+    steps:
+      - name: Checkout trusted harness (pinned immutable commit)
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+        with:
+          ref: ${{ secrets.TRUSTED_HARNESS_SHA }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af  # v4.1.0
+        with:
+          node-version: 24
+
+      - name: Compute trusted script hash (from pinned TRUSTED_HARNESS_SHA)
+        id: script_hash
+        run: |
+          # Compute hash from the PINNED trusted commit, not the current checkout
+          PINNED_SHA="${{ secrets.TRUSTED_HARNESS_SHA }}"
+          TRUSTED_HASH=$(git show "$PINNED_SHA:scripts/audit/notification-inventory.mjs" | sha256sum | cut -d' ' -f1)
+          echo "hash=$TRUSTED_HASH" >> "$GITHUB_OUTPUT"
+          echo "Trusted script hash (from $PINNED_SHA): $TRUSTED_HASH"
+
+      - name: Run trusted audit
+        env:
+          DATABASE_URL_READONLY: ${{ secrets.REAL_DATABASE_URL_READONLY }}
+          PG_EXPECTED_HOST: ${{ secrets.PG_EXPECTED_HOST }}
+          PG_EXPECTED_PORT: "5432"
+          PG_EXPECTED_DATABASE: "postgres"
+          PG_EXPECTED_USERNAME: ${{ secrets.PG_EXPECTED_USERNAME }}
+          PG_EXPECTED_VERSION: ${{ secrets.PG_EXPECTED_VERSION }}
+          EXPECTED_SCRIPT_SHA256: ${{ steps.script_hash.outputs.hash }}
+          # Round 12 R12-1 (P0): bind expected pin to the same immutable SHA
+          # used for checkout (fixes prior workflow-wiring gap — script
+          # required EXPECTED_PIN_SHA but workflow never passed it).
+          EXPECTED_PIN_SHA: ${{ secrets.TRUSTED_HARNESS_SHA }}
+          # Round 13 R13-1: expected effective role for real-mode check.
+          # If secret is not set, GitHub resolves to empty string → script's
+          # existing real-mode gate fires fail-closed. Protected run remains
+          # blocked until role spelling is independently verified.
+          PG_EXPECTED_EFFECTIVE_ROLE: ${{ secrets.PG_EXPECTED_EFFECTIVE_ROLE }}
+          # FIX #4 — UPSTREAM_* now passed from immutable workflow_run payload
+          UPSTREAM_WORKFLOW_SHA: ${{ needs.detect-label.outputs.upstream_sha }}
+          UPSTREAM_RUN_ID: ${{ needs.detect-label.outputs.upstream_run_id }}
+          UPSTREAM_RUN_ATTEMPT: ${{ needs.detect-label.outputs.upstream_run_attempt }}
+          UPSTREAM_PR_NUMBER: ${{ needs.detect-label.outputs.upstream_pr_number }}
+          # Round 12 R12-2: distinguish trusted (current) audit run identity
+          # from upstream (triggering baseline) run identity.
+          TRUSTED_RUN_ID: ${{ github.run_id }}
+          TRUSTED_RUN_ATTEMPT: ${{ github.run_attempt }}
+          AUDIT_MODE: real
+        run: node scripts/audit/notification-inventory.mjs
+
+      - name: Upload receipt
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882  # v4.4.3
+        with:
+          name: real-inventory-receipt-${{ needs.detect-label.outputs.upstream_sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            backups/historical-rows-inventory-receipt.json
+            backups/historical-rows-inventory-receipt.json.sha256
+          if-no-files-found: error
+          retention-days: 90

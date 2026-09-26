@@ -2,10 +2,15 @@ name: baseline-pr-validation
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, labeled]
     branches: [main]
 
 permissions:
   contents: read
+
+concurrency:
+  group: baseline-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
 jobs:
   typecheck:
@@ -19,8 +24,11 @@ jobs:
       - run: npm ci
       - run: npx tsc --noEmit
 
+  # R4 (Round 11): Application unit tests run on the synthetic merge-ref
+  # (github.sha on pull_request events = merge commit of PR into base).
+  # Default checkout (no `ref:`) uses github.sha — merge-ref boundary.
   unit-tests:
-    name: Tests
+    name: Tests (merge-ref)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -29,6 +37,174 @@ jobs:
           node-version: 24
       - run: npm ci
       - run: npx vitest run --exclude "tests/integration/**"
+
+  # R4 (Round 11): Harness validation runs on the exact PR-head commit.
+  # Separate focused boundary from application tests above.
+  harness-validation:
+    name: Harness Validation (PR-head)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Harness crash-path tests (standalone)
+        run: node scripts/audit/tests/crash-paths.test.mjs
+      - name: Harness receipt-construction tests (standalone)
+        run: node scripts/audit/tests/receipt-construction.test.mjs
+      - name: Harness negative-path tests (standalone)
+        run: node scripts/audit/tests/negative-paths.test.mjs
+      - name: Harness contract verification test (standalone)
+        run: node scripts/audit/tests/contract-verification.test.mjs
+      - name: Disposable-target guard test (standalone)
+        run: node scripts/audit/tests/disposable-target-guard.test.mjs
+
+  # R13-2: Real psql validation on disposable PostgreSQL (non-superuser role).
+  # Uses postgres:16 service — never touches production/protected DBs.
+  harness-real-psql:
+    name: Harness Real psql Validation (PR-head)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: superuser
+          POSTGRES_PASSWORD: superuser_pass
+          POSTGRES_DB: audit_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U superuser"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+      - name: Verify psql available
+        run: psql --version
+      - name: Generate per-run role name
+        run: |
+          ROLE_NAME="audit_ro_${GITHUB_RUN_ID}_${GITHUB_RUN_ATTEMPT}_$(openssl rand -hex 4)"
+          echo "TEST_ROLE_NAME=${ROLE_NAME}" >> "$GITHUB_ENV"
+          echo "Per-run role name: ${ROLE_NAME}"
+      - name: Capture trusted cluster identity
+        run: |
+          CLUSTER_ID=$(PGPASSWORD=superuser_pass psql -h localhost -p 5432 -U superuser -d audit_test -t -A -c "SELECT system_identifier::text FROM pg_control_system()")
+          if [ -z "$CLUSTER_ID" ]; then
+            echo "Failed to capture cluster identity" >&2
+            exit 1
+          fi
+          echo "TRUSTED_CLUSTER_ID=${CLUSTER_ID}" >> "$GITHUB_ENV"
+          echo "Trusted cluster captured: ${CLUSTER_ID}"
+      - name: Provision fresh disposable database for this run
+        run: |
+          DB_NAME="audit_${GITHUB_RUN_ID}_${GITHUB_RUN_ATTEMPT}_$(openssl rand -hex 6)"
+          PGPASSWORD=superuser_pass psql -h localhost -p 5432 -U superuser -d audit_test -v ON_ERROR_STOP=1 -c "CREATE DATABASE \"${DB_NAME}\""
+          echo "DISPOSABLE_DB_NAME=${DB_NAME}" >> "$GITHUB_ENV"
+          echo "TEST_DATABASE_URL=postgresql://superuser:superuser_pass@localhost:5432/${DB_NAME}" >> "$GITHUB_ENV"
+          echo "Provisioned fresh disposable database: ${DB_NAME}"
+      - name: Run real psql integration tests
+        run: node scripts/audit/tests/real-psql-integration.test.mjs
+
+  # R14-3: Production-path test — calls the ACTUAL runInventory() against a
+  # disposable SSL-enabled PostgreSQL. Narrow coverage claim vs real-psql
+  # test (which validates psql command behavior only).
+  harness-production-path:
+    name: Harness Production-Path (PR-head)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Generate self-signed SSL cert for test postgres
+        run: |
+          mkdir -p /tmp/pgssl
+          openssl req -new -x509 -days 1 -nodes \
+            -out /tmp/pgssl/server.crt \
+            -keyout /tmp/pgssl/server.key \
+            -subj "/CN=test-db.local"
+          # PostgreSQL refuses to start if server.key has group/world access.
+          # Required permissions: 0600 (owner-only) or 0640 max if owned by root.
+          # We chown to postgres user (UID 999 in the official image) and use 0600.
+          chmod 600 /tmp/pgssl/server.key
+          chmod 644 /tmp/pgssl/server.crt
+          sudo chown 999:999 /tmp/pgssl/server.key /tmp/pgssl/server.crt
+
+      - name: Start PostgreSQL with SSL
+        run: |
+          docker run -d --name pg-r14 \
+            -e POSTGRES_USER=superuser \
+            -e POSTGRES_PASSWORD=superuser_pass \
+            -e POSTGRES_DB=audit_test \
+            -p 5432:5432 \
+            -v /tmp/pgssl:/etc/postgresql-certs:ro \
+            postgres:16 \
+            -c ssl=on \
+            -c ssl_cert_file=/etc/postgresql-certs/server.crt \
+            -c ssl_key_file=/etc/postgresql-certs/server.key
+
+      - name: Wait for postgres ready
+        run: |
+          for i in {1..30}; do
+            if pg_isready -h localhost -p 5432 -U superuser; then
+              echo "postgres ready"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "postgres failed to become ready"
+          docker logs pg-r14
+          exit 1
+
+      - name: Add hosts alias for non-localhost test
+        run: |
+          echo "127.0.0.1 test-db.local" | sudo tee -a /etc/hosts
+          getent hosts test-db.local
+
+      - name: Generate per-run role name
+        run: |
+          ROLE_NAME="audit_ro_${GITHUB_RUN_ID}_${GITHUB_RUN_ATTEMPT}_$(openssl rand -hex 4)"
+          echo "TEST_ROLE_NAME=${ROLE_NAME}" >> "$GITHUB_ENV"
+          echo "Per-run role name: ${ROLE_NAME}"
+      - name: Capture trusted cluster identity
+        run: |
+          CLUSTER_ID=$(PGPASSWORD=superuser_pass psql -h localhost -p 5432 -U superuser -d audit_test -t -A -c "SELECT system_identifier::text FROM pg_control_system()")
+          if [ -z "$CLUSTER_ID" ]; then
+            echo "Failed to capture cluster identity" >&2
+            exit 1
+          fi
+          echo "TRUSTED_CLUSTER_ID=${CLUSTER_ID}" >> "$GITHUB_ENV"
+          echo "Trusted cluster captured: ${CLUSTER_ID}"
+      - name: Provision fresh disposable database for this run
+        run: |
+          DB_NAME="audit_${GITHUB_RUN_ID}_${GITHUB_RUN_ATTEMPT}_$(openssl rand -hex 6)"
+          PGPASSWORD=superuser_pass psql -h localhost -p 5432 -U superuser -d audit_test -v ON_ERROR_STOP=1 -c "CREATE DATABASE \"${DB_NAME}\""
+          echo "DISPOSABLE_DB_NAME=${DB_NAME}" >> "$GITHUB_ENV"
+          echo "TEST_DATABASE_URL=postgresql://superuser:superuser_pass@test-db.local:5432/${DB_NAME}" >> "$GITHUB_ENV"
+          echo "Provisioned fresh disposable database: ${DB_NAME}"
+      - name: Run production-path integration test
+        run: node scripts/audit/tests/production-path.test.mjs
+
+      - name: Stop postgres (always)
+        if: always()
+        run: docker stop pg-r14 || true
 
   build:
     name: Build
@@ -234,6 +410,9 @@ jobs:
     needs:
       - typecheck
       - unit-tests
+      - harness-validation
+      - harness-real-psql
+      - harness-production-path
       - build
       - lint
       - integration-tests
@@ -245,6 +424,9 @@ jobs:
         env:
           TYPECHECK_RESULT: ${{ needs.typecheck.result }}
           TESTS_RESULT: ${{ needs.unit-tests.result }}
+          HARNESS_RESULT: ${{ needs.harness-validation.result }}
+          HARNESS_REAL_PSQL_RESULT: ${{ needs.harness-real-psql.result }}
+          HARNESS_PRODUCTION_PATH_RESULT: ${{ needs.harness-production-path.result }}
           BUILD_RESULT: ${{ needs.build.result }}
           LINT_RESULT: ${{ needs.lint.result }}
           INTEGRATION_RESULT: ${{ needs.integration-tests.result }}
@@ -253,6 +435,9 @@ jobs:
           for result in \
             "$TYPECHECK_RESULT" \
             "$TESTS_RESULT" \
+            "$HARNESS_RESULT" \
+            "$HARNESS_REAL_PSQL_RESULT" \
+            "$HARNESS_PRODUCTION_PATH_RESULT" \
             "$BUILD_RESULT" \
             "$LINT_RESULT" \
             "$INTEGRATION_RESULT" \
