@@ -131,6 +131,15 @@ function psql(sql, { guard = true, env = superEnv } = {}) {
 let passed = 0;
 let failed = 0;
 
+// R20-5a: redact secrets before logging error messages.
+// CodeQL js/clear-text-logging (alert #53): psql stderr may echo the
+// connection URL with password. Sanitize at every log sink.
+function redactSecrets(s) {
+  return String(s)
+    .replace(/postgres(?:ql)?:\/\/[^:\s/]+:[^@\s/]+@/gi, "postgresql://[REDACTED]@")
+    .replace(/password=[^\s&'\"]+/gi, "password=[REDACTED]");
+}
+
 function test(name, fn) {
   try {
     fn();
@@ -138,7 +147,7 @@ function test(name, fn) {
     passed++;
   } catch (err) {
     console.error(`  ✗ ${name}`);
-    console.error(`    ${err.message}`);
+    console.error(`    ${redactSecrets(err.message)}`);
     failed++;
   }
 }
@@ -313,7 +322,7 @@ function captureTargetState(env) {
     if (r.status !== 0) {
       // Fail-closed: a single query failure aborts snapshot capture.
       // No silent skip, no fallback to V1.
-      throw new Error("captureTargetState(" + label + ") failed: " + String(r.stderr).trim());
+      throw new Error("captureTargetState(" + label + ") failed: " + redactSecrets(String(r.stderr).trim()));
     }
     parts.push(label + "=" + r.stdout.trim());
   }
@@ -430,7 +439,7 @@ const setup = spawnSync(
 );
 if (setup.status !== 0) {
   console.error("SETUP FAILED:");
-  console.error(setup.stderr);
+  console.error(redactSecrets(setup.stderr));
   process.exit(1);
 }
 
@@ -677,7 +686,7 @@ const cleanupResult = spawnSync(
 );
 if (cleanupResult.status !== 0) {
   console.error("CLEANUP FAILED:");
-  console.error(cleanupResult.stderr);
+  console.error(redactSecrets(cleanupResult.stderr));
   process.exit(1);
 }
 

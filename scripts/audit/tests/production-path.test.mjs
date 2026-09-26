@@ -68,6 +68,13 @@ const DB_NAME = parsedSuper.pathname.replace(/^\//, "");
 let passed = 0;
 let failed = 0;
 
+// Redact connection credentials echoed by psql before logging errors.
+function redactSecrets(s) {
+  return String(s)
+    .replace(/postgres(?:ql)?:\/\/[^:\s/]+:[^@\s/]+@/gi, "postgresql://[REDACTED]@")
+    .replace(/password=[^\s&'\"]+/gi, "password=[REDACTED]");
+}
+
 function test(name, fn) {
   try {
     fn();
@@ -75,7 +82,7 @@ function test(name, fn) {
     passed++;
   } catch (err) {
     console.error(`  ✗ ${name}`);
-    console.error(`    ${err.message}`);
+    console.error(`    ${redactSecrets(err.message)}`);
     failed++;
   }
 }
@@ -191,7 +198,7 @@ const setupSql = dbNameDoBlock + "\n" + clusterDoBlock + "\n" + `
 const setupResult = superPsqlTx(setupSql);
 if (setupResult.status !== 0) {
   console.error("SETUP FAILED:");
-  console.error(setupResult.stderr);
+  console.error(redactSecrets(setupResult.stderr));
   process.exit(1);
 }
 
@@ -340,7 +347,7 @@ const cleanupSql = buildCleanupSequence({
 const cleanupResult = superPsqlTx(cleanupSql);
 if (cleanupResult.status !== 0) {
   console.error("CLEANUP FAILED:");
-  console.error(cleanupResult.stderr);
+  console.error(redactSecrets(cleanupResult.stderr));
   process.exit(1);
 }
 
