@@ -115,7 +115,7 @@ jobs:
           # pg_controldata reads from the container's $PGDATA directly.
           # -u postgres ensures the postgres user's PATH and env are used.
           CLUSTER_ID=$(docker exec -u postgres "$CONTAINER_ID" pg_controldata \
-            | grep -i "Database cluster identifier" \
+            | grep -i "Database system identifier" \
             | sed 's/.*: *//' \
             | tr -d ' \r\n')
           if [ -z "$CLUSTER_ID" ]; then
@@ -219,7 +219,7 @@ jobs:
           fi
           echo "Container ID: ${CONTAINER_ID}"
           CLUSTER_ID=$(docker exec -u postgres "$CONTAINER_ID" pg_controldata \
-            | grep -i "Database cluster identifier" \
+            | grep -i "Database system identifier" \
             | sed 's/.*: *//' \
             | tr -d ' \r\n')
           if [ -z "$CLUSTER_ID" ]; then
