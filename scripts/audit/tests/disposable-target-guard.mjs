@@ -1,44 +1,58 @@
 // ============================================================================
-// Disposable-target guard — Round 17 R17-1
+// Disposable-target guard — Round 18 R18-2
 // ============================================================================
-// Round 16 expert feedback (verbatim):
-//   "Current runtime check har private/RFC1918/link-local address ko
-//    disposable maan leti hai. Private address disposable hone ka proof
-//    nahi; private Production database bhi pass ho sakta hai."
+// Round 17 expert feedback (verbatim):
+//   "Disposable marker independently trusted identity nahi hai. Workflow
+//    pehle jis target se connect hota hai usi par marker create karta hai,
+//    phir us marker ko proof maanta hai. Wrong writable target ko bhi
+//    workflow khud 'disposable' label kar sakta hai."
 //
-// Round 17 approach:
-//   Network-address classification is removed entirely. Instead, the
-//   disposable target's identity is proven by a per-run marker injected
-//   into the disposable database by the CI workflow (see the "Mark
-//   database as disposable for this run" step in baseline-pr-validation.yml).
+//   "Disposable identity workflow ke destructive path se pehle
+//    independently provisioned/trusted honi chahiye; guard apna proof
+//    khud target par create na kare."
 //
-//   The test must verify the marker in the SAME database connection that
-//   runs the destructive DDL (R17-2). This module provides:
-//     - assertDisposableTarget(): URL shape + marker env presence check
-//     - buildMarkerVerificationDoBlock(): SQL DO block that raises an
-//       exception if the marker table content does not match the expected
-//       per-run marker — callers embed this at the top of the same psql -c
-//       that runs DDL, so a mismatch aborts the transaction before DDL.
+// Round 18 approach:
+//   The per-run marker table is removed entirely. Identity is proven by a
+//   fresh random database name provisioned by the CI workflow BEFORE any
+//   destructive path runs:
 //
-// Fail-closed: if DISPOSABLE_DB_MARKER is missing/empty, we refuse.
+//     1. Workflow step "Provision fresh disposable database for this run"
+//        generates DB_NAME="audit_<run_id>_<attempt>_<random_hex>", runs
+//        CREATE DATABASE "<DB_NAME>" against the disposable service
+//        container, and exports DISPOSABLE_DB_NAME + TEST_DATABASE_URL via
+//        $GITHUB_ENV.
+//
+//     2. The test reads DISPOSABLE_DB_NAME and cross-checks it against the
+//        URL's dbname (defence in depth).
+//
+//     3. Before every destructive statement (setup AND cleanup), the test
+//        embeds a DO block that asserts current_database() equals
+//        DISPOSABLE_DB_NAME. The block runs inside the same psql -1
+//        transaction as the DDL — a mismatch aborts before DDL executes.
+//
+//   The workflow does NOT write any "proof" object into the target — the
+//   newly-provisioned database's existence is the identity. A random name
+//   cannot accidentally match a pre-existing production database.
+//
+// Fail-closed: if DISPOSABLE_DB_NAME is missing/empty, we refuse.
 // ============================================================================
 
 export function assertDisposableTarget(
   urlString,
-  { label = "TEST_DATABASE_URL", expectedMarker } = {}
+  { label = "TEST_DATABASE_URL", expectedDbName } = {}
 ) {
   if (!urlString || typeof urlString !== "string") {
     throw new Error(`${label}: not set or not a string`);
   }
   if (
-    !expectedMarker ||
-    typeof expectedMarker !== "string" ||
-    expectedMarker.trim().length === 0
+    !expectedDbName ||
+    typeof expectedDbName !== "string" ||
+    expectedDbName.trim().length === 0
   ) {
     throw new Error(
-      `DISPOSABLE_DB_MARKER: not set or empty. The CI workflow must inject ` +
-      `a per-run marker into the disposable database and expose it via the ` +
-      `DISPOSABLE_DB_MARKER env var before this test runs.`
+      `DISPOSABLE_DB_NAME: not set or empty. The CI workflow must provision ` +
+      `a fresh disposable database and expose its name via the ` +
+      `DISPOSABLE_DB_NAME env var before this test runs.`
     );
   }
 
@@ -58,47 +72,42 @@ export function assertDisposableTarget(
   const host = parsed.hostname.replace(/^\[|\]$/g, "").toLowerCase();
   const dbName = decodeURIComponent(parsed.pathname.replace(/^\//, ""));
 
-  if (!host) {
-    throw new Error(`${label}: host missing`);
-  }
-  if (!dbName) {
-    throw new Error(`${label}: database name missing`);
+  if (!host) throw new Error(`${label}: host missing`);
+  if (!dbName) throw new Error(`${label}: database name missing`);
+
+  if (dbName !== expectedDbName) {
+    throw new Error(
+      `Disposable-target guard: URL dbname "${dbName}" does not match ` +
+      `DISPOSABLE_DB_NAME "${expectedDbName}". Refusing to proceed.`
+    );
   }
 
-  return { host, dbName, expectedMarker, parsed };
+  return { host, dbName, expectedDbName, parsed };
 }
 
-// Same-connection marker verification: returns a SQL DO block that raises
-// an exception if __disposable_marker does not contain exactly the expected
-// marker. Callers embed this at the top of the SAME psql -c invocation that
-// also runs destructive DDL. Because RAISE EXCEPTION aborts the enclosing
-// transaction, DDL never executes on mismatch.
-//
-// The marker is escaped for single quotes to prevent SQL injection from the
-// env value. That value is provided by the CI workflow, not by untrusted
-// input, but escaping is still done for defence in depth.
-export function buildMarkerVerificationDoBlock(expectedMarker) {
+// Returns a SQL DO block that asserts current_database() equals the
+// expected fresh database name. Embed at the top of the SAME psql -1
+// invocation that runs destructive DDL — RAISE EXCEPTION aborts the
+// enclosing transaction before any DDL executes.
+export function buildDbNameVerificationDoBlock(expectedDbName) {
   if (
-    !expectedMarker ||
-    typeof expectedMarker !== "string" ||
-    expectedMarker.trim().length === 0
+    !expectedDbName ||
+    typeof expectedDbName !== "string" ||
+    expectedDbName.trim().length === 0
   ) {
-    throw new Error("buildMarkerVerificationDoBlock: expectedMarker is empty");
+    throw new Error("buildDbNameVerificationDoBlock: expectedDbName is empty");
   }
-  const escaped = expectedMarker.replace(/'/g, "''");
+  const escaped = expectedDbName.replace(/'/g, "''");
   return [
     "DO $$",
-    "DECLARE m text;",
+    "DECLARE actual_db text;",
     "BEGIN",
-    "  SELECT marker INTO m FROM __disposable_marker LIMIT 1;",
-    "  IF m IS NULL THEN",
-    "    RAISE EXCEPTION 'Disposable marker missing \u2014 refusing to proceed';",
-    "  END IF;",
-    "  IF m <> '" + escaped + "' THEN",
-    "    RAISE EXCEPTION 'Disposable marker mismatch \u2014 refusing to proceed';",
+    "  SELECT current_database() INTO actual_db;",
+    "  IF actual_db IS NULL OR actual_db <> '" + escaped + "' THEN",
+    "    RAISE EXCEPTION 'Disposable DB name mismatch. Expected <" + escaped + ">, got <%>', actual_db;",
     "  END IF;",
     "END $$;",
   ].join("\n");
 }
 
-export const __test__ = { buildMarkerVerificationDoBlock };
+export const __test__ = { buildDbNameVerificationDoBlock };

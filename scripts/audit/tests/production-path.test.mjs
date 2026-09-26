@@ -30,7 +30,7 @@ import { readFileSync, existsSync, rmSync } from "node:fs";
 import { createHash } from "node:crypto";
 import {
   assertDisposableTarget,
-  buildMarkerVerificationDoBlock,
+  buildDbNameVerificationDoBlock,
 } from "./disposable-target-guard.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -46,8 +46,8 @@ if (!TEST_DATABASE_URL) {
 // Round 17 R17-4b: disposable-target identity is proven by a per-run marker
 // injected by the CI workflow (see "Mark database as disposable for this run"
 // step in baseline-pr-validation.yml). Network-address classification removed.
-const EXPECTED_MARKER = process.env.DISPOSABLE_DB_MARKER;
-assertDisposableTarget(TEST_DATABASE_URL, { expectedMarker: EXPECTED_MARKER });
+const EXPECTED_DB_NAME = process.env.DISPOSABLE_DB_NAME;
+assertDisposableTarget(TEST_DATABASE_URL, { expectedDbName: EXPECTED_DB_NAME });
 
 const parsedSuper = new URL(TEST_DATABASE_URL);
 const DB_NAME = parsedSuper.pathname.replace(/^\//, "");
@@ -133,8 +133,8 @@ const ROLE_NAME = "audit_r14_ro";
 const ROLE_PASSWORD = "audit_r14_ro_pass_xyz";
 
 // ── Setup: schema, role, data, read-only default ────────────────────────
-const markerDoBlock = buildMarkerVerificationDoBlock(EXPECTED_MARKER);
-const setupSql = markerDoBlock + "\n" + `
+const dbNameDoBlock = buildDbNameVerificationDoBlock(EXPECTED_DB_NAME);
+const setupSql = dbNameDoBlock + "\n" + `
   DROP TABLE IF EXISTS public."NotificationReadReceipt";
   DROP TABLE IF EXISTS public."Notification";
   DROP ROLE IF EXISTS ${ROLE_NAME};
@@ -298,11 +298,22 @@ test("receipt file + SHA256 sidecar written", () => {
 });
 
 // ── Cleanup ────────────────────────────────────────────────────────────
-superPsql(`
+// R18-1: cleanup also fails-closed through the same guarded pattern as
+// setup (superPsqlTx = -1 -v ON_ERROR_STOP=1). DB name DO block + DROP
+// statements combined in a single transaction. On marker mismatch the
+// transaction aborts before any DROP — closing the R17 cleanup gap.
+const cleanupDbNameDoBlock = buildDbNameVerificationDoBlock(EXPECTED_DB_NAME);
+const cleanupSql = cleanupDbNameDoBlock + "\n" + `
   DROP TABLE IF EXISTS public."NotificationReadReceipt";
   DROP TABLE IF EXISTS public."Notification";
   DROP ROLE IF EXISTS ${ROLE_NAME};
-`);
+`;
+const cleanupResult = superPsqlTx(cleanupSql);
+if (cleanupResult.status !== 0) {
+  console.error("CLEANUP FAILED:");
+  console.error(cleanupResult.stderr);
+  process.exit(1);
+}
 
 console.log(`\n${passed} passed, ${failed} failed\n`);
 process.exit(failed > 0 ? 1 : 0);

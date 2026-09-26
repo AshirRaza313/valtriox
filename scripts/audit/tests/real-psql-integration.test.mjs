@@ -23,7 +23,7 @@
 import { spawnSync } from "node:child_process";
 import {
   assertDisposableTarget,
-  buildMarkerVerificationDoBlock,
+  buildDbNameVerificationDoBlock,
 } from "./disposable-target-guard.mjs";
 
 const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL;
@@ -37,8 +37,8 @@ if (!TEST_DATABASE_URL) {
 // Must be called BEFORE any DROP/CREATE statement. Fail-closed.
 // Round 17 R17-1: disposable-target identity is proven by a per-run marker
 // injected by the CI workflow. Network-address classification is removed.
-const EXPECTED_MARKER = process.env.DISPOSABLE_DB_MARKER;
-assertDisposableTarget(TEST_DATABASE_URL, { expectedMarker: EXPECTED_MARKER });
+const EXPECTED_DB_NAME = process.env.DISPOSABLE_DB_NAME;
+assertDisposableTarget(TEST_DATABASE_URL, { expectedDbName: EXPECTED_DB_NAME });
 
 // ── Setup: derive superuser + readonly role URLs ────────────────────────
 const superUrl = new URL(TEST_DATABASE_URL);
@@ -141,30 +141,51 @@ console.log("\nReal psql integration tests (Round 13 R13-2):\n");
 // hostile/non-disposable target introduce kare aur prove kare ke zero
 // destructive statements chalin aur known target state unchanged rahi."
 
-// Helper: snapshot the public-schema table list (sorted, stable).
+// Helper: comprehensive snapshot of the target database state.
+// R18-3: capture ALL non-system state that destructive DDL could touch —
+// tables, roles, grants, and column definitions — not just public table
+// names. The snapshot is a deterministic, ordered string that can be
+// compared before/after each negative-path test.
 function captureTargetState(env) {
-  const r = spawnSync(
-    "psql",
-    ["-t", "-A", "-c",
-      "SELECT COALESCE(string_agg(tablename, ',' ORDER BY tablename), '') " +
-      "FROM pg_tables WHERE schemaname = 'public'"],
-    { env, encoding: "utf8", maxBuffer: 1024 * 1024, timeout: 10_000 }
-  );
-  if (r.status !== 0) {
-    throw new Error("captureTargetState failed: " + String(r.stderr).trim());
+  const queries = [
+    ["tables",
+     "SELECT COALESCE(string_agg(schemaname||'.'||tablename, '|' ORDER BY 1), '') " +
+     "FROM pg_tables WHERE schemaname NOT IN ('pg_catalog','information_schema')"],
+    ["roles",
+     "SELECT COALESCE(string_agg(rolname, '|' ORDER BY 1), '') " +
+     "FROM pg_roles WHERE rolname NOT LIKE 'pg_%'"],
+    ["grants",
+     "SELECT COALESCE(string_agg(table_schema||'.'||table_name||':'||grantee||':'||privilege_type, '|' ORDER BY 1), '') " +
+     "FROM information_schema.role_table_grants " +
+     "WHERE table_schema NOT IN ('pg_catalog','information_schema')"],
+    ["columns",
+     "SELECT COALESCE(string_agg(table_schema||'.'||table_name||'.'||column_name||':'||data_type, '|' ORDER BY 1), '') " +
+     "FROM information_schema.columns " +
+     "WHERE table_schema NOT IN ('pg_catalog','information_schema')"],
+  ];
+  const parts = [];
+  for (const [label, q] of queries) {
+    const r = spawnSync(
+      "psql",
+      ["-t", "-A", "-c", q],
+      { env, encoding: "utf8", maxBuffer: 10 * 1024 * 1024, timeout: 10_000 }
+    );
+    if (r.status !== 0) {
+      throw new Error("captureTargetState(" + label + ") failed: " + String(r.stderr).trim());
+    }
+    parts.push(label + "=" + r.stdout.trim());
   }
-  return r.stdout.trim();
+  return parts.join("\\n");
 }
-
 const targetStateBefore = captureTargetState(superEnv);
 console.log("Negative pre-tests (before setup DDL):");
-console.log("  baseline public tables: " + (targetStateBefore || "(none)"));
+console.log("  baseline state: captured (tables + roles + grants + columns)");
 console.log("");
 
-test("R17-3a: missing DISPOSABLE_DB_MARKER refused before any DDL", () => {
+test("R17-3a: missing DISPOSABLE_DB_NAME refused before any DDL", () => {
   let threw = null;
   try {
-    assertDisposableTarget(TEST_DATABASE_URL, { expectedMarker: undefined });
+    assertDisposableTarget(TEST_DATABASE_URL, { expectedDbName: undefined });
   } catch (err) {
     threw = err;
   }
@@ -173,9 +194,9 @@ test("R17-3a: missing DISPOSABLE_DB_MARKER refused before any DDL", () => {
   assertEq(after, targetStateBefore, "target state unchanged after refusal");
 });
 
-test("R17-3b: wrong marker aborts transaction before DDL (state unchanged)", () => {
-  const hostileMarker = "hostile-marker-" + Date.now();
-  const doBlock = buildMarkerVerificationDoBlock(hostileMarker);
+test("R17-3b: wrong DB name aborts transaction before DDL (state unchanged)", () => {
+  const hostileDbName = "hostile-marker-" + Date.now();
+  const doBlock = buildDbNameVerificationDoBlock(hostileDbName);
   const hostileAttempt = [
     doBlock,
     "CREATE TABLE __r17_3_hostile_should_not_exist (id int);",
@@ -186,7 +207,7 @@ test("R17-3b: wrong marker aborts transaction before DDL (state unchanged)", () 
     { env: superEnv, encoding: "utf8", maxBuffer: 1024 * 1024, timeout: 10_000 }
   );
   assertTrue(r.status !== 0, "psql should fail on marker mismatch");
-  assertContains(String(r.stderr).toLowerCase(), "disposable marker", "stderr should mention marker");
+  assertContains(String(r.stderr).toLowerCase(), "disposable db name", "stderr should mention marker");
   const after = captureTargetState(superEnv);
   assertEq(after, targetStateBefore, "target state unchanged — no destructive DDL ran");
 });
@@ -213,16 +234,16 @@ test("R17-3c: hostile PGHOSTADDR cannot redirect the setup connection", () => {
 
 
 // ── Setup (as superuser) ────────────────────────────────────────
-// R17-2: Marker verification and destructive DDL are folded into a SINGLE
+// R17-2: DB name verification and destructive DDL are folded into a SINGLE
 // psql -c invocation with `-1` (single transaction) and `ON_ERROR_STOP=1`.
-// If the marker DO block raises, the transaction is aborted before any
+// If the DB name DO block raises, the transaction is aborted before any
 // DDL statement runs. This eliminates the target-switch / second-connection
 // gap flagged in Round 16 review (P0 #2): the connection that attests the
-// disposable marker is the same connection that executes the DDL.
-const markerDoBlock = buildMarkerVerificationDoBlock(EXPECTED_MARKER);
+// disposable database name is the same connection that executes the DDL.
+const dbNameDoBlock = buildDbNameVerificationDoBlock(EXPECTED_DB_NAME);
 
 const setupSql = [
-  markerDoBlock,
+  dbNameDoBlock,
   `DROP TABLE IF EXISTS ${TEST_TABLE};`,
   `DROP ROLE IF EXISTS ${ROLE_NAME};`,
   `CREATE ROLE ${ROLE_NAME} LOGIN PASSWORD '${ROLE_PASSWORD}';`,
@@ -354,11 +375,67 @@ test("N-j: hostile ambient PGHOSTADDR does not redirect psql (integration)", () 
   }
 });
 
+// ── R18-4: Wrong-identity tests for cleanup sequence ─────────
+// Expert Round 17 (Checkpoint 3): actual cleanup sequence ke wrong-identity
+// tests do. Setup sequence wrong-identity tests are R17-3a/b/c above.
+// These tests verify the cleanup guard fails-closed BEFORE any DROP, using
+// the comprehensive snapshot (R18-3) as evidence of unchanged state.
+
+const targetStateBeforeCleanup = captureTargetState(superEnv);
+console.log("\nR18-4: Cleanup wrong-identity tests:\n");
+
+test("R18-4a: cleanup with wrong DB_NAME aborts before DROP (state unchanged)", () => {
+  const wrongDbName = "audit_wrong_" + Date.now();
+  const wrongDoBlock = buildDbNameVerificationDoBlock(wrongDbName);
+  const wrongCleanupSql = [
+    wrongDoBlock,
+    `DROP TABLE IF EXISTS ${TEST_TABLE};`,
+    `DROP ROLE IF EXISTS ${ROLE_NAME};`,
+  ].join("\n");
+  const r = spawnSync(
+    "psql",
+    ["-t", "-A", "-F", "\t", "-v", "ON_ERROR_STOP=1", "-1", "-c", wrongCleanupSql],
+    { env: superEnv, encoding: "utf8", maxBuffer: 10 * 1024 * 1024, timeout: 10_000 }
+  );
+  assertTrue(r.status !== 0, "psql should fail on DB name mismatch");
+  assertContains(String(r.stderr).toLowerCase(), "disposable db name mismatch", "stderr should mention mismatch");
+  const after = captureTargetState(superEnv);
+  assertEq(after, targetStateBeforeCleanup, "state unchanged \u2014 no DROP ran");
+});
+
+test("R18-4b: missing DISPOSABLE_DB_NAME refused before any DDL", () => {
+  let threw = null;
+  try {
+    assertDisposableTarget(TEST_DATABASE_URL, { expectedDbName: undefined });
+  } catch (err) {
+    threw = err;
+  }
+  assertTrue(threw !== null, "guard should refuse when DB name is missing");
+  const after = captureTargetState(superEnv);
+  assertEq(after, targetStateBeforeCleanup, "state unchanged after refusal");
+});
+
 // ── Cleanup (as superuser) ──────────────────────────────────────────────
-psql(
-  `DROP TABLE IF EXISTS ${TEST_TABLE}; DROP ROLE IF EXISTS ${ROLE_NAME};`,
-  { guard: false }
+// R18-1: cleanup also fails-closed through the same guarded pattern as
+// setup. DB name DO block + DROP statements combined in a single psql -1
+// -v ON_ERROR_STOP=1 transaction. On marker mismatch the transaction
+// aborts before any DROP statement runs — closing the R17 cleanup gap.
+const cleanupDbNameDoBlock = buildDbNameVerificationDoBlock(EXPECTED_DB_NAME);
+const cleanupSql = [
+  cleanupDbNameDoBlock,
+  `DROP TABLE IF EXISTS ${TEST_TABLE};`,
+  `DROP ROLE IF EXISTS ${ROLE_NAME};`,
+].join("\n");
+const cleanupResult = spawnSync(
+  "psql",
+  ["-t", "-A", "-F", "\t", "-v", "ON_ERROR_STOP=1", "-1", "-c", cleanupSql],
+  { env: superEnv, encoding: "utf8", maxBuffer: 10 * 1024 * 1024, timeout: 30_000 }
 );
+if (cleanupResult.status !== 0) {
+  console.error("CLEANUP FAILED:");
+  console.error(cleanupResult.stderr);
+  process.exit(1);
+}
 
 console.log(`\n${passed} passed, ${failed} failed\n`);
 process.exit(failed > 0 ? 1 : 0);
