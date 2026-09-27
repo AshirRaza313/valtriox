@@ -84,19 +84,67 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
 }, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"] }), { maxRequests: 10, windowSeconds: 60 });
 
 // DELETE /api/integrations?id=... — Disconnect an integration
-export async function DELETE(req: NextRequest) {
-  // Using a raw handler since withAuth DELETE needs org context
-  try {
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get("id");
-    if (!id) {
-      return NextResponse.json({ error: "Integration ID required" }, { status: 400 });
-    }
-    await db.integrationConnection.delete({ where: { id } });
-    return NextResponse.json({ success: true });
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Unknown error";
-    logger.error("[Integrations DELETE] Error:", message);
-    return NextResponse.json({ error: "Failed to disconnect" }, { status: 500 });
-  }
-}
+export const DELETE = withRateLimit(
+  withAuth(
+    async (req: NextRequest, authCtx) => {
+      try {
+        // Platform roles bypass requireOrg in withAuth (see auth-middleware.ts).
+        // We enforce tenant binding explicitly so platform users WITHOUT an org
+        // cannot perform a cross-tenant delete via this endpoint.
+        if (!authCtx.organizationId) {
+          return NextResponse.json(
+            { error: "Organization context required" },
+            { status: 403 },
+          );
+        }
+
+        const { searchParams } = new URL(req.url);
+        const id = searchParams.get("id");
+        if (!id) {
+          return NextResponse.json(
+            { error: "Integration ID required" },
+            { status: 400 },
+          );
+        }
+
+        // Atomic org-bound delete: both `id` AND `organizationId` in WHERE.
+        // Prevents cross-tenant destruction even if a valid id is guessed.
+        const result = await withRetry(
+          () =>
+            db.integrationConnection.deleteMany({
+              where: {
+                id,
+                organizationId: authCtx.organizationId!,
+              },
+            }),
+          2,
+          500,
+        );
+
+        // Same 404 for "not found" and "belongs to another org" — no info leak.
+        if (result.count === 0) {
+          return NextResponse.json(
+            { error: "Integration not found" },
+            { status: 404 },
+          );
+        }
+
+        return NextResponse.json({ success: true });
+      } catch (error: unknown) {
+        const message =
+          error instanceof Error ? error.message : "Unknown error";
+        logger.error("[Integrations DELETE] Error:", message);
+        if (isDbUnavailable(error)) return dbErrorResponse(error);
+        return NextResponse.json(
+          { error: "Failed to disconnect" },
+          { status: 500 },
+        );
+      }
+    },
+    {
+      requireOrg: true,
+      requireRole: ["admin", "owner", "platform_owner", "platform_admin"],
+    },
+  ),
+  { maxRequests: 10, windowSeconds: 60 },
+);
