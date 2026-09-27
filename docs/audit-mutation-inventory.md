@@ -161,7 +161,7 @@ superseded by R19-5a/c which use the shared cleanup-runner.
 ## C. Snapshot Coverage Requirements (updated R20-3)
 
 Har mutation ke liye, ye table batata hai kaunsi snapshot category usko
-detect karti hai. Current snapshot (R20-3) mein **26 categories** hain.
+detect karti hai. Current snapshot (R20-3) mein **27 categories** hain.
 
 | Snapshot category | Required by ops | Added in |
 |-------------------|-----------------|----------|
@@ -169,6 +169,7 @@ detect karti hai. Current snapshot (R20-3) mein **26 categories** hain.
 | `columns` | S2, S4, S5 | V1 |
 | `roles` | S1, S8, F2, F8 | V1 |
 | `table_grants` | S3, S11 | V1 |
+| `column_grants` | (defence-in-depth) | **R20-3e** |
 | `row_counts` | S6, S7, T1, T2 | R19-4 |
 | `row_counts_approx` | (defence-in-depth) | R19-4 |
 | `database_grants` | S9, F3 | R19-4 |
@@ -196,6 +197,10 @@ detect karti hai. Current snapshot (R20-3) mein **26 categories** hain.
 references in `ORDER BY`. The previous `ORDER BY 1` / `ORDER BY 1,2,3`
 inside `string_agg` referred to the aggregate's argument positions (a
 constant for concatenated expressions), not the outer query columns.
+
+**Column grants (R20-3e):** The `column_grants` category now captures
+column-level privileges via `information_schema.column_privileges`,
+closing the previously identified column grants coverage gap.
 
 **Remaining for C4b (R20-3b + R20-3g):**
 - Atomicity: current snapshot runs 26 separate `psql -c` calls, not a

@@ -179,9 +179,9 @@ console.log("\nReal psql integration tests (Round 13 R13-2):\n");
 // destructive statements chalin aur known target state unchanged rahi."
 
 // R20-3: comprehensive snapshot of the target database state (V3).
-// Captures all 26 non-system categories that destructive DDL could touch.
+// Captures all 27 non-system categories that destructive DDL could touch.
 //
-// V1 (4):     tables, columns, roles, table_grants
+// V1 (5):     tables, columns, roles, table_grants, column_grants
 // R19-4 (14): row_counts, row_counts_approx, database_grants,
 //             schema_grants, role_attributes, memberships, ownership,
 //             defaults, constraints, indexes, triggers, rls, sequences,
@@ -221,6 +221,12 @@ function captureTargetState(env) {
      "  table_schema||'.'||table_name||':'||grantee||':'||privilege_type, '|' " +
      "  ORDER BY table_schema, table_name, grantee, privilege_type), '') " +
      "FROM information_schema.role_table_grants " +
+     "WHERE table_schema NOT IN ('pg_catalog','information_schema')"],
+    ["column_grants",
+     "SELECT COALESCE(string_agg(" +
+     "  table_schema||'.'||table_name||'.'||column_name||':'||grantee||':'||privilege_type, '|' " +
+     "  ORDER BY table_schema, table_name, column_name, grantee, privilege_type), '') " +
+     "FROM information_schema.column_privileges " +
      "WHERE table_schema NOT IN ('pg_catalog','information_schema')"],
     // ── R19-4 categories ────────────────────────────────────────
     ["row_counts",
@@ -405,16 +411,21 @@ function captureTargetState(env) {
      "  AND n.nspname NOT IN ('pg_catalog','information_schema','pg_toast')"],
     ["default_acl",
      "SELECT COALESCE(string_agg(" +
-     "  COALESCE(r.rolname, 'ALL')||'|'||" +
+     "  COALESCE(owner.rolname, 'ALL')||'|'||" +
      "  CASE WHEN d.defaclnamespace = 0 THEN 'ALL' " +
      "       ELSE ns.nspname END||'|'||" +
-     "  d.defaclobjtype::text||'|'||a.privilege_type, '||' " +
-     "  ORDER BY r.rolname, d.defaclnamespace, d.defaclobjtype::text, a.privilege_type), '') " +
+     "  d.defaclobjtype::text||'|'||" +
+     "  COALESCE(grantee.rolname, 'PUBLIC')||'|'||" +
+     "  a.privilege_type, '||' " +
+     "  ORDER BY COALESCE(owner.rolname, 'ALL'), d.defaclnamespace, " +
+     "           d.defaclobjtype::text, COALESCE(grantee.rolname, 'PUBLIC'), " +
+     "           a.privilege_type), '') " +
      "FROM pg_default_acl d " +
-     "LEFT JOIN pg_roles r ON r.oid = d.defaclrole " +
+     "LEFT JOIN pg_roles owner ON owner.oid = d.defaclrole " +
      "LEFT JOIN pg_namespace ns ON ns.oid = d.defaclnamespace " +
-     "CROSS JOIN LATERAL aclexplode(d.defaclacl) a"],
-        ["shared_dependencies",
+     "CROSS JOIN LATERAL aclexplode(d.defaclacl) a " +
+     "LEFT JOIN pg_roles grantee ON grantee.oid = a.grantee"],
+    ["shared_dependencies",
      // R20-3e: scoped to role references in the current database - this
      // is the surface DROP OWNED BY acts on. Uses numeric OIDs (not
      // ::regclass::text) to avoid "cache lookup failed" errors when a
@@ -491,7 +502,7 @@ function captureTargetState(env) {
 }
 const targetStateBefore = captureTargetState(superEnv);
 console.log("Negative pre-tests (before setup DDL):");
-console.log("  baseline state: captured (26 categories — R20-3 comprehensive snapshot)");
+console.log("  baseline state: captured (27 categories — R20-3 comprehensive snapshot)");
 console.log("");
 
 test("R17-3a: missing DISPOSABLE_DB_NAME refused before any DDL", () => {
@@ -588,7 +599,7 @@ test("R19-4b: snapshot detects a newly created table and returns to prior state 
 // tables, columns, defaults, constraints, indexes, triggers,
 // ownership, rls, rls_flags, table_grants, sequence_grants,
 // function_grants, type_grants, schema_grants, default_acl,
-// db_role_setting, views, matviews, sequences (22 of 26).
+// db_role_setting, views, matviews, sequences (23 of 27).
 //
 // Not directly tested (covered by other categories' side effects):
 //   row_counts (any CREATE/INSERT changes table counts)
@@ -684,7 +695,7 @@ test("R20-3g-C: RLS + policy detected (rls, rls_flags)", () => {
   );
 });
 
-test("R20-3g-D: grants across object types detected (table_grants, sequence_grants, function_grants, type_grants, schema_grants, default_acl)", () => {
+test("R20-3g-D: grants across object types detected (table_grants, column_grants, sequence_grants, function_grants, type_grants, schema_grants, default_acl)", () => {
   const R = "__r20_3g_gr";
   const T = "__r20_3g_gr_tbl";
   const S = "__r20_3g_gr_seq";
@@ -698,6 +709,7 @@ test("R20-3g-D: grants across object types detected (table_grants, sequence_gran
     `CREATE FUNCTION public."${F}"() RETURNS int LANGUAGE sql AS $fn$ SELECT 1 $fn$;` +
     `GRANT USAGE ON SCHEMA public TO "${R}";` +
     `GRANT SELECT ON public."${T}" TO "${R}";` +
+    `GRANT SELECT (id) ON public."${T}" TO "${R}";` +
     `GRANT USAGE ON SEQUENCE public."${S}" TO "${R}";` +
     `GRANT USAGE ON TYPE public."${Y}" TO "${R}";` +
     `GRANT EXECUTE ON FUNCTION public."${F}"() TO "${R}";` +
@@ -710,6 +722,7 @@ test("R20-3g-D: grants across object types detected (table_grants, sequence_gran
     `DROP ROLE "${R}";`,
     (during) => {
       assertTrue(extractCategory(during, "table_grants").includes(R), "table_grants detects");
+      assertTrue(extractCategory(during, "column_grants").includes(R), "column_grants detects");
       assertTrue(extractCategory(during, "sequence_grants").includes(R), "sequence_grants detects");
       assertTrue(extractCategory(during, "function_grants").includes(R), "function_grants detects");
       assertTrue(extractCategory(during, "type_grants").includes(R), "type_grants detects");
