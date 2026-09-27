@@ -154,9 +154,6 @@ superseded by R19-5a/c which use the shared cleanup-runner.
 **Hostile statement subtotal: 1 + 1 + 5 + 5 + 1 = 13 statements across
 4 test groups (+ 1 JS-only test)**
 
-Wait — H3 has 5 statements and H4 has 5 statements. Let me recount: H1=1,
-H2=1, H3=5, H4=5, H5=1 → 13.
-
 **Grand total tracked: 27 executable + 13 hostile = 40 operations**
 
 ---
@@ -294,3 +291,9 @@ git grep -nE "(CREATE|ALTER|DROP|GRANT|REVOKE|INSERT|UPDATE|DELETE|TRUNCATE) " \
 
 # Shared cleanup runner sequence
 grep -E "(REVOKE|DROP)" scripts/audit/cleanup-runner.mjs
+```
+
+Compare against this document. Any mismatch = inventory out of date.
+
+*End of mutation inventory. Section C's remaining coverage gaps are
+tracked for R20-3 (commit C4).*
