@@ -178,61 +178,80 @@ console.log("\nReal psql integration tests (Round 13 R13-2):\n");
 // hostile/non-disposable target introduce kare aur prove kare ke zero
 // destructive statements chalin aur known target state unchanged rahi."
 
-// R19-4: comprehensive snapshot of the target database state.
-// Captures all 18 non-system categories that destructive DDL could touch:
-// tables, columns, roles, table_grants, row_counts, row_counts_approx,
-// database_grants, schema_grants, role_attributes, memberships, ownership,
-// defaults, constraints, indexes, triggers, rls, sequences, views.
+// R20-3: comprehensive snapshot of the target database state (V3).
+// Captures all 26 non-system categories that destructive DDL could touch.
 //
-// Expert Round 18 noted the previous "comprehensive snapshot" claim was
-// unsupported (only 4 categories captured). V2 addresses that by adding
-// the 13 expert-requested categories + 1 defence-in-depth category
-// (row_counts_approx via pg_class.reltuples).
+// V1 (4):     tables, columns, roles, table_grants
+// R19-4 (14): row_counts, row_counts_approx, database_grants,
+//             schema_grants, role_attributes, memberships, ownership,
+//             defaults, constraints, indexes, triggers, rls, sequences,
+//             views
+// R20-3a:     determinism fix - ORDER BY 1 inside string_agg refers to
+//             the aggregate's argument position, not outer-query columns.
+//             Replaced with explicit column references on ALL categories.
+// R20-3c:     db_role_setting - actual storage for ALTER ROLE ... SET
+//             (S12). pg_roles.rolconfig does NOT reflect per-database
+//             role settings.
+// R20-3d:     rls_flags - relrowsecurity / relforcerowsecurity. The
+//             pg_policies category captures policy definitions only.
+// R20-3e:     matviews, function_grants, type_grants, sequence_grants,
+//             default_acl, shared_dependencies; ownership expanded to
+//             cover rel/schema/func/type/db owners.
 //
-// The result is a deterministic, ordered string that can be compared
-// before/after each negative-path test. Every query fails loudly on error
-// (no silent skip) — a failed query throws, which propagates up and aborts
-// the test, preserving fail-closed semantics.
+// Result: deterministic, ordered string. Any query failure aborts
+// capture (fail-closed, no silent skip).
 function captureTargetState(env) {
   const queries = [
-    // ── V1 categories (names preserved) ─────────────────────────
+    // ── V1 categories ───────────────────────────────────────────
     ["tables",
-     "SELECT COALESCE(string_agg(schemaname||'.'||tablename, '|' ORDER BY 1), '') " +
+     "SELECT COALESCE(string_agg(schemaname||'.'||tablename, '|' " +
+     "  ORDER BY schemaname, tablename), '') " +
      "FROM pg_tables WHERE schemaname NOT IN ('pg_catalog','information_schema')"],
     ["columns",
-     "SELECT COALESCE(string_agg(table_schema||'.'||table_name||'.'||column_name||':'||data_type, '|' ORDER BY 1),'') " +
+     "SELECT COALESCE(string_agg(" +
+     "  table_schema||'.'||table_name||'.'||column_name||':'||data_type, '|' " +
+     "  ORDER BY table_schema, table_name, column_name), '') " +
      "FROM information_schema.columns " +
      "WHERE table_schema NOT IN ('pg_catalog','information_schema')"],
     ["roles",
-     "SELECT COALESCE(string_agg(rolname, '|' ORDER BY 1), '') " +
+     "SELECT COALESCE(string_agg(rolname, '|' ORDER BY rolname), '') " +
      "FROM pg_roles WHERE rolname NOT LIKE 'pg_%'"],
     ["table_grants",
-     "SELECT COALESCE(string_agg(table_schema||'.'||table_name||':'||grantee||':'||privilege_type, '|' ORDER BY 1), '') " +
+     "SELECT COALESCE(string_agg(" +
+     "  table_schema||'.'||table_name||':'||grantee||':'||privilege_type, '|' " +
+     "  ORDER BY table_schema, table_name, grantee, privilege_type), '') " +
      "FROM information_schema.role_table_grants " +
      "WHERE table_schema NOT IN ('pg_catalog','information_schema')"],
-    // ── R19-4 new categories — expert's 13 missing ──────────────
+    // ── R19-4 categories ────────────────────────────────────────
     ["row_counts",
-     // Exact count(*) per user table via query_to_xml (single-query,
-     // deterministic, no dynamic SQL from Node).
-     "SELECT COALESCE(string_agg(schemaname||'.'||tablename||'='||" +
+     "SELECT COALESCE(string_agg(" +
+     "  schemaname||'.'||tablename||'='||" +
      "  COALESCE((xpath('/row/c/text()', query_to_xml(" +
      "    format('SELECT count(*) AS c FROM %I.%I', schemaname, tablename)," +
-     "    false, true, '')))[1]::text, '?'), '|' ORDER BY 1), '') " +
+     "    false, true, '')))[1]::text, '?'), '|' " +
+     "  ORDER BY schemaname, tablename), '') " +
      "FROM pg_tables WHERE schemaname NOT IN ('pg_catalog','information_schema')"],
     ["row_counts_approx",
-     // pg_class.reltuples — cheap approximate, defence in depth.
-     "SELECT COALESCE(string_agg(n.nspname||'.'||c.relname||'='||c.reltuples::bigint::text, '|' ORDER BY 1), '') " +
+     "SELECT COALESCE(string_agg(" +
+     "  n.nspname||'.'||c.relname||'='||c.reltuples::bigint::text, '|' " +
+     "  ORDER BY n.nspname, c.relname), '') " +
      "FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace " +
-     "WHERE c.relkind = 'r' AND n.nspname NOT IN ('pg_catalog','information_schema')"],
+     "WHERE c.relkind = 'r' " +
+     "  AND n.nspname NOT IN ('pg_catalog','information_schema')"],
     ["database_grants",
-     "SELECT COALESCE(string_agg(datname||'|'||grantee||'|'||privilege_type, '||' ORDER BY 1,2,3), '') " +
-     "FROM (SELECT d.datname, COALESCE(r.rolname, 'PUBLIC') AS grantee, a.privilege_type " +
+     "SELECT COALESCE(string_agg(" +
+     "  datname||'|'||grantee||'|'||privilege_type, '||' " +
+     "  ORDER BY datname, grantee, privilege_type), '') " +
+     "FROM (SELECT d.datname, COALESCE(r.rolname, 'PUBLIC') AS grantee, " +
+     "             a.privilege_type " +
      "      FROM pg_database d " +
      "      CROSS JOIN LATERAL aclexplode(COALESCE(d.datacl, acldefault('d', d.datdba))) a " +
      "      LEFT JOIN pg_roles r ON r.oid = a.grantee " +
      "      WHERE d.datname NOT LIKE 'template%') sub"],
     ["schema_grants",
-     "SELECT COALESCE(string_agg(nspname||'|'||COALESCE(rolname, 'PUBLIC')||'|'||privilege_type, '||' ORDER BY 1,2,3), '') " +
+     "SELECT COALESCE(string_agg(" +
+     "  nspname||'|'||COALESCE(rolname, 'PUBLIC')||'|'||privilege_type, '||' " +
+     "  ORDER BY nspname, rolname, privilege_type), '') " +
      "FROM (SELECT n.nspname, r.rolname, a.privilege_type " +
      "      FROM pg_namespace n " +
      "      CROSS JOIN LATERAL aclexplode(COALESCE(n.nspacl, acldefault('n', n.nspowner))) a " +
@@ -244,24 +263,42 @@ function captureTargetState(env) {
      "  ||'|inherit='||rolinherit||'|login='||rolcanlogin||'|replication='||rolreplication" +
      "  ||'|bypassrls='||rolbypassrls||'|connlimit='||rolconnlimit" +
      "  ||'|validuntil='||COALESCE(rolvaliduntil::text,'null')" +
-     "  , '||' ORDER BY 1), '') " +
+     "  , '||' ORDER BY rolname), '') " +
      "FROM pg_roles WHERE rolname NOT LIKE 'pg_%'"],
     ["memberships",
      "SELECT COALESCE(string_agg(" +
      "  m.roleid::regrole::text||'<-'||m.member::regrole::text||'|admin='||m.admin_option" +
-     "  , '||' ORDER BY 1), '') " +
+     "  , '||' ORDER BY m.roleid, m.member), '') " +
      "FROM pg_auth_members m"],
     ["ownership",
-     "SELECT COALESCE(string_agg(" +
-     "  n.nspname||'.'||c.relname||'|owner='||pg_get_userbyid(c.relowner)" +
-     "  , '||' ORDER BY 1), '') " +
-     "FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace " +
-     "WHERE n.nspname NOT IN ('pg_catalog','information_schema','pg_toast') " +
-     "  AND c.relkind IN ('r','v','m','S','f','p')"],
+     // R20-3e: expanded to rel + schema + function + type + database
+     // owners (was rel only in R19-4).
+     "SELECT COALESCE(string_agg(entry, '||' ORDER BY entry), '') FROM (" +
+     "  SELECT 'rel:'||n.nspname||'.'||c.relname||'='||pg_get_userbyid(c.relowner) AS entry " +
+     "    FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace " +
+     "    WHERE n.nspname NOT IN ('pg_catalog','information_schema','pg_toast') " +
+     "      AND c.relkind IN ('r','v','m','S','f','p') " +
+     "  UNION ALL " +
+     "  SELECT 'schema:'||n.nspname||'='||pg_get_userbyid(n.nspowner) " +
+     "    FROM pg_namespace n " +
+     "    WHERE n.nspname NOT IN ('pg_catalog','information_schema','pg_toast') " +
+     "  UNION ALL " +
+     "  SELECT 'func:'||n.nspname||'.'||p.proname||'('||pg_get_function_identity_arguments(p.oid)||')='" +
+     "         ||pg_get_userbyid(p.proowner) " +
+     "    FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace " +
+     "    WHERE n.nspname NOT IN ('pg_catalog','information_schema','pg_toast') " +
+     "  UNION ALL " +
+     "  SELECT 'type:'||n.nspname||'.'||t.typname||'='||pg_get_userbyid(t.typowner) " +
+     "    FROM pg_type t JOIN pg_namespace n ON n.oid = t.typnamespace " +
+     "    WHERE n.nspname NOT IN ('pg_catalog','information_schema','pg_toast') " +
+     "  UNION ALL " +
+     "  SELECT 'db:'||d.datname||'='||pg_get_userbyid(d.datdba) " +
+     "    FROM pg_database d WHERE d.datname NOT LIKE 'template%' " +
+     ") own"],
     ["defaults",
      "SELECT COALESCE(string_agg(" +
      "  n.nspname||'.'||c.relname||'.'||a.attname||'='||pg_get_expr(ad.adbin, ad.adrelid)" +
-     "  , '||' ORDER BY 1), '') " +
+     "  , '||' ORDER BY n.nspname, c.relname, a.attname), '') " +
      "FROM pg_attrdef ad " +
      "JOIN pg_class c ON c.oid = ad.adrelid " +
      "JOIN pg_namespace n ON n.oid = c.relnamespace " +
@@ -270,7 +307,7 @@ function captureTargetState(env) {
     ["constraints",
      "SELECT COALESCE(string_agg(" +
      "  n.nspname||'.'||c.relname||'|'||con.conname||'|'||con.contype::text||'|'||pg_get_constraintdef(con.oid)" +
-     "  , '||' ORDER BY 1), '') " +
+     "  , '||' ORDER BY n.nspname, c.relname, con.conname), '') " +
      "FROM pg_constraint con " +
      "JOIN pg_class c ON c.oid = con.conrelid " +
      "JOIN pg_namespace n ON n.oid = c.relnamespace " +
@@ -278,13 +315,13 @@ function captureTargetState(env) {
     ["indexes",
      "SELECT COALESCE(string_agg(" +
      "  schemaname||'.'||tablename||'|'||indexname||'|'||indexdef" +
-     "  , '||' ORDER BY 1), '') " +
+     "  , '||' ORDER BY schemaname, tablename, indexname), '') " +
      "FROM pg_indexes " +
      "WHERE schemaname NOT IN ('pg_catalog','information_schema','pg_toast')"],
     ["triggers",
      "SELECT COALESCE(string_agg(" +
      "  n.nspname||'.'||c.relname||'|'||t.tgname||'|'||pg_get_triggerdef(t.oid)" +
-     "  , '||' ORDER BY 1), '') " +
+     "  , '||' ORDER BY n.nspname, c.relname, t.tgname), '') " +
      "FROM pg_trigger t " +
      "JOIN pg_class c ON c.oid = t.tgrelid " +
      "JOIN pg_namespace n ON n.oid = c.relnamespace " +
@@ -294,7 +331,7 @@ function captureTargetState(env) {
      "SELECT COALESCE(string_agg(" +
      "  schemaname||'.'||tablename||'|'||policyname||'|'||cmd" +
      "  ||'|'||COALESCE(qual,'')||'|'||COALESCE(with_check,'')" +
-     "  , '||' ORDER BY 1), '') " +
+     "  , '||' ORDER BY schemaname, tablename, policyname), '') " +
      "FROM pg_policies " +
      "WHERE schemaname NOT IN ('pg_catalog','information_schema','pg_toast')"],
     ["sequences",
@@ -302,15 +339,93 @@ function captureTargetState(env) {
      "  schemaname||'.'||sequencename||'|start='||start_value" +
      "  ||'|min='||min_value||'|max='||max_value" +
      "  ||'|inc='||increment_by||'|cycle='||cycle||'|cache='||cache_size" +
-     "  , '||' ORDER BY 1), '') " +
+     "  , '||' ORDER BY schemaname, sequencename), '') " +
      "FROM pg_sequences " +
      "WHERE schemaname NOT IN ('pg_catalog','information_schema','pg_toast')"],
     ["views",
      "SELECT COALESCE(string_agg(" +
      "  schemaname||'.'||viewname||'|'||definition" +
-     "  , '||' ORDER BY 1), '') " +
+     "  , '||' ORDER BY schemaname, viewname), '') " +
      "FROM pg_views " +
      "WHERE schemaname NOT IN ('pg_catalog','information_schema','pg_toast')"],
+    // ── R20-3 new categories ────────────────────────────────────
+    ["db_role_setting",
+     "SELECT COALESCE(string_agg(" +
+     "  s.setrole::regrole::text||'|'||" +
+     "  CASE WHEN s.setdatabase = 0 THEN 'ALL' " +
+     "       ELSE s.setdatabase::regdatabase::text END||'|'||" +
+     "  array_to_string(s.setconfig, ','), '||' " +
+     "  ORDER BY s.setrole, s.setdatabase), '') " +
+     "FROM pg_db_role_setting s"],
+    ["rls_flags",
+     "SELECT COALESCE(string_agg(" +
+     "  n.nspname||'.'||c.relname||'|rls='||c.relrowsecurity" +
+     "  ||'|force='||c.relforcerowsecurity, '||' " +
+     "  ORDER BY n.nspname, c.relname), '') " +
+     "FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace " +
+     "WHERE c.relkind IN ('r','p') " +
+     "  AND n.nspname NOT IN ('pg_catalog','information_schema','pg_toast')"],
+    ["matviews",
+     "SELECT COALESCE(string_agg(" +
+     "  schemaname||'.'||matviewname||'|'||definition, '||' " +
+     "  ORDER BY schemaname, matviewname), '') " +
+     "FROM pg_matviews " +
+     "WHERE schemaname NOT IN ('pg_catalog','information_schema','pg_toast')"],
+    ["function_grants",
+     "SELECT COALESCE(string_agg(" +
+     "  n.nspname||'.'||p.proname||'('||pg_get_function_identity_arguments(p.oid)||')|'||" +
+     "  COALESCE(r.rolname, 'PUBLIC')||'|'||a.privilege_type, '||' " +
+     "  ORDER BY n.nspname, p.proname, pg_get_function_identity_arguments(p.oid)," +
+     "           r.rolname, a.privilege_type), '') " +
+     "FROM pg_proc p " +
+     "JOIN pg_namespace n ON n.oid = p.pronamespace " +
+     "CROSS JOIN LATERAL aclexplode(COALESCE(p.proacl, acldefault('f', p.proowner))) a " +
+     "LEFT JOIN pg_roles r ON r.oid = a.grantee " +
+     "WHERE n.nspname NOT IN ('pg_catalog','information_schema','pg_toast')"],
+    ["type_grants",
+     "SELECT COALESCE(string_agg(" +
+     "  n.nspname||'.'||t.typname||'|'||" +
+     "  COALESCE(r.rolname, 'PUBLIC')||'|'||a.privilege_type, '||' " +
+     "  ORDER BY n.nspname, t.typname, r.rolname, a.privilege_type), '') " +
+     "FROM pg_type t " +
+     "JOIN pg_namespace n ON n.oid = t.typnamespace " +
+     "CROSS JOIN LATERAL aclexplode(COALESCE(t.typacl, acldefault('T', t.typowner))) a " +
+     "LEFT JOIN pg_roles r ON r.oid = a.grantee " +
+     "WHERE n.nspname NOT IN ('pg_catalog','information_schema','pg_toast')"],
+    ["sequence_grants",
+     "SELECT COALESCE(string_agg(" +
+     "  n.nspname||'.'||c.relname||'|'||" +
+     "  COALESCE(r.rolname, 'PUBLIC')||'|'||a.privilege_type, '||' " +
+     "  ORDER BY n.nspname, c.relname, r.rolname, a.privilege_type), '') " +
+     "FROM pg_class c " +
+     "JOIN pg_namespace n ON n.oid = c.relnamespace " +
+     "CROSS JOIN LATERAL aclexplode(COALESCE(c.relacl, acldefault('S', c.relowner))) a " +
+     "LEFT JOIN pg_roles r ON r.oid = a.grantee " +
+     "WHERE c.relkind = 'S' " +
+     "  AND n.nspname NOT IN ('pg_catalog','information_schema','pg_toast')"],
+    ["default_acl",
+     "SELECT COALESCE(string_agg(" +
+     "  COALESCE(r.rolname, 'ALL')||'|'||" +
+     "  CASE WHEN d.defaclnamespace = 0 THEN 'ALL' " +
+     "       ELSE ns.nspname END||'|'||" +
+     "  d.defaclobjtype::text||'|'||a.privilege_type, '||' " +
+     "  ORDER BY r.rolname, d.defaclnamespace, d.defaclobjtype::text, a.privilege_type), '') " +
+     "FROM pg_default_acl d " +
+     "LEFT JOIN pg_roles r ON r.oid = d.defaclrole " +
+     "LEFT JOIN pg_namespace ns ON ns.oid = d.defaclnamespace " +
+     "CROSS JOIN LATERAL aclexplode(d.defaclacl) a"],
+    ["shared_dependencies",
+     // R20-3e: scoped to role references in the current database - this
+     // is the surface DROP OWNED BY acts on.
+     "SELECT COALESCE(string_agg(" +
+     "  s.classid::regclass::text||'|'||s.objid::text||'|'||" +
+     "  s.refclassid::regclass::text||'|'||s.refobjid::text||'|'||s.deptype::text" +
+     "  , '||' ORDER BY s.classid::regclass::text, s.objid," +
+     "           s.refclassid::regclass::text, s.refobjid, s.deptype::text), '') " +
+     "FROM pg_shdepend s " +
+     "WHERE s.refclassid = 'pg_authid'::regclass " +
+     "  AND (s.dbid = 0 " +
+     "       OR s.dbid = (SELECT oid FROM pg_database WHERE datname = current_database()))"],
   ];
   const parts = [];
   for (const [label, q] of queries) {
@@ -330,7 +445,7 @@ function captureTargetState(env) {
 }
 const targetStateBefore = captureTargetState(superEnv);
 console.log("Negative pre-tests (before setup DDL):");
-console.log("  baseline state: captured (18 categories — R19-4 comprehensive snapshot)");
+console.log("  baseline state: captured (26 categories — R20-3 comprehensive snapshot)");
 console.log("");
 
 test("R17-3a: missing DISPOSABLE_DB_NAME refused before any DDL", () => {

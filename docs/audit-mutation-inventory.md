@@ -158,67 +158,51 @@ superseded by R19-5a/c which use the shared cleanup-runner.
 
 ---
 
-## C. Snapshot Coverage Requirements (current state)
+## C. Snapshot Coverage Requirements (updated R20-3)
 
 Har mutation ke liye, ye table batata hai kaunsi snapshot category usko
-detect karti hai. Current snapshot (R19-4) mein 18 categories hain.
+detect karti hai. Current snapshot (R20-3) mein **26 categories** hain.
 
-| Snapshot category | Required by ops | Used by |
-|-------------------|-----------------|---------|
-| `tables` | S2, S4, S5, P1, P2, P3, F1, F5, F6 | existing (V2) |
-| `columns` | S2, S4, S5 | existing (V2) |
-| `roles` | S1, S8, F2, F8 | existing (V2) |
-| `table_grants` | S3, S11 | existing (V2) |
-| `row_counts` | S6, S7, T1, T2 | existing (V2) |
-| `row_counts_approx` | (defence-in-depth) | existing (V2) |
-| `database_grants` | S9, F3 | existing (V2) |
-| `schema_grants` | S10, F4 | existing (V2) |
-| `role_attributes` | S1, S8, S12 | existing (V2) |
-| `memberships` | (defence-in-depth) | existing (V2) |
-| `ownership` | F7 | existing (V2) |
-| `defaults` | S4, S5 | existing (V2) |
-| `constraints` | S4, S5, F5, F6 | existing (V2) |
-| `indexes` | S4, S5, F5, F6 | existing (V2) |
-| `triggers` | (defence-in-depth) | existing (V2) |
-| `rls` | (defence-in-depth) | existing (V2) |
-| `sequences` | (defence-in-depth) | existing (V2) |
-| `views` | (defence-in-depth) | existing (V2) |
+| Snapshot category | Required by ops | Added in |
+|-------------------|-----------------|----------|
+| `tables` | S2, S4, S5, P1, P2, P3, F1, F5, F6 | V1 |
+| `columns` | S2, S4, S5 | V1 |
+| `roles` | S1, S8, F2, F8 | V1 |
+| `table_grants` | S3, S11 | V1 |
+| `row_counts` | S6, S7, T1, T2 | R19-4 |
+| `row_counts_approx` | (defence-in-depth) | R19-4 |
+| `database_grants` | S9, F3 | R19-4 |
+| `schema_grants` | S10, F4 | R19-4 |
+| `role_attributes` | S1, S8 | R19-4 |
+| `memberships` | (defence-in-depth) | R19-4 |
+| `ownership` | F7 | R19-4 (expanded R20-3e) |
+| `defaults` | S4, S5 | R19-4 |
+| `constraints` | S4, S5, F5, F6 | R19-4 |
+| `indexes` | S4, S5, F5, F6 | R19-4 |
+| `triggers` | (defence-in-depth) | R19-4 |
+| `rls` | (defence-in-depth) | R19-4 |
+| `sequences` | (defence-in-depth) | R19-4 |
+| `views` | (defence-in-depth) | R19-4 |
+| `db_role_setting` | **S12** | **R20-3c** |
+| `rls_flags` | (defence-in-depth) | **R20-3d** |
+| `matviews` | (defence-in-depth) | **R20-3e** |
+| `function_grants` | (defence-in-depth) | **R20-3e** |
+| `type_grants` | (defence-in-depth) | **R20-3e** |
+| `sequence_grants` | (defence-in-depth) | **R20-3e** |
+| `default_acl` | (defence-in-depth) | **R20-3e** |
+| `shared_dependencies` | **F7** (DROP OWNED surface) | **R20-3e** |
 
-**Gaps to be addressed in R20-3 (commit C4):**
+**Determinism (R20-3a):** All categories now use explicit column
+references in `ORDER BY`. The previous `ORDER BY 1` / `ORDER BY 1,2,3`
+inside `string_agg` referred to the aggregate's argument positions (a
+constant for concatenated expressions), not the outer query columns.
 
-Expert Round 19 P0-2 identified the following missing coverage. C4 will
-add these categories:
-
-1. `pg_db_role_setting` — actual storage for `ALTER ROLE ... SET` (S12).
-   Current `role_attributes` reads `pg_roles`, which does NOT reflect
-   per-database role settings. **This is a real gap: S12 mutates
-   `pg_db_role_setting`, but snapshot reads `pg_roles.rolconfig`.**
-
-2. RLS flags — `pg_class.relrowsecurity` and `pg_class.relforcerowsecurity`.
-   Current `rls` category reads `pg_policies` (policy definitions only,
-   not the ENABLE/FORCE flags).
-
-3. Materialized views — `pg_matviews`. Current `views` category only
-   reads `pg_views` (regular views).
-
-4. Complete ACL surface — current `table_grants`, `database_grants`,
-   `schema_grants` cover those scopes; missing: sequence grants, function
-   grants, type grants, column grants, default privileges (`pg_default_acl`).
-
-5. `pg_shdepend` snapshot — `DROP OWNED BY` (F7) affects shared
-   dependencies across the whole cluster. Current `ownership` category
-   only reads `pg_class.relowner`, which is incomplete.
-
-**Also to be addressed in C4:**
-- Deterministic ordering — current `string_agg(... ORDER BY 1)` is a
-  constant inside the aggregate, not a column reference. Real ordering
-  not guaranteed (R20-3a).
-- Atomicity — current snapshot runs 18 separate `psql -c` calls, not a
-  single transactional snapshot (R20-3b).
-- Row-content evidence — current `row_counts` captures counts, not row
-  values. S6, S7, T1, T2 use INSERT only (no UPDATE in current mutation
-  surface), so counts are the proven surface. Claim narrows to "row
-  counts only" (R20-3f).
+**Remaining for C4b (R20-3b + R20-3g):**
+- Atomicity: current snapshot runs 26 separate `psql -c` calls, not a
+  single transactional snapshot.
+- Category-specific detection tests: R19-4b tests only the `tables`
+  category. C4b will add representative detection tests across
+  categories.
 
 ---
 
