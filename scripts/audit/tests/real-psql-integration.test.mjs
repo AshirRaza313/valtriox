@@ -352,11 +352,11 @@ function captureTargetState(env) {
     ["db_role_setting",
      "SELECT COALESCE(string_agg(" +
      "  s.setrole::regrole::text||'|'||" +
-     "  CASE WHEN s.setdatabase = 0 THEN 'ALL' " +
-     "       ELSE s.setdatabase::regdatabase::text END||'|'||" +
+     "  COALESCE(d.datname, 'ALL')||'|'||" +
      "  array_to_string(s.setconfig, ','), '||' " +
-     "  ORDER BY s.setrole, s.setdatabase), '') " +
-     "FROM pg_db_role_setting s"],
+     "  ORDER BY s.setrole::regrole::text, s.setdatabase), '') " +
+     "FROM pg_db_role_setting s " +
+     "LEFT JOIN pg_database d ON d.oid = s.setdatabase"],
     ["rls_flags",
      "SELECT COALESCE(string_agg(" +
      "  n.nspname||'.'||c.relname||'|rls='||c.relrowsecurity" +
@@ -414,14 +414,16 @@ function captureTargetState(env) {
      "LEFT JOIN pg_roles r ON r.oid = d.defaclrole " +
      "LEFT JOIN pg_namespace ns ON ns.oid = d.defaclnamespace " +
      "CROSS JOIN LATERAL aclexplode(d.defaclacl) a"],
-    ["shared_dependencies",
+        ["shared_dependencies",
      // R20-3e: scoped to role references in the current database - this
-     // is the surface DROP OWNED BY acts on.
+     // is the surface DROP OWNED BY acts on. Uses numeric OIDs (not
+     // ::regclass::text) to avoid "cache lookup failed" errors when a
+     // classid references a table that was dropped before snapshot.
      "SELECT COALESCE(string_agg(" +
-     "  s.classid::regclass::text||'|'||s.objid::text||'|'||" +
-     "  s.refclassid::regclass::text||'|'||s.refobjid::text||'|'||s.deptype::text" +
-     "  , '||' ORDER BY s.classid::regclass::text, s.objid," +
-     "           s.refclassid::regclass::text, s.refobjid, s.deptype::text), '') " +
+     "  s.classid::text||'|'||s.objid::text||'|'||" +
+     "  s.refclassid::text||'|'||s.refobjid::text||'|'||s.deptype::text" +
+     "  , '||' ORDER BY s.classid, s.objid," +
+     "           s.refclassid, s.refobjid, s.deptype), '') " +
      "FROM pg_shdepend s " +
      "WHERE s.refclassid = 'pg_authid'::regclass " +
      "  AND (s.dbid = 0 " +
