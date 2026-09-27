@@ -933,7 +933,8 @@ test("N-j: hostile ambient PGHOSTADDR does not redirect psql (integration)", () 
 //
 // These tests exercise the EXACT production cleanup path via the shared
 // runner (scripts/audit/cleanup-runner.mjs), not a reduced copy. Each
-// case proves complete unchanged state via the V2 comprehensive snapshot.
+// case proves complete unchanged state via the V3 comprehensive snapshot
+// (27 categories, single REPEATABLE READ transaction, deterministic).
 
 const targetStateBeforeCleanup = captureTargetState(superEnv);
 console.log("\nR19-5: Cleanup wrong-identity tests (exact production path):\n");
@@ -1012,6 +1013,90 @@ test("R19-5c: wrong cluster ID aborts before any REVOKE/DROP (state unchanged)",
   );
   const after = captureTargetState(superEnv);
   assertEq(after, targetStateBeforeCleanup, "state unchanged - no REVOKE/DROP ran");
+});
+
+test("R20-4c: cleanup against a role that does not exist aborts before any DROP (state unchanged)", () => {
+  // Expert Round 19 P0-3: R19-5b only tested JS builder refusal (missing
+  // roleName param). This test exercises the ACTUAL SQL execution path:
+  // a role name that passes JS identifier validation but does not exist
+  // at the database level.
+  //
+  // The shared cleanup sequence starts with:
+  //   REVOKE ALL PRIVILEGES ON DATABASE "<db>" FROM <role>;
+  // For a nonexistent role, PostgreSQL raises "role ... does not exist"
+  // and the single -1 transaction aborts. No REVOKE, DROP TABLE,
+  // DROP OWNED, or DROP ROLE statement is executed. State is unchanged.
+  const ghostRole = "audit_ro_ghost_" + Date.now();
+  const cleanupSql = buildCleanupSequence({
+    roleName: ghostRole,
+    dbName: EXPECTED_DB_NAME,
+    tableNames: [TEST_TABLE],
+    expectedDbName: EXPECTED_DB_NAME,
+    expectedClusterId: TRUSTED_CLUSTER_ID,
+  });
+  const r = spawnSync(
+    "psql",
+    ["-t", "-A", "-v", "ON_ERROR_STOP=1", "-1", "-c", cleanupSql],
+    { env: superEnv, encoding: "utf8", maxBuffer: 10 * 1024 * 1024, timeout: 30_000 }
+  );
+  assertTrue(r.status !== 0, "psql should fail because role does not exist");
+  assertContains(
+    String(r.stderr).toLowerCase(),
+    "does not exist",
+    "stderr should mention nonexistent role"
+  );
+  const after = captureTargetState(superEnv);
+  assertEq(after, targetStateBeforeCleanup, "state unchanged - no REVOKE/DROP ran");
+});
+
+test("R20-4d: hostile host env + self-captured cluster ID aborts cleanup (state unchanged)", () => {
+  // Expert Round 19 P0-3: "Wrong-host/self-captured-cluster test absent hai".
+  //
+  // Threat model combines two vectors:
+  //   (a) Wrong-host: attacker sets PGHOSTADDR to redirect psql.
+  //   (b) Self-captured cluster: attacker supplies a cluster ID that
+  //       matches the hostile host's actual system_identifier (so the
+  //       guard would pass if that ID were trusted).
+  //
+  // Our defense has two independent layers:
+  //   1. env isolation strips PGHOSTADDR before psql runs (R17-3c).
+  //   2. cluster ID is captured from the container filesystem via
+  //      pg_controldata (R20-1a), independent of any psql endpoint.
+  //
+  // This test proves that even if layer 1 were somehow bypassed, layer 2
+  // catches a hostile cluster ID: the guard fails-closed before any
+  // destructive statement runs.
+  const saved = process.env.PGHOSTADDR;
+  process.env.PGHOSTADDR = "192.0.2.1"; // TEST-NET-1, unroutable
+  try {
+    const hostileClusterId = (BigInt(TRUSTED_CLUSTER_ID) + 424242n).toString();
+    const hostileGuard = buildCleanupGuard({
+      expectedDbName: EXPECTED_DB_NAME,
+      expectedClusterId: hostileClusterId,
+    });
+    const cleanupSql = buildCleanupSequenceForTest({
+      roleName: ROLE_NAME,
+      dbName: EXPECTED_DB_NAME,
+      tableNames: [TEST_TABLE],
+      guardDoBlocks: hostileGuard,
+    });
+    const r = spawnSync(
+      "psql",
+      ["-t", "-A", "-v", "ON_ERROR_STOP=1", "-1", "-c", cleanupSql],
+      { env: superEnv, encoding: "utf8", maxBuffer: 10 * 1024 * 1024, timeout: 30_000 }
+    );
+    assertTrue(r.status !== 0, "guard must reject hostile self-consistent ID");
+    assertContains(
+      String(r.stderr).toLowerCase(),
+      "cluster mismatch",
+      "stderr should mention cluster mismatch"
+    );
+    const after = captureTargetState(superEnv);
+    assertEq(after, targetStateBeforeCleanup, "state unchanged - no REVOKE/DROP ran");
+  } finally {
+    if (saved === undefined) delete process.env.PGHOSTADDR;
+    else process.env.PGHOSTADDR = saved;
+  }
 });
 
 test("R19-1a: wrong cluster + matching DB name aborts before DDL (state unchanged)", () => {
