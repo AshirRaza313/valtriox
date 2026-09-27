@@ -573,6 +573,180 @@ test("R19-4b: snapshot detects a newly created table and returns to prior state 
   assertEq(after, before, "snapshot returns to prior state after drop");
 });
 
+// ── R20-3g: category-specific detection tests ──────────────────
+// Expert Round 19 P0-2: previous detection test covered only the
+// "tables" category. These tests provide representative detection
+// evidence across the remaining category groups. Each test:
+//   1. captures baseline snapshot
+//   2. applies a targeted mutation (single transaction)
+//   3. asserts the snapshot changed AND the specific category
+//      contains the expected marker
+//   4. reverses the mutation
+//   5. asserts the snapshot returns to the baseline state
+//
+// Categories covered directly: roles, role_attributes, memberships,
+// tables, columns, defaults, constraints, indexes, triggers,
+// ownership, rls, rls_flags, table_grants, sequence_grants,
+// function_grants, type_grants, schema_grants, default_acl,
+// db_role_setting, views, matviews, sequences (22 of 26).
+//
+// Not directly tested (covered by other categories' side effects):
+//   row_counts (any CREATE/INSERT changes table counts)
+//   row_counts_approx (approximation; not deterministic)
+//   shared_dependencies (CREATE ROLE writes pg_shdepend rows)
+//   database_grants (would need a second database; scope out)
+
+function extractCategory(snapshot, label) {
+  const prefix = label + "=";
+  const line = snapshot.split("\n").find((l) => l.startsWith(prefix));
+  return line ? line.slice(prefix.length) : "";
+}
+
+function psqlTx(sql) {
+  return spawnSync(
+    "psql",
+    ["-t", "-A", "-v", "ON_ERROR_STOP=1", "-1", "-c", sql],
+    { env: superEnv, encoding: "utf8", maxBuffer: 10 * 1024 * 1024, timeout: 30_000 }
+  );
+}
+
+function runCategoryTest(setupSql, dropSql, verifyFn) {
+  const before = captureTargetState(superEnv);
+  const setup = psqlTx(setupSql);
+  assertEq(setup.status, 0, "setup: " + redactSecrets(String(setup.stderr)));
+  try {
+    const during = captureTargetState(superEnv);
+    assertTrue(during !== before, "snapshot must change after setup");
+    verifyFn(during);
+  } finally {
+    const drop = psqlTx(dropSql);
+    if (drop.status !== 0) {
+      throw new Error("cleanup: " + redactSecrets(String(drop.stderr)));
+    }
+  }
+  const after = captureTargetState(superEnv);
+  assertEq(after, before, "snapshot returns to prior state after cleanup");
+}
+
+test("R20-3g-A: role lifecycle detected (roles, role_attributes, memberships)", () => {
+  const R = "__r20_3g_role_a";
+  runCategoryTest(
+    `CREATE ROLE "${R}";` +
+    `ALTER ROLE "${R}" WITH LOGIN CREATEDB;` +
+    `GRANT "${R}" TO CURRENT_USER;`,
+    `REVOKE "${R}" FROM CURRENT_USER; DROP ROLE "${R}";`,
+    (during) => {
+      assertTrue(extractCategory(during, "roles").includes(R), "roles detects");
+      assertTrue(extractCategory(during, "role_attributes").includes(R), "role_attributes detects");
+      assertTrue(extractCategory(during, "memberships").includes(R), "memberships detects");
+    }
+  );
+});
+
+test("R20-3g-B: table DDL bundle detected (tables, columns, defaults, constraints, indexes, triggers, ownership)", () => {
+  const T = "__r20_3g_ddl";
+  runCategoryTest(
+    `CREATE TABLE public."${T}" (` +
+    `  id int PRIMARY KEY,` +
+    `  val text DEFAULT 'x'` +
+    `);` +
+    `CREATE INDEX "${T}_idx" ON public."${T}" (val);` +
+    `CREATE TRIGGER "${T}_trg" BEFORE UPDATE ON public."${T}"` +
+    `  FOR EACH ROW EXECUTE FUNCTION suppress_redundant_updates_trigger();`,
+    `DROP TABLE public."${T}";`,
+    (during) => {
+      assertTrue(extractCategory(during, "tables").includes(T), "tables detects");
+      assertTrue(extractCategory(during, "columns").includes(T), "columns detects");
+      assertTrue(extractCategory(during, "defaults").includes(T), "defaults detects");
+      assertTrue(extractCategory(during, "constraints").includes(T), "constraints detects");
+      assertTrue(extractCategory(during, "indexes").includes(T), "indexes detects");
+      assertTrue(extractCategory(during, "triggers").includes(T), "triggers detects");
+      assertTrue(extractCategory(during, "ownership").includes(T), "ownership detects");
+    }
+  );
+});
+
+test("R20-3g-C: RLS + policy detected (rls, rls_flags)", () => {
+  const T = "__r20_3g_rls";
+  runCategoryTest(
+    `CREATE TABLE public."${T}" (id int);` +
+    `ALTER TABLE public."${T}" ENABLE ROW LEVEL SECURITY;` +
+    `CREATE POLICY "${T}_pol" ON public."${T}" FOR SELECT USING (id > 0);`,
+    `DROP TABLE public."${T}";`,
+    (during) => {
+      assertTrue(extractCategory(during, "rls").includes(T), "rls detects");
+      assertTrue(extractCategory(during, "rls_flags").includes(T), "rls_flags detects");
+      assertTrue(
+        extractCategory(during, "rls_flags").includes(T + "|rls=true"),
+        "rls_flags shows enabled state"
+      );
+    }
+  );
+});
+
+test("R20-3g-D: grants across object types detected (table_grants, sequence_grants, function_grants, type_grants, schema_grants, default_acl)", () => {
+  const R = "__r20_3g_gr";
+  const T = "__r20_3g_gr_tbl";
+  const S = "__r20_3g_gr_seq";
+  const Y = "__r20_3g_gr_type";
+  const F = "__r20_3g_gr_fn";
+  runCategoryTest(
+    `CREATE ROLE "${R}";` +
+    `CREATE TABLE public."${T}" (id int);` +
+    `CREATE SEQUENCE public."${S}";` +
+    `CREATE TYPE public."${Y}" AS ENUM ('a');` +
+    `CREATE FUNCTION public."${F}"() RETURNS int LANGUAGE sql AS $fn$ SELECT 1 $fn$;` +
+    `GRANT USAGE ON SCHEMA public TO "${R}";` +
+    `GRANT SELECT ON public."${T}" TO "${R}";` +
+    `GRANT USAGE ON SEQUENCE public."${S}" TO "${R}";` +
+    `GRANT USAGE ON TYPE public."${Y}" TO "${R}";` +
+    `GRANT EXECUTE ON FUNCTION public."${F}"() TO "${R}";` +
+    `ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO "${R}";`,
+    `DROP TABLE public."${T}";` +
+    `DROP SEQUENCE public."${S}";` +
+    `DROP TYPE public."${Y}";` +
+    `DROP FUNCTION public."${F}"();` +
+    `DROP OWNED BY "${R}";` +
+    `DROP ROLE "${R}";`,
+    (during) => {
+      assertTrue(extractCategory(during, "table_grants").includes(R), "table_grants detects");
+      assertTrue(extractCategory(during, "sequence_grants").includes(R), "sequence_grants detects");
+      assertTrue(extractCategory(during, "function_grants").includes(R), "function_grants detects");
+      assertTrue(extractCategory(during, "type_grants").includes(R), "type_grants detects");
+      assertTrue(extractCategory(during, "schema_grants").includes(R), "schema_grants detects");
+      assertTrue(extractCategory(during, "default_acl").includes(R), "default_acl detects");
+    }
+  );
+});
+
+test("R20-3g-E: settings + views + matviews + sequences detected (db_role_setting, views, matviews, sequences)", () => {
+  const R = "__r20_3g_set_r";
+  const SRC = "__r20_3g_src";
+  const V = "__r20_3g_view";
+  const M = "__r20_3g_matview";
+  const Q = "__r20_3g_seq";
+  runCategoryTest(
+    `CREATE ROLE "${R}";` +
+    `ALTER ROLE "${R}" IN DATABASE "${EXPECTED_DB_NAME}" SET statement_timeout = '7s';` +
+    `CREATE TABLE public."${SRC}" (id int);` +
+    `CREATE VIEW public."${V}" AS SELECT id FROM public."${SRC}";` +
+    `CREATE MATERIALIZED VIEW public."${M}" AS SELECT 1 AS x;` +
+    `CREATE SEQUENCE public."${Q}";`,
+    `DROP VIEW public."${V}";` +
+    `DROP MATERIALIZED VIEW public."${M}";` +
+    `DROP SEQUENCE public."${Q}";` +
+    `DROP TABLE public."${SRC}";` +
+    `DROP OWNED BY "${R}";` +
+    `DROP ROLE "${R}";`,
+    (during) => {
+      assertTrue(extractCategory(during, "db_role_setting").includes(R), "db_role_setting detects");
+      assertTrue(extractCategory(during, "views").includes(V), "views detects");
+      assertTrue(extractCategory(during, "matviews").includes(M), "matviews detects");
+      assertTrue(extractCategory(during, "sequences").includes(Q), "sequences detects");
+    }
+  );
+});
+
 // ── Setup (as superuser) ────────────────────────────────────────
 // R17-2: DB name verification and destructive DDL are folded into a SINGLE
 // psql -c invocation with `-1` (single transaction) and `ON_ERROR_STOP=1`.
