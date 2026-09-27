@@ -1,14 +1,26 @@
-// R19-5: Shared cleanup runner — exercises the EXACT production cleanup
-// path so wrong-identity tests are not reduced copies.
+// R19-5 / R20-4b: Shared cleanup runner — exercises the EXACT production
+// cleanup path so wrong-identity tests are not reduced copies.
 //
 // Expert Round 18 (P0 Blocker #3):
 //   "Real-psql test reduced copied cleanup sequence chalata hai. Actual
 //    production cleanup mein REVOKE, DROP OWNED aur DROP ROLE ka different
 //    sequence hai."
 //
-// This module is the single source of truth for the cleanup sequence.
-// Both real-psql-integration.test.mjs and production-path.test.mjs import
-// from here — no duplication, no drift.
+// Expert Round 19 (P0-3):
+//   "Runner guard ko internally mandatory banaye."
+//
+// API design:
+//   - buildCleanupSequence()         — production path. Guard is built
+//                                      INTERNALLY from authoritative
+//                                      identity params; callers cannot
+//                                      omit or tamper.
+//   - buildCleanupSequenceForTest()  — test-only escape hatch for
+//                                      negative tests that must inject a
+//                                      deliberately wrong guard. The
+//                                      "ForTest" suffix signals intent.
+//
+// Both callers (production-path.test.mjs, real-psql-integration.test.mjs)
+// import from here. No duplication, no drift.
 
 import {
   buildDbNameVerificationDoBlock,
@@ -39,16 +51,11 @@ export function buildCleanupGuard({ expectedDbName, expectedClusterId }) {
   ].join("\n");
 }
 
-// Build the EXACT production cleanup sequence as a single SQL string.
-// Order matters — this is the sequence used by production-path.test.mjs
-// and any test that needs to exercise the real cleanup.
-//
-// Parameters:
-//   roleName       — per-run role (e.g. audit_ro_<run>_<attempt>_<hex>)
-//   dbName         — database name (must match guard)
-//   tableNames     — array of fully-qualified table names to drop
-//   guardDoBlocks  — output of buildCleanupGuard() — MUST be non-empty
-export function buildCleanupSequence({
+// ── Internal assembler ──────────────────────────────────────────────
+// Shared by both public APIs. NOT exported. Only runs after the caller
+// has either built a guard internally (production) or supplied one
+// explicitly (test-only).
+function assembleCleanupSequence({
   roleName,
   dbName,
   tableNames,
@@ -112,4 +119,35 @@ export function buildCleanupSequence({
   return lines.join("\n");
 }
 
-export const __test__ = { buildCleanupGuard, buildCleanupSequence };
+// ── Public API 1: production path ───────────────────────────────────
+// R20-4b: the guard is constructed INTERNALLY. Callers pass authoritative
+// identity params; they cannot omit, weaken, or substitute the guard.
+export function buildCleanupSequence({
+  roleName,
+  dbName,
+  tableNames,
+  expectedDbName,
+  expectedClusterId,
+}) {
+  const guardDoBlocks = buildCleanupGuard({ expectedDbName, expectedClusterId });
+  return assembleCleanupSequence({ roleName, dbName, tableNames, guardDoBlocks });
+}
+
+// ── Public API 2: test-only escape hatch ────────────────────────────
+// Used EXCLUSIVELY by negative tests (R19-5a, R19-5c, R20-4d) that must
+// inject a deliberately wrong guard to prove fail-closed behavior. The
+// "ForTest" suffix signals intent and prevents accidental misuse.
+export function buildCleanupSequenceForTest({
+  roleName,
+  dbName,
+  tableNames,
+  guardDoBlocks,
+}) {
+  return assembleCleanupSequence({ roleName, dbName, tableNames, guardDoBlocks });
+}
+
+export const __test__ = {
+  buildCleanupGuard,
+  buildCleanupSequence,
+  buildCleanupSequenceForTest,
+};

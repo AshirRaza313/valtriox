@@ -29,6 +29,7 @@ import {
 import {
   buildCleanupGuard,
   buildCleanupSequence,
+  buildCleanupSequenceForTest,
 } from "../cleanup-runner.mjs";
 
 const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL;
@@ -943,7 +944,7 @@ test("R19-5a: wrong DB name aborts before any REVOKE/DROP (state unchanged)", ()
     expectedDbName: wrongDbName,
     expectedClusterId: TRUSTED_CLUSTER_ID,
   });
-  const cleanupSql = buildCleanupSequence({
+  const cleanupSql = buildCleanupSequenceForTest({
     roleName: ROLE_NAME,
     dbName: EXPECTED_DB_NAME,
     tableNames: [TEST_TABLE],
@@ -965,17 +966,17 @@ test("R19-5a: wrong DB name aborts before any REVOKE/DROP (state unchanged)", ()
 });
 
 test("R19-5b: missing role identity refuses before DDL (state unchanged)", () => {
-  const guard = buildCleanupGuard({
-    expectedDbName: EXPECTED_DB_NAME,
-    expectedClusterId: TRUSTED_CLUSTER_ID,
-  });
+  // R20-4c: this test now exercises the STANDARD (production) API path.
+  // The runner builds the guard internally; the assertion is that the
+  // standard path rejects an undefined roleName before any SQL is emitted.
   let threw = null;
   try {
     buildCleanupSequence({
       roleName: undefined,
       dbName: EXPECTED_DB_NAME,
       tableNames: [TEST_TABLE],
-      guardDoBlocks: guard,
+      expectedDbName: EXPECTED_DB_NAME,
+      expectedClusterId: TRUSTED_CLUSTER_ID,
     });
   } catch (err) {
     threw = err;
@@ -992,7 +993,7 @@ test("R19-5c: wrong cluster ID aborts before any REVOKE/DROP (state unchanged)",
     expectedDbName: EXPECTED_DB_NAME,
     expectedClusterId: wrongClusterId,
   });
-  const cleanupSql = buildCleanupSequence({
+  const cleanupSql = buildCleanupSequenceForTest({
     roleName: ROLE_NAME,
     dbName: EXPECTED_DB_NAME,
     tableNames: [TEST_TABLE],
@@ -1065,18 +1066,20 @@ test("R20-1c: independent-source cluster ID mismatch aborts before DDL", () => {
 });
 
 // ── Cleanup (as superuser) ──────────────────────────────────────────────
-// R18-1: cleanup also fails-closed through the same guarded pattern as
-// setup. DB name DO block + DROP statements combined in a single psql -1
-// -v ON_ERROR_STOP=1 transaction. On marker mismatch the transaction
-// aborts before any DROP statement runs — closing the R17 cleanup gap.
-const cleanupDbNameDoBlock = buildDbNameVerificationDoBlock(EXPECTED_DB_NAME);
-const cleanupClusterDoBlock = buildClusterVerificationDoBlock(TRUSTED_CLUSTER_ID);
-const cleanupSql = [
-  cleanupDbNameDoBlock,
-  cleanupClusterDoBlock,
-  `DROP TABLE IF EXISTS ${TEST_TABLE};`,
-  `DROP ROLE IF EXISTS ${ROLE_NAME};`,
-].join("\n");
+// R20-4a: real-psql main final cleanup now routes through the shared
+// cleanup-runner (scripts/audit/cleanup-runner.mjs) - the SAME builder
+// used by production-path.test.mjs. This eliminates the previous
+// "reduced inline cleanup" duplication flagged in expert Round 19 P0-3.
+// R20-4b: the runner builds the guard INTERNALLY from authoritative
+// identity params; a mismatch aborts the single psql -1 transaction
+// before any DROP runs.
+const cleanupSql = buildCleanupSequence({
+  roleName: ROLE_NAME,
+  dbName: EXPECTED_DB_NAME,
+  tableNames: [TEST_TABLE],
+  expectedDbName: EXPECTED_DB_NAME,
+  expectedClusterId: TRUSTED_CLUSTER_ID,
+});
 const cleanupResult = spawnSync(
   "psql",
   ["-t", "-A", "-F", "\t", "-v", "ON_ERROR_STOP=1", "-1", "-c", cleanupSql],

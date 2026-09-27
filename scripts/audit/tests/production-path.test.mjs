@@ -35,7 +35,6 @@ import {
   buildClusterVerificationDoBlock,
 } from "./disposable-target-guard.mjs";
 import {
-  buildCleanupGuard,
   buildCleanupSequence,
 } from "../cleanup-runner.mjs";
 
@@ -347,16 +346,16 @@ test("receipt file + SHA256 sidecar written", () => {
 // R19-5: cleanup uses the shared runner (scripts/audit/cleanup-runner.mjs)
 // so this file exercises the EXACT same production cleanup sequence that
 // real-psql-integration.test.mjs uses — no drift, no reduced copies.
-// The runner composes both guard DO blocks (DB name + cluster ID) into the
-// same transaction, so a mismatch aborts before any REVOKE/DROP runs.
+// R20-4b: the runner now builds the guard INTERNALLY from authoritative
+// identity params. Callers cannot omit or weaken the guard. The runner
+// composes both guard DO blocks (DB name + cluster ID) into the same
+// transaction, so a mismatch aborts before any REVOKE/DROP runs.
 const cleanupSql = buildCleanupSequence({
   roleName: ROLE_NAME,
   dbName: DB_NAME,
   tableNames: ['public."NotificationReadReceipt"', 'public."Notification"'],
-  guardDoBlocks: buildCleanupGuard({
-    expectedDbName: EXPECTED_DB_NAME,
-    expectedClusterId: TRUSTED_CLUSTER_ID,
-  }),
+  expectedDbName: EXPECTED_DB_NAME,
+  expectedClusterId: TRUSTED_CLUSTER_ID,
 });
 const cleanupResult = superPsqlTx(cleanupSql);
 if (cleanupResult.status !== 0) {
