@@ -429,20 +429,64 @@ function captureTargetState(env) {
      "  AND (s.dbid = 0 " +
      "       OR s.dbid = (SELECT oid FROM pg_database WHERE datname = current_database()))"],
   ];
-  const parts = [];
-  for (const [label, q] of queries) {
-    const r = spawnSync(
-      "psql",
-      ["-t", "-A", "-c", q],
-      { env, encoding: "utf8", maxBuffer: 10 * 1024 * 1024, timeout: 30_000 }
-    );
-    if (r.status !== 0) {
-      // Fail-closed: a single query failure aborts snapshot capture.
-      // No silent skip, no fallback to V1.
-      throw new Error("captureTargetState(" + label + ") failed: " + redactSecrets(String(r.stderr).trim()));
+
+  // R20-3b: run all categories in one REPEATABLE READ transaction so
+  // every query observes the same committed database snapshot. Script
+  // input is required because \echo is a psql meta-command, not SQL.
+  const MARK = "__CAT_BOUNDARY_e0d3f4a__";
+  const script = [
+    "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;",
+    ...queries.map(([label, q]) => `\\echo '${MARK}${label}'\n${q};`),
+  ].join("\n");
+
+  const r = spawnSync(
+    "psql",
+    ["-t", "-A", "-v", "ON_ERROR_STOP=1", "-1", "-f", "-"],
+    {
+      env,
+      input: script,
+      encoding: "utf8",
+      maxBuffer: 10 * 1024 * 1024,
+      timeout: 60_000,
     }
-    parts.push(label + "=" + r.stdout.trim());
+  );
+
+  const stdout = String(r.stdout || "");
+
+  if (r.status !== 0) {
+    // The last marker identifies the category executing at failure.
+    const idx = stdout.lastIndexOf(MARK);
+    const cat =
+      idx >= 0
+        ? stdout.slice(idx + MARK.length).split("\n")[0].trim()
+        : "unknown";
+    throw new Error(
+      'captureTargetState failed at category "' +
+        cat +
+        '": ' +
+        redactSecrets(String(r.stderr).trim())
+    );
   }
+
+  const lines = stdout.split("\n");
+  const parts = [];
+  let curLabel = null;
+  let buf = [];
+  const flush = () => {
+    if (curLabel !== null) {
+      parts.push(curLabel + "=" + buf.join("\n").trim());
+    }
+  };
+  for (const line of lines) {
+    if (line.startsWith(MARK)) {
+      flush();
+      curLabel = line.slice(MARK.length).trim();
+      buf = [];
+    } else {
+      buf.push(line);
+    }
+  }
+  flush();
   return parts.join("\n");
 }
 const targetStateBefore = captureTargetState(superEnv);
