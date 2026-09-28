@@ -4,6 +4,8 @@ import { withAuth } from "@/lib/auth-middleware";
 import { withRateLimit } from "@/lib/rate-limit";
 import { createIntegrationSchema } from "@/lib/validations/schemas";
 import logger from "@/lib/logger";
+import { getFreshMembership } from "@/lib/membership";
+import { INTEGRATIONS_DELETE_ROLES } from "@/lib/roles";
 
 // GET /api/integrations?orgId=... — List all integration connections for the org
 export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
@@ -83,20 +85,90 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
   }
 }, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"] }), { maxRequests: 10, windowSeconds: 60 });
 
-// DELETE /api/integrations?id=... — Disconnect an integration
-export async function DELETE(req: NextRequest) {
-  // Using a raw handler since withAuth DELETE needs org context
-  try {
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get("id");
-    if (!id) {
-      return NextResponse.json({ error: "Integration ID required" }, { status: 400 });
-    }
-    await db.integrationConnection.delete({ where: { id } });
-    return NextResponse.json({ success: true });
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Unknown error";
-    logger.error("[Integrations DELETE] Error:", message);
-    return NextResponse.json({ error: "Failed to disconnect" }, { status: 500 });
-  }
-}
+// DELETE /api/integrations?id=... -- Disconnect an integration
+export const DELETE = withRateLimit(
+  withAuth(
+    async (req: NextRequest, authCtx) => {
+      try {
+        // Step 1: Fresh DB-backed membership check (S1-1)
+        // Cached session role/orgId is NOT authoritative for mutations.
+        const membership = await getFreshMembership(authCtx);
+        if (!membership) {
+          // Removed / demoted / org-changed / penalized / no-org non-platform
+          // Same message for all -> no info leak distinction.
+          return NextResponse.json(
+            { error: "Organization context required" },
+            { status: 403 },
+          );
+        }
+
+        // Step 2: Platform role without org -> explicit reject (D2)
+        if (membership.isPlatformBypass) {
+          return NextResponse.json(
+            { error: "Platform role requires organization context for this mutation" },
+            { status: 403 },
+          );
+        }
+
+        // Step 3: Fresh DB role must be in destructive-mutation allowlist (S1-2)
+        if (!INTEGRATIONS_DELETE_ROLES.has(membership.role)) {
+          return NextResponse.json(
+            { error: "Insufficient permissions" },
+            { status: 403 },
+          );
+        }
+
+        // Step 4: Parse target integration ID
+        const { searchParams } = new URL(req.url);
+        const id = searchParams.get("id");
+        if (!id) {
+          return NextResponse.json(
+            { error: "Integration ID required" },
+            { status: 400 },
+          );
+        }
+
+        // Step 5: Atomic org-bound delete
+        // No withRetry (D16): DELETE is HTTP-idempotent; retry on destructive
+        // writes creates ambiguity (commit-success + network-fail -> client 404
+        // while row is gone). Clarity > resilience for destructive mutations.
+        const result = await db.integrationConnection.deleteMany({
+          where: {
+            id,
+            organizationId: membership.organizationId,
+          },
+        });
+
+        // Step 6: Not found or cross-org -> same 404 (no info leak)
+        if (result.count === 0) {
+          return NextResponse.json(
+            { error: "Integration not found" },
+            { status: 404 },
+          );
+        }
+
+        return NextResponse.json({ success: true });
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : "Unknown error";
+        logger.error("[Integrations DELETE] Error:", message);
+        if (isDbUnavailable(error)) return dbErrorResponse(error);
+        return NextResponse.json(
+          { error: "Failed to disconnect" },
+          { status: 500 },
+        );
+      }
+    },
+    {
+      requireOrg: true,
+      requireRole: [
+        "admin",
+        "owner",
+        "brand_admin",
+        "brand_owner",
+        "platform_owner",
+        "platform_admin",
+      ],
+    },
+  ),
+  { maxRequests: 10, windowSeconds: 60 },
+);
