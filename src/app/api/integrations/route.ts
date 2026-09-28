@@ -4,6 +4,8 @@ import { withAuth } from "@/lib/auth-middleware";
 import { withRateLimit } from "@/lib/rate-limit";
 import { createIntegrationSchema } from "@/lib/validations/schemas";
 import logger from "@/lib/logger";
+import { getFreshMembership } from "@/lib/membership";
+import { INTEGRATIONS_DELETE_ROLES } from "@/lib/roles";
 
 // GET /api/integrations?orgId=... — List all integration connections for the org
 export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
@@ -83,21 +85,40 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
   }
 }, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"] }), { maxRequests: 10, windowSeconds: 60 });
 
-// DELETE /api/integrations?id=... — Disconnect an integration
+// DELETE /api/integrations?id=... -- Disconnect an integration
 export const DELETE = withRateLimit(
   withAuth(
     async (req: NextRequest, authCtx) => {
       try {
-        // Platform roles bypass requireOrg in withAuth (see auth-middleware.ts).
-        // We enforce tenant binding explicitly so platform users WITHOUT an org
-        // cannot perform a cross-tenant delete via this endpoint.
-        if (!authCtx.organizationId) {
+        // Step 1: Fresh DB-backed membership check (S1-1)
+        // Cached session role/orgId is NOT authoritative for mutations.
+        const membership = await getFreshMembership(authCtx);
+        if (!membership) {
+          // Removed / demoted / org-changed / penalized / no-org non-platform
+          // Same message for all -> no info leak distinction.
           return NextResponse.json(
             { error: "Organization context required" },
             { status: 403 },
           );
         }
 
+        // Step 2: Platform role without org -> explicit reject (D2)
+        if (membership.isPlatformBypass) {
+          return NextResponse.json(
+            { error: "Platform role requires organization context for this mutation" },
+            { status: 403 },
+          );
+        }
+
+        // Step 3: Fresh DB role must be in destructive-mutation allowlist (S1-2)
+        if (!INTEGRATIONS_DELETE_ROLES.has(membership.role)) {
+          return NextResponse.json(
+            { error: "Insufficient permissions" },
+            { status: 403 },
+          );
+        }
+
+        // Step 4: Parse target integration ID
         const { searchParams } = new URL(req.url);
         const id = searchParams.get("id");
         if (!id) {
@@ -107,21 +128,18 @@ export const DELETE = withRateLimit(
           );
         }
 
-        // Atomic org-bound delete: both `id` AND `organizationId` in WHERE.
-        // Prevents cross-tenant destruction even if a valid id is guessed.
-        const result = await withRetry(
-          () =>
-            db.integrationConnection.deleteMany({
-              where: {
-                id,
-                organizationId: authCtx.organizationId!,
-              },
-            }),
-          2,
-          500,
-        );
+        // Step 5: Atomic org-bound delete
+        // No withRetry (D16): DELETE is HTTP-idempotent; retry on destructive
+        // writes creates ambiguity (commit-success + network-fail -> client 404
+        // while row is gone). Clarity > resilience for destructive mutations.
+        const result = await db.integrationConnection.deleteMany({
+          where: {
+            id,
+            organizationId: membership.organizationId,
+          },
+        });
 
-        // Same 404 for "not found" and "belongs to another org" — no info leak.
+        // Step 6: Not found or cross-org -> same 404 (no info leak)
         if (result.count === 0) {
           return NextResponse.json(
             { error: "Integration not found" },
@@ -131,8 +149,7 @@ export const DELETE = withRateLimit(
 
         return NextResponse.json({ success: true });
       } catch (error: unknown) {
-        const message =
-          error instanceof Error ? error.message : "Unknown error";
+        const message = error instanceof Error ? error.message : "Unknown error";
         logger.error("[Integrations DELETE] Error:", message);
         if (isDbUnavailable(error)) return dbErrorResponse(error);
         return NextResponse.json(
@@ -143,7 +160,14 @@ export const DELETE = withRateLimit(
     },
     {
       requireOrg: true,
-      requireRole: ["admin", "owner", "platform_owner", "platform_admin"],
+      requireRole: [
+        "admin",
+        "owner",
+        "brand_admin",
+        "brand_owner",
+        "platform_owner",
+        "platform_admin",
+      ],
     },
   ),
   { maxRequests: 10, windowSeconds: 60 },
