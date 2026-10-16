@@ -1,0 +1,5 @@
+# Preserve byte-exact content for all files in this folder.
+# Prevents Git EOL conversion (CRLF <-> LF) on checkout/commit.
+# Reason: evidence files are SHA256-hashed; hash must remain
+# stable across platforms (Windows, Linux, macOS checkouts).
+* -text
