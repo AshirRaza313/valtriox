@@ -1,0 +1,41 @@
+# ============================================================
+# security/rls-audit/.gitignore
+# ============================================================
+# Rules for the RLS audit evidence bundle.
+# Goal: prevent secret/temp leakage while committing all
+#       reproducible evidence.
+# ============================================================
+
+# --- Never commit secrets or credentials ---
+bundle-signed-urls-*.txt
+*.env
+*.env.*
+*.key
+*.pem
+*.token
+*_secret*
+credentials.*
+
+# --- Never commit local temp / editor artifacts ---
+*.tmp
+*.temp
+*.log
+*.bak
+*~
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# --- Explicit allowlist: DO commit evidence and SQL ---
+# (Negation rules — keep tracked even if a broader pattern
+#  above might otherwise match.)
+!evidence/*.txt
+!evidence/*.sql
+!evidence/*.ps1
+!evidence/*.md
+!evidence/*.png
+!evidence/pg17-test-outputs/*.txt
+
+# --- Sanity: keep the gitignore itself tracked ---
+!.gitignore

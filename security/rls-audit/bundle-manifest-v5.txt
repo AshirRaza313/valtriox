@@ -1,0 +1,280 @@
+================================================================
+VALTRIOX PHASE 10 BUNDLE MANIFEST v5
+================================================================
+Manifest version:  v5
+Generated UTC:     2026-10-15T18:59:56Z
+Prepared by:       Ashir Raza
+Bucket folder:     phase10-bundle-v1/
+Supersedes:        bundle-manifest-v4.txt
+Corrections:       Phase 11 Wave 2 — B1 (scope count), B2 (evidence
+                   byte size), B3 (full 8-file hash re-verification).
+                   Metadata-only correction; no file bytes changed.
+================================================================
+
+CHANGELOG FROM v4
+----------------------------------------------------------------
+1. B1 (scope count) — SCOPE section corrected:
+   from  "4 authoritative + 5 supporting"
+   to    "4 authoritative + 4 supporting = 8 uploads"
+   (bundle-signed-urls-v1.txt is local-only; never uploaded.)
+   The SUPPORTING EVIDENCE section is now split into:
+     - SUPPORTING EVIDENCE (4 uploaded)
+     - LOCAL-ONLY REFERENCE (not uploaded)
+
+2. B2 (evidence byte size) — item [8]
+   pg17-test-evidence-2026-10-12T18-45-06Z.txt
+   byte size corrected: 372634 -> 380576.
+   SHA256 unchanged (55E2C394...). The v4 byte-size value was an
+   earlier pre-finalization capture; the current file matches the
+   manifest hash. Verified against local disk on 2026-10-15.
+
+3. B3 (hash re-verification) — all 8 files re-hashed on 2026-10-15.
+   All 8 SHA256 values match. All byte sizes match except item [8]
+   which is corrected in this manifest. Evidence:
+     - wave2-hash-verification-<UTC>.txt
+     - wave2-byte-size-reconciliation-<UTC>.txt
+
+================================================================
+SCOPE
+----------------------------------------------------------------
+Phase 10 focused corrections. 4 authoritative files + 4 supporting
+artifacts = 8 uploads. bundle-signed-urls-v1.txt is local-only and
+is NOT uploaded to the bucket.
+
+No broad report. No historical references. No unchanged SQL files
+(canonical containment/rollback/NOLOGIN SQL remain valid at prior
+hashes).
+
+All catalog queries from the 4 files were executed on PostgreSQL
+17.11 (WSL2 + Ubuntu) against a fixture environment matching the
+production schema shape. Actual execution output is captured in
+the combined evidence file.
+
+Manifest does NOT contain its own SHA256 (circular avoidance). Its
+hash is recorded separately in the PR comment after upload, and
+verified by re-downloading after upload (Upload-Verify-Before-Post).
+
+================================================================
+AUTHORITATIVE FILES (4)
+================================================================
+
+[1] jit-checklist-v5.md
+    Byte size: 18809
+    SHA256:    500362FACA739752B8FC21D435841BE1D367365A5050868E46412211DE306445
+    Purpose:   JIT pre-execution checklist with P0-1 (column
+               privileges text-safe), P0-2 (role-path direction
+               corrected), P0-4 (project binding operational),
+               P1-6 (working tree clean), P1-7 (PostgREST exposed
+               schemas). Evidence-filled after PG17 execution.
+    Status:    Awaiting written approval
+
+[2] post-verification-v5.md
+    Byte size: 21402
+    SHA256:    3AC55B925FD886256B8B2422267D5AEA5084D0DF75E2D81ACBF2A3198FEF90F9
+    Purpose:   Post-verification with P0-3 (DO-block fail-closed —
+               RAISE EXCEPTION on success, re-raise unexpected),
+               P0-5 (anon HTTP probe automated with hard-fail),
+               P1-8 (audit_readonly verified on all 3 tables),
+               P1-9 (smoke test non-mutating proof via code +
+               network capture).
+    Status:    Awaiting written approval
+
+[3] nologin-revalidation-checklist-v4.md
+    Byte size: 18305
+    SHA256:    E36A4905B76D7CA4E91EEB6C7FF2ABB41A7096EAB109DACDD436A34918808212
+    Purpose:   NOLOGIN revalidation with all 9 P0 blockers closed:
+               pg_stat_activity limitation stated honestly;
+               pg_cast.castowner removed (pg_shdepend used); prokind
+               filter + sanitized function output; secret scans
+               output-disciplined (no line content); multi-source
+               non-disclosing secret dependency (GitHub/Vercel/PM);
+               7-day logs inconclusive handling; immediate
+               pre-mutation role state; approved execution window
+               (not equality); wording corrected to "design updated;
+               execution evidence pending".
+    Status:    Awaiting separate written approval
+
+[4] bundle-manifest-v5.txt
+    Byte size: (recorded in PR comment after save)
+    SHA256:    (recorded in PR comment after save)
+    Note:      Self-hash recorded in PR comment, not inside this file
+               (circular avoidance rule).
+    Purpose:   This manifest.
+    Status:    Reference
+
+================================================================
+SUPPORTING EVIDENCE (4 uploaded)
+================================================================
+Uploaded for independent verification. Not authoritative for
+approval decisions; provide PG17 execution evidence referenced by
+the 4 authoritative files.
+
+[5] jit-test-queries.sql
+    Byte size: 10377
+    SHA256:    24F7D3D7858A1C90244E88C4F08D07278D803C6D593DB17C216A83AD93644384
+    Purpose:   Source SQL that reproduces every executable JIT
+               section (2.1-11.5, 14). Non-executable sections
+               (1.1, 1.2, 2.2, 13) captured via PowerShell /
+               screenshots separately.
+    Status:    Test source
+
+[6] pg17-fixtures.sql
+    Byte size: 6027
+    SHA256:    8B55B2E94FBAA6EB7D5ED85369454396C2BB243B23ED7C2228143E7E75B81800
+    Purpose:   PG17 fixture — roles, memberships, 3 tables, RLS
+               policies, grants, minimal data (2/21/0). Reproduces
+               production schema shape for query testing.
+    Status:    Test fixture
+
+[7] anon-http-probe.ps1
+    Byte size: 2779
+    SHA256:    AA47E2B2D6D1527DD4D36C272EEEBDE2E8E7024A7A5439BE0BBA71566DA80EAD
+    Purpose:   Automated anon HTTP probe with hard-fail assertions
+               (curl --write-out status; non-zero exit on anomaly;
+               Content-Range presence check; row-shaped body check;
+               ZeroFreeBSTR cleanup in finally).
+    Status:    Test script
+
+[8] pg17-test-evidence-2026-10-12T18-45-06Z.txt
+    Byte size: 380576
+    SHA256:    55E2C394BC60D435A43433250BC2E888CF6A1BACF02301BB1A8278CE585B7720
+    Purpose:   Combined execution evidence — all PG17 catalog
+               queries and failure-path tests. Includes:
+               - jit-queries-output.txt (87 KB, JIT 2-14 output)
+               - nl-queries-output.txt (NOLOGIN 2-10)
+               - pv-queries-output.txt (post-verify 1-9)
+               - pv-5.2-do-fail-path.txt (DO-block EXCEPTION proof)
+               - pv-5.2-do-pass-path.txt (42501 pass)
+               - anon-probe-fail-path.txt (exit code 1 proof)
+               - jit-1.1-worktree.txt (working tree DIRTY — 3 files,
+                 documented as-is; resolved in Phase 11 Wave 1)
+               - jit-1.2-local-sha.txt
+               - jit-13-setlocal-placement.txt
+    Status:    Execution evidence
+    Note:      Byte size corrected in v5 (was 372634 in v4; actual
+               is 380576). SHA256 unchanged and matches v4 claim.
+
+================================================================
+LOCAL-ONLY REFERENCE (not uploaded)
+================================================================
+
+[9] bundle-signed-urls-v1.txt
+    Local only — created during Block 6 upload step.
+    Contains 9 signed URLs (7-day expiry).
+    NEVER posted publicly.
+    Status:    Local reference only (created in Block 6)
+
+================================================================
+UNCHANGED CANONICAL FILES (Not resubmitted)
+================================================================
+Remain valid at prior hashes:
+
+  phase-a-containment-v3.sql
+  SHA256: 59C62F1A92510BD45889BA519957BD1F893934DF18557EFD3DAA1636B1227A3C
+
+  phase-a-rollback-v2.sql
+  SHA256: 8CEDA08FAA167F39CA9E0778D44F1661C9FF987143FB2E4AFC0A498ED8787E4D
+
+  pg-version-proof.txt
+  SHA256: B81039187686A1EE8CDB95A9E67D2DB0611D03325992AA78DD88FDCBC19EC995
+
+  break-glass-policy-v2.md
+  SHA256: E7FFA41C5C6C7C16F3D4F6E333A3FB576587FD8E0B2B3717F1E07A6302C0518A
+
+  nologin-execute.sql
+  SHA256: 772B2CB298F784BE866BDF83521D8243D9F2291490CA819080B67D096C559B85
+
+  nologin-rollback.sql
+  SHA256: 2368AD7E8ADDC8B389449C37358DE4646F540AC2D12CBD4C88346CE1E1CC6789
+
+  maintain-pre-state-comparison.md
+  SHA256: 718BFE538295AA996705B365EF64602E6263689E8644BD60D6970A494289AD60
+
+  pr-ci-binding-note.md
+  SHA256: 4999824D6782AEF1E0B3A7F31A86613E27A954CE19914C53DECD889FA2BFD799
+
+================================================================
+PG17 TEST ENVIRONMENT RECORD
+================================================================
+Environment:  WSL2 + Ubuntu 26.04 (resolute)
+PostgreSQL:   17.11 (Ubuntu 17.11-1.pgdg26.04+2)
+data_directory: /var/lib/postgresql/17/main
+ssl_library:  OpenSSL
+TimeZone:     Asia/Karachi
+
+Note: PostgREST is not installed in the disposable environment.
+The anon HTTP probe against the production PostgREST endpoint is
+executed during Phase A containment verification, not during the
+PG17 catalog dry-run. The disposable environment verifies catalog
+queries + probe logic (fail-path) only.
+
+================================================================
+WORKING TREE STATE (Documented)
+================================================================
+Repo: C:\Users\Aashir\Projects\valtriox-trackb
+Local SHA: 08c1d5bd89ed9adac7f7c3892203854b436974cf
+Working tree status at time of Phase 10 test: DIRTY (3 files modified)
+  - package-lock.json
+  - package.json
+  - prisma/seed.ts
+
+UPDATE (Phase 11 Wave 1): working tree now CLEAN. The 3 modified
+files were reverted (git checkout -- on each). Local HEAD, remote
+HEAD, and GitHub-deployments-API SHA all equal 08c1d5b...; ahead/
+behind = 0 0. Evidence: wave1-identity/A1-clean-tree-evidence-*.txt.
+
+================================================================
+HASH VERIFICATION
+================================================================
+Independently verify each file after download:
+
+  Get-FileHash -Algorithm SHA256 "<file>" | Select-Object Hash
+  sha256sum <file>
+
+Byte sizes must match exactly. Any mismatch invalidates this
+manifest and requires a new version.
+
+================================================================
+PHASE 11 WAVE 2 VERIFICATION
+================================================================
+All 8 files (4 authoritative + 4 supporting) were re-hashed from
+local disk on 2026-10-15. Results:
+  - All 8 SHA256 values match the values recorded in this manifest.
+  - All byte sizes match except item [8], which is corrected to
+    380576 in this manifest (was 372634 in v4).
+
+Reconciliation evidence (local disk, not uploaded):
+  - wave2-hash-verification-<UTC>.txt
+  - wave2-byte-size-reconciliation-<UTC>.txt
+
+================================================================
+DELIVERY
+================================================================
+Bucket:            valtriox-security-artifacts
+Folder:            phase10-bundle-v1/
+Files delivered:   4 authoritative + 4 supporting = 8 uploads
+                   (bundle-signed-urls-v1.txt is local-only)
+Signed URLs:       7-day expiry
+Private channel:   WhatsApp (controlled/private only)
+Public PR:         filenames + SHA256 only (no signed URLs)
+
+Upload-Verify-Before-Post rule (from Phase 9, applied here):
+  1. Upload all 8 files to bucket.
+  2. Download each from its signed URL.
+  3. Compute SHA256 on downloaded copy.
+  4. Compare against manifest values.
+  5. Only after all 8 match, post PR comment.
+
+================================================================
+NO-MUTATION CONFIRMATION
+================================================================
+No production mutation of any kind was executed during this phase.
+No ALTER ROLE, no DROP ROLE, no REVOKE, no GRANT, no NOLOGIN, no
+membership change, no credential rotation.
+
+The PG17 test environment is disposable (WSL2 + Ubuntu, locally
+provisioned) and unrelated to production.
+
+================================================================
+END OF BUNDLE MANIFEST v5
+================================================================
