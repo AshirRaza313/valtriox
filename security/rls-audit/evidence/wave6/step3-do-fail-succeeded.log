@@ -1,0 +1,28 @@
+=== DO probe 1/3: Subscription ===
+psql:/mnt/c/Users/Aashir/Projects/evidence-phase1/phase11-corrections/wave6-test-evidence/do-block-probe.sql:29: ERROR:  Subscription: SELECT SUCCEEDED with count=0 -- FAIL (SELECT privilege still active); cleanup_user=postgres
+CONTEXT:  PL/pgSQL function inline_code_block line 22 at RAISE
+ post_cleanup_user | post_cleanup_role 
+-------------------+-------------------
+ postgres          | postgres
+(1 row)
+
+
+=== DO probe 2/3: Notification ===
+psql:/mnt/c/Users/Aashir/Projects/evidence-phase1/phase11-corrections/wave6-test-evidence/do-block-probe.sql:56: ERROR:  Notification: SELECT SUCCEEDED with count=0 -- FAIL (SELECT privilege still active); cleanup_user=postgres
+CONTEXT:  PL/pgSQL function inline_code_block line 22 at RAISE
+ post_cleanup_user | post_cleanup_role 
+-------------------+-------------------
+ postgres          | postgres
+(1 row)
+
+
+=== DO probe 3/3: PaymentProof ===
+psql:/mnt/c/Users/Aashir/Projects/evidence-phase1/phase11-corrections/wave6-test-evidence/do-block-probe.sql:83: ERROR:  PaymentProof: SELECT SUCCEEDED with count=0 -- FAIL (SELECT privilege still active); cleanup_user=postgres
+CONTEXT:  PL/pgSQL function inline_code_block line 22 at RAISE
+ post_cleanup_user | post_cleanup_role 
+-------------------+-------------------
+ postgres          | postgres
+(1 row)
+
+
+=== DO-block probe COMPLETE ===

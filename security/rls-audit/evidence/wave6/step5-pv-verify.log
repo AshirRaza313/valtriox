@@ -1,0 +1,71 @@
+=== PV §1 — ACL post-state (anon/auth/PUBLIC rows) ===
+ table_name | grantee | privilege_type 
+------------+---------+----------------
+(0 rows)
+
+
+=== PV §1 summary — ACL counts per (table, role) ===
+     tbl      |    grantee     | priv_count 
+--------------+----------------+------------
+ Notification | audit_readonly |          1
+ Notification | postgres       |          8
+ Notification | service_role   |          8
+ PaymentProof | audit_readonly |          1
+ PaymentProof | postgres       |          8
+ PaymentProof | service_role   |          8
+ Subscription | audit_readonly |          1
+ Subscription | postgres       |          8
+ Subscription | service_role   |          8
+(9 rows)
+
+
+=== PV §2 — 96-check matrix post-containment (per role) ===
+   role_name   | total | n_true | n_false 
+---------------+-------+--------+---------
+ anon          |    24 |      0 |      24
+ authenticated |    24 |      0 |      24
+ postgres      |    24 |     24 |       0
+ service_role  |    24 |     24 |       0
+(4 rows)
+
+
+=== PV §3.1 — Direct column grants via info_schema ===
+ table_name | column_name | grantee | privilege_type 
+------------+-------------+---------+----------------
+(0 rows)
+
+
+=== PV §3.3 — Effective column access (any true = FAIL) ===
+ tbl | col | role_name | priv | has_pr 
+-----+-----+-----------+------+--------
+(0 rows)
+
+
+=== PV §6 — service_role / postgres / audit_readonly unchanged ===
+      role      | s | n | p 
+----------------+---+---+---
+ service_role   | t | t | t
+ postgres       | t | t | t
+ audit_readonly | t | t | t
+(3 rows)
+
+
+=== PV §8 — Row counts (unchanged) ===
+     tbl      | cnt 
+--------------+-----
+ Subscription |   2
+ Notification |  21
+ PaymentProof |   0
+(3 rows)
+
+
+=== PV §9 — RLS state unchanged ===
+   relname    | relrowsecurity | relforcerowsecurity |  owner   
+--------------+----------------+---------------------+----------
+ Notification | t              | f                   | postgres
+ PaymentProof | t              | f                   | postgres
+ Subscription | t              | f                   | postgres
+(3 rows)
+
+
+=== PV verification COMPLETE ===

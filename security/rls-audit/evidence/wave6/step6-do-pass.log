@@ -1,0 +1,28 @@
+=== DO probe 1/3: Subscription ===
+psql:/mnt/c/Users/Aashir/Projects/evidence-phase1/phase11-corrections/wave6-test-evidence/do-block-probe.sql:29: NOTICE:  Subscription: SQLSTATE=42501 -- PASS; cleanup_user=postgres
+DO
+ post_cleanup_user | post_cleanup_role 
+-------------------+-------------------
+ postgres          | postgres
+(1 row)
+
+
+=== DO probe 2/3: Notification ===
+psql:/mnt/c/Users/Aashir/Projects/evidence-phase1/phase11-corrections/wave6-test-evidence/do-block-probe.sql:56: NOTICE:  Notification: SQLSTATE=42501 -- PASS; cleanup_user=postgres
+DO
+ post_cleanup_user | post_cleanup_role 
+-------------------+-------------------
+ postgres          | postgres
+(1 row)
+
+
+=== DO probe 3/3: PaymentProof ===
+psql:/mnt/c/Users/Aashir/Projects/evidence-phase1/phase11-corrections/wave6-test-evidence/do-block-probe.sql:83: NOTICE:  PaymentProof: SQLSTATE=42501 -- PASS; cleanup_user=postgres
+DO
+ post_cleanup_user | post_cleanup_role 
+-------------------+-------------------
+ postgres          | postgres
+(1 row)
+
+
+=== DO-block probe COMPLETE ===

@@ -1,0 +1,97 @@
+================================================================
+VALTRIOX PHASE 11 — FINAL BUNDLE MANIFEST v6
+================================================================
+Manifest version:  v6
+Generated UTC:     2026-10-17T11:53:52Z
+Prepared by:       Ashir Raza
+PR:                #17 (dedicated security)
+PR head (base at generation): f9c400b30df920d3096490b09bdaaf46c69ddced
+Base (main):       bebd61f4c971dafdf42aa3fee7b97bde8203feea
+Supersedes:        bundle-manifest-v5.txt (git history: f9c400b)
+================================================================
+
+SCOPE
+----------------------------------------------------------------
+Phase 11 final submission. All Wave 1-6 corrections addressed.
+Canonical approval location: this PR (#17). NOLOGIN approval is
+a SEPARATE track (see evidence/nologin/).
+
+FILE INVENTORY (43 files)
+----------------------------------------------------------------
+
+NOTE: This manifest describes the FINAL PR state after Wave 7
+commits. Files superseded by v6 (jit-checklist-v5, post-verification-v5,
+bundle-manifest-v5, pg17-fixtures v1, jit/pv test queries v1, v1 anon
+probes) are NOT listed here; they are preserved in git history at
+commit f9c400b and removed in Wave 7 commit 2.
+
+Path | Bytes | SHA256
+-----|-------|-------
+.gitattributes | 253 | 32C59163BEC82DB295E89F853119FE9E38F0C62DB14E5EF6908C29EC847E9ABD
+.gitignore | 1197 | 0926254ACD391D661D3AE93FA3AA5BCF4E79619465494F29C9AEE9162CE42932
+break-glass-policy-v2.md | 2239 | E7FFA41C5C6C7C16F3D4F6E333A3FB576587FD8E0B2B3717F1E07A6302C0518A
+evidence/nologin/nl-test-queries.sql | 6258 | 3EAE2AEE257D1A64D575722025F1BC99F89E14F842D780FB56FCF393392883B0
+evidence/wave10/pg17-test-evidence-2026-10-12T18-45-06Z.txt | 380576 | 55E2C394BC60D435A43433250BC2E888CF6A1BACF02301BB1A8278CE585B7720
+evidence/wave4/A2-project-ref-screenshot.png | 72759 | 1DF698A4779EA2FE74B24227A631B1BF69F0AE73D30C5F00ED9CAA7890BF12A5
+evidence/wave4/A3-canonical-sql-binding-2026-10-16T20-28-48Z.txt | 4493 | 122F0EC8434FA5707103DED9F9FD9C7F72E7BB70AE7A9292CC957E35E65FA2BF
+evidence/wave4/A3-file-hashes-2026-10-16T20-28-48Z.txt | 886 | A558FB281DB4F3915C082721A507D2D2253E6C68DC4E02FBB1505A139E0825E2
+evidence/wave4/run-wave4-a3.ps1 | 8962 | 01F530757888263D2DA880C1A60771D88074B0601F038FD650058E2F74FD95DD
+evidence/wave4/wave4-a2-combined-output.csv | 921 | 72C295C4DE7C1A5434BA16F9910C8B8F4696A946BACD3FB2F9B8BDAC42EA7092
+evidence/wave4/wave4-a2-combined-v2.sql | 3815 | A3C5A2E23FB474672010B1801E06D6264763048BC3EC8D43D9D8EFD5B8C8254C
+evidence/wave4/wave4-a2-queries-setrole.sql | 8303 | 8C343FEFC798FA56712751CF8BCA43C0F5B60584CDB506C0274DB819A857681C
+evidence/wave4/wave4-a2-queries-v2.sql | 9424 | 087D1F254E8621ED9AFFF9B6F775FE99B441B4DE1F1B541E2E8489ABF6F7715E
+evidence/wave6/anon-http-probe-prod.ps1 | 7944 | 47A97971FB638B866E08281C03B162C2D9F891072E5322B77CD2D45AF43589FE
+evidence/wave6/containment-v3-copy.sql | 1041 | 59C62F1A92510BD45889BA519957BD1F893934DF18557EFD3DAA1636B1227A3C
+evidence/wave6/d1-acceptance-checklist.md | 1108 | C8C8A5C7E364750FE0E330E9B8891AC0D9A92AE1EB9DD0616E5BA1647844DA0E
+evidence/wave6/d1-summary-2026-10-17T10-41-46Z.md | 802 | 8194E8CEE9B8A941BA50179F963E01B19490482116C9B835D8885608FE20D573
+evidence/wave6/d1-summary-template.md | 1376 | EC23F2E352C4FBA2766A8E43FBAA4859D2E17E51B782092F0850CED43FFACBD9
+evidence/wave6/d2-prod-probe-2026-10-17T10-46-04Z.json | 3088 | ADA31402E8D39CB365DDF7E77A796321C6251EB64EA2F97A328FC183FEFB46EC
+evidence/wave6/d2-prod-probe-2026-10-17T10-46-04Z.sha256 | 107 | 7E237AE72EEF5A4423BBABD93FE748DAA1F8DF0193788245A0F8E8EAE26D3E7D
+evidence/wave6/d2-prod-probe-2026-10-17T11-18-09Z.json | 2988 | 7056C6DB74C8C6F9143540EBA0846431FE1FA42339D1E92C7D4B03AD4B235F72
+evidence/wave6/d2-prod-probe-2026-10-17T11-18-09Z.sha256 | 107 | 765F1186F78D6EA54E308B6753638B2EDD1408C72FAE37A423AE68F6663523FB
+evidence/wave6/do-block-probe.sql | 3848 | 8E23A53040ECB6845E4311A98B4284DCBA279D14B04F9137C51EE4F498DA7A46
+evidence/wave6/fixtures-v2-copy.sql | 10968 | A4559613070718D118030611022497E2E27AD2443062ED76E20751B9C2D95006
+evidence/wave6/jit-baseline.sql | 9135 | 46C5303F6898041A7148737EBAE7D88FC82B695F69892037C8F38B8D156825F4
+evidence/wave6/pv-verify.sql | 6259 | F6C0C5A66C936ABD8452DB9E36208A37532046A0814EE3D01FF463EA3F4497B2
+evidence/wave6/step1-fixture-load.log | 2638 | 49206566DDAF58F8FAA4E1836855E34633CAA373B70E8DD6A6652F368A7FD139
+evidence/wave6/step2-jit-baseline.log | 6702 | 976EEAE35B252834EEE4D8C5FC41066B12114D8A6A2EACBC162EE4B38DE76568
+evidence/wave6/step3-do-fail-succeeded.log | 1370 | B046AD4A900C3B2B60815E9A19B8E6EB80F418329FCAB9282E97C63B9EF4194C
+evidence/wave6/step4-containment.log | 84 | 5C2A5CDEC566B333F789C6F5F1684E3D53EEA3FCED33D5F1C0D8D019216E74F9
+evidence/wave6/step5-pv-verify.log | 2144 | DFDB4D693109367AA18E2E591612D06711F674683093C9E3C41EC2A1E363D14C
+evidence/wave6/step6-do-pass.log | 1052 | 81358D2808089A6D3BE4DAAED20C77BEBC8C2FF7AE35E83F7A03804BC67B2B3A
+jit-checklist-v6.md | 22390 | 526B6ACAC40D53F2E63D7DAE0D634D8B4A2629AE27E33F37DFD4CC0425EB36CA
+maintain-pre-state-comparison.md | 3080 | 718BFE538295AA996705B365EF64602E6263689E8644BD60D6970A494289AD60
+nologin-revalidation-checklist-v4.md | 18305 | E36A4905B76D7CA4E91EEB6C7FF2ABB41A7096EAB109DACDD436A34918808212
+OUT-OF-SCOPE-FLAGS.md | 6201 | 6F4D2B8235DA81F3BA919677C164408ABE0290A08CBB575ABE6B678CEB6F6985
+pg-version-proof.txt | 424 | B81039187686A1EE8CDB95A9E67D2DB0611D03325992AA78DD88FDCBC19EC995
+pg17-fixtures-v2.sql | 10968 | A4559613070718D118030611022497E2E27AD2443062ED76E20751B9C2D95006
+phase-a-containment-v3.sql | 1041 | 59C62F1A92510BD45889BA519957BD1F893934DF18557EFD3DAA1636B1227A3C
+phase-a-rollback-v2.sql | 987 | 8CEDA08FAA167F39CA9E0778D44F1661C9FF987143FB2E4AFC0A498ED8787E4D
+post-verification-v6.md | 27569 | A9554D5BAD9FC49A31E34DC255A3377291A672607597A93FB3DC72EC91518275
+pr-ci-binding-note.md | 1111 | 4999824D6782AEF1E0B3A7F31A86613E27A954CE19914C53DECD889FA2BFD799
+README.md | 7918 | 47BC85BB30A69E23E6394C920E49147226DB5F9C6A527AD7F66A67FA5F489113
+
+SELF-HASH NOTE
+----------------------------------------------------------------
+This manifest does NOT contain its own SHA256 (circular avoidance).
+Its SHA256 is recorded in the PR #17 final comment for verification
+after download.
+
+NO-MUTATION CONFIRMATION
+----------------------------------------------------------------
+No production ALTER/DROP/REVOKE/GRANT/NOLOGIN executed.
+PG17 test environment is disposable (WSL2, unrelated to production).
+
+OUT-OF-SCOPE FLAGS
+----------------------------------------------------------------
+See OUT-OF-SCOPE-FLAGS.md for documented observations outside
+Phase A scope.
+
+DELIVERY
+----------------------------------------------------------------
+PR #17: https://github.com/AshirRaza313/valtriox/pull/17
+PR #13 (historical): https://github.com/AshirRaza313/valtriox/pull/13
+
+================================================================
+END OF BUNDLE MANIFEST v6
+================================================================
