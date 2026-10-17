@@ -164,121 +164,105 @@ Recorded: ___________
 
 ---
 
-## 4. anon HTTP Probe — Automated Assertions (P0-5)
+## 4. anon HTTP Probe — Mode-Aware Classification (P0-5, Phase 11 Wave 7 B2)
 
-**Purpose:** Verify anon access is blocked via PostgREST, with hard-fail on any anomaly.
+**Purpose:** Verify anon access state via PostgREST with mode-aware hard-fail assertions. The probe distinguishes pre-containment expected behavior (anon exposed) from post-containment expected behavior (anon denied). Any probe failure (invalid key, transport error) is classified as `PROBE_FAILED`, never as a pass.
 
-**Method:** `curl --write-out` captures status; exit code asserted; body & Content-Range validated; script exits non-zero on any failure.
+**Method:** `curl.exe --write-out` captures HTTP status; script inspects the `sb-error-code` response header (Supabase gateway) for explicit invalid-key detection; body and Content-Range validated per mode; script exits non-zero on any failure.
 
-**Script — `phase10-corrections/anon-http-probe.ps1`:**
+**Script (single source of truth):** `evidence/wave6/anon-http-probe-prod.ps1`
+
+**Invocation:**
 
 ```powershell
-# anon-http-probe.ps1
-# Automated anon HTTP probe with hard-fail assertions.
-# ZeroFreeBSTR cleanup on all paths.
+cd C:\Users\Aashir\Projects\valtriox-trackb\security\rls-audit\evidence\wave6
 
-$ErrorActionPreference = "Stop"
-$base = "https://wqwsagnxkamblnefhpzx.supabase.co/rest/v1"
-$tables = @("Subscription", "Notification", "PaymentProof")
-$failures = @()
+powershell -ExecutionPolicy Bypass -File .\anon-http-probe-prod.ps1 -Mode pre
+# pre-containment
 
-$anonKeySecure = Read-Host "Anon Key" -AsSecureString
-$anonKey = $null
-try {
-    $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($anonKeySecure)
-    $anonKey = [Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr)
-
-    foreach ($t in $tables) {
-        Write-Host "===== $t =====" -ForegroundColor Cyan
-
-        $headersFile = "$env:TEMP\anon-http-$t-headers.txt"
-        $bodyFile = "$env:TEMP\anon-http-$t-body.json"
-
-        # --write-out captures status; --fail-with-body makes curl non-zero on HTTP >= 400
-        # but we want the status even on 4xx; so we do NOT use --fail.
-        # We use --write-out to print the status to stdout, and check exit code separately.
-        $httpStatus = curl.exe -s -S `
-            -D $headersFile `
-            -o $bodyFile `
-            -w "%{http_code}" `
-            -X GET "$base/$t?select=id&limit=0" `
-            -H "apikey: $anonKey" `
-            -H "Authorization: Bearer $anonKey" `
-            -H "Prefer: count=exact"
-
-        $curlExit = $LASTEXITCODE
-        Write-Host "HTTP: $httpStatus | curl exit: $curlExit"
-
-        if ($curlExit -ne 0) {
-            $failures += "$t : curl exit $curlExit (transport failure)"
-            continue
-        }
-
-        # Status must be 401 or 403
-        if ($httpStatus -notin @("401", "403")) {
-            $failures += "$t : unexpected HTTP $httpStatus (expected 401/403)"
-            continue
-        }
-
-        # Content-Range must be absent
-        $headerText = Get-Content $headersFile -Raw
-        if ($headerText -match "(?i)Content-Range:") {
-            $failures += "$t : Content-Range header present"
-        }
-
-        # Body must not contain a JSON array of rows
-        # Sanitized check only; do not print body to terminal
-        $bodyText = Get-Content $bodyFile -Raw -ErrorAction SilentlyContinue
-        if ($bodyText -match '^\s*\[\s*\{\s*"id"') {
-            $failures += "$t : body appears to contain row data (id fields present)"
-        }
-
-        # Sanitized summary only
-        $bodyPreview = if ($bodyText) {
-            $trimmed = $bodyText.Trim()
-            if ($trimmed.Length -gt 120) { $trimmed.Substring(0, 120) + "..." } else { $trimmed }
-        } else { "(empty)" }
-        Write-Host "  Body preview (first 120 chars): $bodyPreview"
-        Write-Host "  Content-Range header present: $([bool]($headerText -match '(?i)Content-Range:'))"
-        Write-Host ""
-    }
-}
-finally {
-    if ($bstr -and $bstr -ne [IntPtr]::Zero) {
-        [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
-    }
-    $anonKey = $null
-    [System.GC]::Collect()
-}
-
-if ($failures.Count -gt 0) {
-    Write-Host "FAILURES:" -ForegroundColor Red
-    $failures | ForEach-Object { Write-Host " - $_" -ForegroundColor Red }
-    exit 1
-} else {
-    Write-Host "ALL ANON PROBES PASSED (401/403, no Content-Range, no row-shaped body)" -ForegroundColor Green
-    exit 0
-}
+powershell -ExecutionPolicy Bypass -File .\anon-http-probe-prod.ps1 -Mode post
+# post-containment
 ```
 
-**Run:**
-```powershell
-cd C:\Users\Aashir\Projects\evidence-phase1\phase10-corrections
-powershell -ExecutionPolicy Bypass -File .\anon-http-probe.ps1
-```
+### Classification Matrix (Mode-Aware)
 
-**Pass criteria:**
-- Script exit code = 0
-- Each table: HTTP 401 or 403
-- No `Content-Range` header in any response
+| HTTP | `sb-error-code` | Content-Range | Mode | Classification | Exit |
+|---|---|---|---|---|---:|
+| 200 / 206 | — | Present (anon SELECT) | `pre` | `EXPECTED_PRE_CONTAINMENT_EXPOSURE` | 0 |
+| 200 / 206 | — | Any | `post` | `CRITICAL_LEAK` | 10 |
+| 403 | — | Absent | `post` | `EXPECTED_DENIAL` (RLS blocked) | 0 |
+| 403 | — | Absent | `pre` | `UNEXPECTED_PRE_CONTAINMENT_DENIAL` | 11 |
+| 401 | `UNAUTHORIZED_INVALID_API_KEY` | Any | `pre` / `post` | `PROBE_FAILED` (invalid API key) | 11 |
+| 401 | Any other value / absent | Any | `pre` / `post` | `PROBE_FAILED` (auth error) | 11 |
+| Any 2xx | — | Present + row-shaped body (`[\s*{\s*"id"`) | Any | `CRITICAL_DATA_LEAK` | 10 |
+| — | — | — | Any | Curl transport non-zero | 11 (`PROBE_FAILED`) |
+
+**Exit codes:**
+
+- `0` = clean
+- `10` = critical leak
+- `11` = probe failed
+
+### Evidence Output
+
+`d2-prod-probe-<mode>-<UTC>.json`
+
+Sanitized fields:
+
+- Mode
+- HTTP status per table
+- Content-Range presence and truncated value
+- Body length
+- Body shape (never raw content)
+- Anon key SHA256 first-8 (never full key)
+- Classification per table
+
+### Lesson Learned (Wave 6B First Attempt, 2026-10-17T10-46-04Z)
+
+The pre-fix probe treated `401` (invalid/expired key) and `403` (RLS denial) identically as `EXPECTED_PRE_CONTAINMENT_DENIAL`. An invalid legacy anon key produced three `401` responses that were misclassified as passing.
+
+Root cause: no `sb-error-code` header inspection and no mode awareness.
+
+The `-Mode` parameter and `sb-error-code` check added in Phase 11 Wave 7 B2 prevent recurrence:
+
+- Invalid-key `401` is now `PROBE_FAILED` (exit 11).
+- Mode disambiguates `200/206` (exposure vs. leak) and `403` (unexpected vs. denial).
+
+### Pass Criteria — Pre-Containment Mode (Wave 6B Baseline)
+
+- Script exit code = `0`
+- Each table: HTTP `200` or `206` with `Content-Range` present (anon SELECT confirmed)
+- Body shape: `[]` — no row data returned (via `limit=0`)
+- No `UNAUTHORIZED_INVALID_API_KEY` in any response
+
+### Pass Criteria — Post-Containment Mode (Wave 7 Post-Execution)
+
+- Script exit code = `0`
+- Each table: HTTP `403` (RLS denial)
+- No `Content-Range` header
 - No row-shaped body
+- No `UNAUTHORIZED_INVALID_API_KEY` in any response
 
-Recorded:
-- Script exit code: ___________
-- Subscription: HTTP ___ | Content-Range ___
-- Notification: HTTP ___ | Content-Range ___
-- PaymentProof: HTTP ___ | Content-Range ___
-- Failures array (empty = pass): ___________
+### Recorded — Wave 6B Pre-Containment Baseline (2026-10-17T11-18-09Z)
+
+- **Evidence:** `evidence/wave6/d2-prod-probe-2026-10-17T11-18-09Z.json`
+- **Anon key fingerprint:** `4b07cb15` (publishable key)
+- **Subscription:** HTTP `206` | Content-Range `*/2` | Body `[]`
+- **Notification:** HTTP `206` | Content-Range `*/21` | Body `[]`
+- **PaymentProof:** HTTP `200` | Content-Range `*/0` | Body `[]`
+
+**Note:** This run's JSON was produced by the **pre-fix** script; classifications in that file are labeled via the buggy 401/403 logic. The corrected script (Part 2 of B2) will produce a fresh run with accurate labels.
+
+### Recorded — Invalid-Key Negative Test (To Be Generated Wave 7 B2)
+
+- **Evidence:** `evidence/wave6/d2-prod-probe-invalid-<UTC>.json`
+- **Purpose:** Prove the fix correctly classifies invalid-key `401` as `PROBE_FAILED`.
+- **Expected:** 3 × `PROBE_FAILED`, exit `11`, `sb-error-code=UNAUTHORIZED_INVALID_API_KEY` recorded per table.
+
+### Recorded — Post-Containment (Fill After Phase A Execution Approval)
+
+- **Evidence:** `evidence/wave6/d2-prod-probe-post-<UTC>.json`
+- **Expected:** 3 × `EXPECTED_DENIAL` (HTTP 403), exit `0`.
 
 ---
 

@@ -1,20 +1,34 @@
 # ==================================================================
-# Wave 6B - Production anon HTTP probe (PRE-containment baseline)
+# Phase 11 Wave 7 B2 - Production anon HTTP probe (mode-aware)
 # Read-only. No row data captured. Key never logged.
+# Distinguishes PROBE_FAILED (invalid/expired key, 401, transport)
+# from EXPECTED_DENIAL (403 in post-containment mode) and from
+# CRITICAL_LEAK (2xx in post-mode, or rows returned despite limit=0).
 # ==================================================================
+param(
+    [Parameter(Mandatory = $false)]
+    [ValidateSet("pre", "post")]
+    [string]$Mode = "pre"
+)
+
 $ErrorActionPreference = "Stop"
 
 $base = "https://wqwsagnxkamblnefhpzx.supabase.co/rest/v1"
 $tables = @("Subscription", "Notification", "PaymentProof")
 $utc = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH-mm-ssZ")
-$outDir = "C:\Users\Aashir\Projects\evidence-phase1\phase11-corrections\wave6-test-evidence"
+
+# Portable output directory: next to the script.
+$scriptDir = if ($PSScriptRoot) { $PSScriptRoot } else { (Get-Location).Path }
+$outDir = $scriptDir
 New-Item -ItemType Directory -Force -Path $outDir | Out-Null
-$outJson = "$outDir\d2-prod-probe-$utc.json"
-$outSha  = "$outDir\d2-prod-probe-$utc.sha256"
+$outJson = Join-Path $outDir "d2-prod-probe-$Mode-$utc.json"
+$outSha  = Join-Path $outDir "d2-prod-probe-$Mode-$utc.sha256"
 
 Write-Host "===============================================" -ForegroundColor Cyan
-Write-Host "Wave 6B - Production anon HTTP probe (read-only)" -ForegroundColor Cyan
+Write-Host "Phase 11 W7 B2 - Production anon HTTP probe (read-only)" -ForegroundColor Cyan
+Write-Host "Mode:   $Mode" -ForegroundColor Cyan
 Write-Host "Target: $base" -ForegroundColor Cyan
+Write-Host "Output: $outJson" -ForegroundColor Cyan
 Write-Host "===============================================" -ForegroundColor Cyan
 
 # ---- Pre-flight ----
@@ -23,7 +37,7 @@ $preflightCode = curl.exe -sS -o NUL -w "%{http_code}" "$base/"
 Write-Host "  Pre-flight HTTP: $preflightCode"
 if (-not $preflightCode -or $preflightCode -eq "000") {
     Write-Host "  Endpoint unreachable - STOP (PROBE_FAILED)" -ForegroundColor Red
-    exit 2
+    exit 11
 }
 
 # ---- Anon key (hidden, never logged) ----
@@ -48,17 +62,25 @@ try {
     Write-Host "`n[3/4] Probing tables..." -ForegroundColor Yellow
     foreach ($t in $tables) {
         Write-Host "`n  === $t ===" -ForegroundColor Cyan
-        $hf = "$env:TEMP\prod-probe-$t-headers.txt"
-        $bf = "$env:TEMP\prod-probe-$t-body.json"
+        $hf = "$env:TEMP\prod-probe-$Mode-$t-headers.txt"
+        $bf = "$env:TEMP\prod-probe-$Mode-$t-body.json"
         Remove-Item $hf,$bf -ErrorAction SilentlyContinue
 
-        $url = "$base/$t`?select=id`&limit=0"
+        # Explicit ${t} interpolation - avoids $t? parsing ambiguity
+        $url = "$base/${t}?select=id&limit=0"
         $httpStatus = curl.exe -s -S -D $hf -o $bf -w "%{http_code}" -X GET $url -H "apikey: $anonKey" -H "Authorization: Bearer $anonKey" -H "Prefer: count=exact"
         $curlExit = $LASTEXITCODE
 
         $hdr = if (Test-Path $hf) { Get-Content $hf -Raw } else { "" }
         $bytes = if (Test-Path $bf) { [System.IO.File]::ReadAllBytes($bf) } else { @() }
         $len = if ($bytes) { $bytes.Length } else { 0 }
+
+        # sb-error-code header (Supabase gateway)
+        $sbErrCode = "(absent)"
+        $sbErrMatch = [regex]::Match($hdr, "(?im)^sb-error-code:\s*(.+)$")
+        if ($sbErrMatch.Success) {
+            $sbErrCode = $sbErrMatch.Groups[1].Value.Trim()
+        }
 
         $crPresent = ($hdr -match "(?i)Content-Range:") -as [bool]
         $crValue = "(absent)"
@@ -72,11 +94,12 @@ try {
 
         # Body shape (sanitized)
         $shape = "empty"
+        $rowCount = 0
         if ($len -gt 0 -and (Test-Path $bf)) {
             $txt = [System.Text.Encoding]::UTF8.GetString($bytes).Trim()
             if ($txt.StartsWith("[")) {
-                $rows = ([regex]::Matches($txt, '\{"')).Count
-                $shape = "JSON array, $rows row(s)"
+                $rowCount = ([regex]::Matches($txt, '\{"')).Count
+                $shape = "JSON array, $rowCount row(s)"
             } elseif ($txt.StartsWith("{")) {
                 $keys = ([regex]::Matches($txt, '"[a-zA-Z_]+\s*:')).Count
                 $shape = "JSON object, $keys key(s)"
@@ -85,69 +108,108 @@ try {
             }
         }
 
-        # Classification
+        # ---- Mode-aware classification ----
         $cls = "UNKNOWN"
         $leak = $false
-        if ($curlExit -ne 0) { 
+        $failed = $false
+
+        if ($curlExit -ne 0) {
             $cls = "PROBE_FAILED (curl exit $curlExit)"
-            $failedCount++ 
+            $failed = $true
         }
-        elseif ($httpStatus -eq "401" -or $httpStatus -eq "403") { 
-            $cls = "EXPECTED_PRE_CONTAINMENT_DENIAL (unexpected for pre-state)" 
+        elseif ($sbErrCode -match "(?i)UNAUTHORIZED_INVALID_API_KEY") {
+            $cls = "PROBE_FAILED (invalid API key: sb-error-code=$sbErrCode)"
+            $failed = $true
         }
-        elseif ($httpStatus -eq "200" -and $shape -match "0 row") { 
-            $cls = "EXPECTED_PRE_CONTAINMENT_EXPOSURE (200, 0 rows via limit=0)"
-            $leak = $false 
+        elseif ($httpStatus -eq "401") {
+            $cls = "PROBE_FAILED (401 auth error; sb-error-code=$sbErrCode)"
+            $failed = $true
         }
-        elseif ($httpStatus -eq "200" -and $shape -match "[1-9][0-9]* row") { 
-            $cls = "CRITICAL_DATA_LEAK (200 with actual row data)"
-            $leak = $true
-            $criticalCount++ 
+        elseif ($httpStatus -eq "403") {
+            if ($Mode -eq "post") {
+                $cls = "EXPECTED_DENIAL (RLS blocked, valid auth)"
+            } else {
+                $cls = "UNEXPECTED_PRE_CONTAINMENT_DENIAL (403 in pre-mode)"
+                $failed = $true
+            }
         }
-        elseif ($httpStatus -eq "200") { 
-            $cls = "UNEXPECTED_200 ($shape)" 
+        elseif ($httpStatus -eq "200" -or $httpStatus -eq "206") {
+            if ($Mode -eq "post") {
+                # Any 2xx in post-containment mode = anon reached the table
+                if ($crPresent -or $rowCount -gt 0) {
+                    $cls = "CRITICAL_LEAK (2xx in post-mode with data indicator)"
+                } else {
+                    $cls = "CRITICAL_LEAK (2xx in post-mode; anon reached endpoint)"
+                }
+                $leak = $true
+            } else {
+                # Pre-containment mode
+                if ($rowCount -gt 0) {
+                    $cls = "CRITICAL_DATA_LEAK (rows returned despite limit=0)"
+                    $leak = $true
+                } elseif ($crPresent) {
+                    $cls = "EXPECTED_PRE_CONTAINMENT_EXPOSURE (2xx + CR, limit=0 empty)"
+                } else {
+                    $cls = "UNEXPECTED_2XX_NO_CR (2xx without Content-Range; investigate)"
+                    $failed = $true
+                }
+            }
         }
-        else { 
-            $cls = "UNEXPECTED_HTTP_$httpStatus" 
+        else {
+            $cls = "UNEXPECTED_HTTP_$httpStatus"
+            $failed = $true
         }
 
-        Write-Host "  HTTP: $httpStatus | curl exit: $curlExit"
+        if ($leak) { $criticalCount++ }
+        if ($failed) { $failedCount++ }
+
+        Write-Host "  HTTP: $httpStatus | curl exit: $curlExit | sb-error-code: $sbErrCode"
         Write-Host "  Content-Range: $crValue"
         Write-Host "  Body length: $len bytes"
         Write-Host "  Body shape: $shape"
-        Write-Host "  Classification: $cls" -ForegroundColor $(if ($leak) { "Red" } else { "Yellow" })
+        Write-Host "  Classification: $cls" -ForegroundColor $(if ($leak -or $failed) { "Red" } else { "Green" })
 
         $results += [pscustomobject]@{
             table                 = $t
             url                   = $url
             http_status           = $httpStatus
             curl_exit             = $curlExit
+            sb_error_code         = $sbErrCode
             content_range_present = $crPresent
             content_range_value   = $crValue
             body_length_bytes     = $len
             body_shape            = $shape
             classification        = $cls
             critical_leak         = $leak
+            probe_failed          = $failed
         }
     }
 
     # ---- Write sanitized JSON ----
     Write-Host "`n[4/4] Writing sanitized evidence..." -ForegroundColor Yellow
     $summary = [pscustomobject]@{
-        wave                    = "6B"
-        generated_utc           = $utc
-        target_base             = $base
-        probe_mode              = "PRE-containment baseline (read-only)"
-        anon_key_sha256_first8  = $anonFp
-        preflight_http_code     = $preflightCode
-        sanitization_captured   = @("http_status","content_range_presence","content_range_value_truncated_30","body_length_bytes","body_shape")
+        wave                      = "11-W7-B2"
+        generated_utc             = $utc
+        mode                      = $Mode
+        target_base               = $base
+        anon_key_sha256_first8    = $anonFp
+        preflight_http_code       = $preflightCode
+        classification_matrix     = @{
+            "2xx+CR+pre"          = "EXPECTED_PRE_CONTAINMENT_EXPOSURE"
+            "2xx+any+post"        = "CRITICAL_LEAK"
+            "403+post"            = "EXPECTED_DENIAL"
+            "403+pre"             = "UNEXPECTED_PRE_CONTAINMENT_DENIAL"
+            "401+any"             = "PROBE_FAILED"
+            "sb-error-code=UNAUTHORIZED_INVALID_API_KEY" = "PROBE_FAILED"
+        }
+        sanitization_captured     = @("http_status","sb_error_code","content_range_presence","content_range_value_truncated_30","body_length_bytes","body_shape")
         sanitization_not_captured = @("raw_row_data","anon_key_value","full_body")
-        tables                  = $results
-        escalation_protocol     = "If any table shows CRITICAL_DATA_LEAK: manual WhatsApp to expert with this JSON"
+        tables                    = $results
+        escalation_protocol       = "If CRITICAL_DATA_LEAK: manual WhatsApp to expert with this JSON"
     }
     $summary | ConvertTo-Json -Depth 10 | Out-File $outJson -Encoding utf8
     $jsonHash = (Get-FileHash $outJson -Algorithm SHA256).Hash
-    "$jsonHash  d2-prod-probe-$utc.json" | Out-File $outSha -Encoding ascii
+    "$jsonHash  $(Split-Path -Leaf $outJson)" | Out-File $outSha -Encoding ascii
 
     Write-Host "  Evidence JSON: $outJson"
     Write-Host "  Evidence SHA:  $outSha"
@@ -156,9 +218,10 @@ try {
     Write-Host "`n===============================================" -ForegroundColor Cyan
     Write-Host "PROBE COMPLETE" -ForegroundColor Cyan
     Write-Host "===============================================" -ForegroundColor Cyan
+    Write-Host "Mode: $Mode"
     Write-Host "Anon key fingerprint: $anonFp"
     Write-Host "Pre-flight HTTP: $preflightCode"
-    $results | Format-Table -Property table, http_status, body_shape, classification -AutoSize
+    $results | Format-Table -Property table, http_status, sb_error_code, body_shape, classification -AutoSize
 
     if ($criticalCount -gt 0) {
         Write-Host "`n*** CRITICAL_DATA_LEAK DETECTED - $criticalCount table(s) ***" -ForegroundColor Red
