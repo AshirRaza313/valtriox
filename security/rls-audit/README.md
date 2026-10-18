@@ -121,9 +121,9 @@ psql -d pg17test2 -f pg17-fixtures-v2.sql
 # 3. Run JIT baseline queries (pre-containment)
 psql -d pg17test2 -f evidence/wave6/jit-baseline.sql
 
-# 4. Verify fail-closed DO block behavior (SELECT granted)
-psql -d pg17test2 -v ON_ERROR_STOP=0 -f evidence/wave6/do-block-probe.sql
-# Expect: 3× ERROR "SELECT SUCCEEDED -- FAIL; cleanup_user=postgres"
+# 4. Verify fail-closed DO block behavior (SELECT granted) — fail-succeeded path
+powershell -File evidence/wave6/run-do-block-probe.ps1 -Mode pre
+# Expect: 3 blocks, each exit=3 (psql script error w/ ON_ERROR_STOP=1), 1 ERROR per block, runner PASS (exit 0)
 
 # 5. Apply containment
 psql -d pg17test2 -f evidence/wave6/containment-v3-copy.sql
@@ -131,9 +131,9 @@ psql -d pg17test2 -f evidence/wave6/containment-v3-copy.sql
 # 6. Run post-verification queries (post-containment)
 psql -d pg17test2 -f evidence/wave6/pv-verify.sql
 
-# 7. Verify fail-closed DO block behavior (SELECT revoked)
-psql -d pg17test2 -f evidence/wave6/do-block-probe.sql
-# Expect: 3× NOTICE "SQLSTATE=42501 -- PASS; cleanup_user=postgres"
+# 7. Verify fail-closed DO block behavior (SELECT revoked) — pass path
+powershell -File evidence/wave6/run-do-block-probe.ps1 -Mode post
+# Expect: 3 blocks, each exit=0 (clean), 1 NOTICE per block, runner PASS (exit 0)
 ```
 
 Expected outputs are in `evidence/wave6/step*.log`. Any mismatch

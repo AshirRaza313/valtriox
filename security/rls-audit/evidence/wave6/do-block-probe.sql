@@ -1,5 +1,5 @@
 -- DO-block fail-closed probes (v6 §5.1-5.3)
--- Run with: psql -v ON_ERROR_STOP=0 -f do-block-probe.sql
+-- Run via: run-do-block-probe.ps1 -Mode pre|post  (per-block, ON_ERROR_STOP=1)
 -- Step 3 (pre-containment):  expect 3× ERROR "SELECT SUCCEEDED -- FAIL"
 -- Step 6 (post-containment): expect 3× NOTICE "SQLSTATE=42501 -- PASS; cleanup_user=postgres"
 
