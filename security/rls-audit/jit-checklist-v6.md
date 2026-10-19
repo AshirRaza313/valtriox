@@ -366,12 +366,12 @@ ORDER BY r.rolname;
 
 **Required analysis (OUTBOUND):**
 
-For every role where `anon_can_set = true` or `auth_can_set = true`, correlate:
+For every role where `anon_can_set = true`, `auth_can_set = true`, `anon_can_use = true`, or `auth_can_use = true`, correlate:
 - That role's table privileges on Phase A tables
 - That role's column privileges on Phase A target columns
 - Whether that path could re-expose revoked access
 
-**Stop condition:** Any outbound path from anon/authenticated to a role that holds Phase A privileges → STOP + investigate. (Note: `USAGE` is weaker than `SET`; treat `SET` paths as authoritative for this audit.)
+**Stop condition:** Any outbound SET or USAGE path from anon/authenticated to a role that holds Phase A privileges → STOP + investigate. These are orthogonal risk paths per PostgreSQL `pg_has_role` docs: `SET` = ability to `SET ROLE` to the target (requires `set_option`); `USAGE` = implicit privilege inheritance without `SET ROLE` (requires `inherit_option`). Neither implies the other.
 
 Recorded: ___________
 

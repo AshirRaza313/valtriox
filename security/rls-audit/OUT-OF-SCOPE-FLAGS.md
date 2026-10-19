@@ -15,9 +15,9 @@ This file documents observations and follow-up items surfaced during the Phase 1
 
 ## Flag 1 — Production app may be using deprecated legacy anon key
 
-**Observation:** During Wave 6B (D2 probe), the Supabase API gateway rejected the project's legacy `anon` JWT key with `sb-error-code: UNAUTHORIZED_INVALID_API_KEY`. The publishable key (`sb_publishable_...`) worked as expected (206/200, pre-containment baseline confirmed).
+**Observation:** During Wave 6B (D2 probe), the Supabase API gateway rejected the dashboard-displayed `anon` key with `sb-error-code: UNAUTHORIZED_INVALID_API_KEY`. The publishable key (`sb_publishable_...`) worked as expected (206/200, pre-containment baseline confirmed).
 
-**Root cause:** Supabase deprecated legacy anon/service_role JWT keys. The publishable key is the official replacement and maps to the same `anon` Postgres role.
+**Root cause: UNVERIFIED.** The dashboard-displayed key was rejected by the gateway with `sb-error-code: UNAUTHORIZED_INVALID_API_KEY`, while the publishable key (`sb_publishable_...`) succeeded on the same tables. Candidate causes include Supabase legacy-key deprecation (documented migration path), project-specific JWT key rotation, or a gateway policy change. Primary evidence at audit time does not confirm which cause applies to this specific rejection.
 
 **Potential impact (UNVERIFIED):** If the production Vercel deployment uses `NEXT_PUBLIC_SUPABASE_ANON_KEY` set to a legacy value, end-user requests could be returning 401. This is a **separate incident** from the RLS audit.
 
