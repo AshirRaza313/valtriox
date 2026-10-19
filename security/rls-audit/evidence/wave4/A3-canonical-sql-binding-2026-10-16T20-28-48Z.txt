@@ -1,5 +1,6 @@
 # Wave 4 (A3) - Canonical SQL Binding Report
 # Generated (UTC): 2026-10-16T20-28-48Z
+# Updated (UTC): 2026-10-19T15:56:22Z
 # Repository: C:\Users\Aashir\Projects\valtriox-trackb
 # Branch: security/rls-audit-containment-v1
 
@@ -17,15 +18,21 @@ phase-a-rollback-v2.sql
   Expected (manifest v5): 8CEDA08FAA167F39CA9E0778D44F1661C9FF987143FB2E4AFC0A498ED8787E4D
   Match:                  True
 
-## 2. Remote SHA Binding (frozen Wave 3.5)
+## 2. Remote SHA Binding (re-bound at B4 fix)
 
 Main base (origin/main):                    bebd61f4c971dafdf42aa3fee7b97bde8203feea
-PR branch (origin/security/rls-audit-...):  f9c400b30df920d3096490b09bdaaf46c69ddced
-Local HEAD:                                 f9c400b30df920d3096490b09bdaaf46c69ddced
+PR branch (origin/security/rls-audit-...):  1e7c39886a53991d98fc8810b48daf7ef7f8d330
+Local HEAD:                                 1e7c39886a53991d98fc8810b48daf7ef7f8d330
 Ahead/behind (HEAD vs origin):              0	0
 
 PR #17 metadata (via gh api):
-{"base":"bebd61f4c971dafdf42aa3fee7b97bde8203feea","base_ref":"main","head":"f9c400b30df920d3096490b09bdaaf46c69ddced","number":17,"state":"open","url":"https://github.com/AshirRaza313/valtriox/pull/17"}
+{"base":"bebd61f4c971dafdf42aa3fee7b97bde8203feea","base_ref":"main","head":"1e7c39886a53991d98fc8810b48daf7ef7f8d330","number":17,"state":"open","url":"https://github.com/AshirRaza313/valtriox/pull/17"}
+
+Deployment environment:  Preview (Vercel)
+Production deployment:   None for this branch (verified via gh api
+                         repos/AshirRaza313/valtriox/deployments -
+                         all entries environment='Preview' as of 2026-10-19T15:56:22Z)
+Latest Preview deployment (1e7c398): id=7161196726, 2026-10-18T21:44:32Z
 
 ## 3. Target Project Binding
 
@@ -81,15 +88,15 @@ As of 2026-10-16T20-28-48Z:
 
 ## 7. Wave 4 Evidence Anchoring
 
-Frozen PR #17 head SHA: f9c400b30df920d3096490b09bdaaf46c69ddced
+Frozen PR #17 head SHA: 1e7c39886a53991d98fc8810b48daf7ef7f8d330
 All Wave 4 evidence binds to this commit.
-Any subsequent commit to PR #17 invalidates this binding.
+This binding is per-commit; any subsequent commit to PR #17 advances the head SHA and requires re-binding.
 
 ## 8. Cross-References
 
 - PR #17 (dedicated security): https://github.com/AshirRaza313/valtriox/pull/17
 - PR #13 (historical, frontend): https://github.com/AshirRaza313/valtriox/pull/13
-- Manifest v5: bundle-manifest-v5.txt
+- Manifest v6: bundle-manifest-v6.txt
 - Wave 1 evidence: ../wave1-identity/
 - Wave 2 evidence: ../wave2-manifest-integrity/
 
