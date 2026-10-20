@@ -8,12 +8,15 @@
 param(
     [Parameter(Mandatory = $false)]
     [ValidateSet("pre", "post")]
-    [string]$Mode = "pre"
+    [string]$Mode = "pre",
+
+    [Parameter(Mandatory = $false)]
+    [string]$Base = $null
 )
 
 $ErrorActionPreference = "Stop"
 
-$base = "https://wqwsagnxkamblnefhpzx.supabase.co/rest/v1"
+$base = if ($Base) { $Base } else { "https://wqwsagnxkamblnefhpzx.supabase.co/rest/v1" }
 $tables = @("Subscription", "Notification", "PaymentProof")
 $utc = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH-mm-ssZ")
 
@@ -42,7 +45,11 @@ if (-not $preflightCode -or $preflightCode -eq "000") {
 
 # ---- Anon key (hidden, never logged) ----
 Write-Host "`n[2/4] Anon key input" -ForegroundColor Yellow
-$anonKeySecure = Read-Host "Paste anon key (hidden)" -AsSecureString
+$anonKeySecure = if ($env:VLTX_PROBE_TEST_KEY) {
+    ConvertTo-SecureString -String $env:VLTX_PROBE_TEST_KEY -AsPlainText -Force
+} else {
+    Read-Host "Paste anon key (hidden)" -AsSecureString
+}
 $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($anonKeySecure)
 $anonKey = $null
 $anonFp  = $null
@@ -101,11 +108,22 @@ try {
                 $rowCount = ([regex]::Matches($txt, '\{"')).Count
                 $shape = "JSON array, $rowCount row(s)"
             } elseif ($txt.StartsWith("{")) {
-                $keys = ([regex]::Matches($txt, '"[a-zA-Z_]+\s*:')).Count
+                $keys = ([regex]::Matches($txt, '"[a-zA-Z_]+"\s*:')).Count
                 $shape = "JSON object, $keys key(s)"
             } else {
                 $shape = "non-JSON (len=$($txt.Length))"
             }
+        }
+
+        # ---- Additional post-mode 403 body inspection ----
+        $bodyIsJson    = $false
+        $bodyDbPermErr = $false
+        $bodyRaw       = if ($len -gt 0 -and (Test-Path $bf)) { [System.Text.Encoding]::UTF8.GetString($bytes).Trim() } else { "" }
+        if ($bodyRaw.Length -gt 0) {
+            $firstChar = $bodyRaw.Substring(0,1)
+            if ($firstChar -eq "{" -or $firstChar -eq "[") { $bodyIsJson = $true }
+            if ($bodyRaw -match '"code"\s*:\s*"42501"')                          { $bodyDbPermErr = $true }
+            elseif ($bodyRaw -match 'permission denied for (table|relation|sequence)') { $bodyDbPermErr = $true }
         }
 
         # ---- Mode-aware classification ----
@@ -121,15 +139,29 @@ try {
             $cls = "PROBE_FAILED (invalid API key: sb-error-code=$sbErrCode)"
             $failed = $true
         }
-        elseif ($httpStatus -eq "401") {
-            $cls = "PROBE_FAILED (401 auth error; sb-error-code=$sbErrCode)"
-            $failed = $true
-        }
-        elseif ($httpStatus -eq "403") {
+        elseif ($httpStatus -eq "401" -or $httpStatus -eq "403") {
             if ($Mode -eq "post") {
-                $cls = "EXPECTED_DENIAL (RLS blocked, valid auth)"
+                if ($crPresent) {
+                    $cls = "CRITICAL_LEAK ($httpStatus with Content-Range present)"
+                    $leak = $true
+                }
+                elseif ($bodyDbPermErr) {
+                    $cls = "EXPECTED_DENIAL_DB_PERM ($httpStatus + PostgreSQL permission error in body)"
+                }
+                elseif (-not $bodyIsJson) {
+                    $cls = "PROBE_FAILED_NON_JSON_403 ($httpStatus + non-JSON body)"
+                    $failed = $true
+                }
+                else {
+                    $cls = "PROBE_FAILED_GATEWAY_403 ($httpStatus + JSON body, no pg error)"
+                    $failed = $true
+                }
             } else {
-                $cls = "UNEXPECTED_PRE_CONTAINMENT_DENIAL (403 in pre-mode)"
+                if ($httpStatus -eq "401") {
+                    $cls = "PROBE_FAILED (401 auth error in pre-mode; sb-error-code=$sbErrCode)"
+                } else {
+                    $cls = "UNEXPECTED_PRE_CONTAINMENT_DENIAL (403 in pre-mode)"
+                }
                 $failed = $true
             }
         }
@@ -178,7 +210,9 @@ try {
             content_range_present = $crPresent
             content_range_value   = $crValue
             body_length_bytes     = $len
-            body_shape            = $shape
+            body_shape               = $shape
+            body_is_json             = $bodyIsJson
+            body_db_permission_error = $bodyDbPermErr
             classification        = $cls
             critical_leak         = $leak
             probe_failed          = $failed
@@ -197,9 +231,16 @@ try {
         classification_matrix     = @{
             "2xx+CR+pre"          = "EXPECTED_PRE_CONTAINMENT_EXPOSURE"
             "2xx+any+post"        = "CRITICAL_LEAK"
-            "403+post"            = "EXPECTED_DENIAL"
+            "401+post+pg_perm_err"   = "EXPECTED_DENIAL_DB_PERM"
+            "401+post+no_pg_perm"    = "PROBE_FAILED_GATEWAY_403"
+            "401+post+non_json"      = "PROBE_FAILED_NON_JSON_403"
+            "401+post+cr_present"    = "CRITICAL_LEAK"
+            "403+post+pg_perm_err"   = "EXPECTED_DENIAL_DB_PERM"
+            "403+post+no_pg_perm"    = "PROBE_FAILED_GATEWAY_403"
+            "403+post+non_json"      = "PROBE_FAILED_NON_JSON_403"
+            "403+post+cr_present"    = "CRITICAL_LEAK"
             "403+pre"             = "UNEXPECTED_PRE_CONTAINMENT_DENIAL"
-            "401+any"             = "PROBE_FAILED"
+            "401+pre"             = "PROBE_FAILED"
             "sb-error-code=UNAUTHORIZED_INVALID_API_KEY" = "PROBE_FAILED"
         }
         sanitization_captured     = @("http_status","sb_error_code","content_range_presence","content_range_value_truncated_30","body_length_bytes","body_shape")
@@ -207,7 +248,7 @@ try {
         tables                    = $results
         escalation_protocol       = "If CRITICAL_DATA_LEAK: manual WhatsApp to expert with this JSON"
     }
-    $summary | ConvertTo-Json -Depth 10 | Out-File $outJson -Encoding utf8
+    [System.IO.File]::WriteAllText($outJson, ($summary | ConvertTo-Json -Depth 10), [System.Text.UTF8Encoding]::new($false))
     $jsonHash = (Get-FileHash $outJson -Algorithm SHA256).Hash
     "$jsonHash  $(Split-Path -Leaf $outJson)" | Out-File $outSha -Encoding ascii
 
