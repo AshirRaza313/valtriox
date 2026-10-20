@@ -25,7 +25,16 @@ param(
     [string]$Mode = "pre",
 
     [Parameter(Mandatory = $false)]
-    [string]$Database = "pg17test2"
+    [string]$Database = "pg17test2",
+
+    [Parameter(Mandatory = $false)]
+    [ValidateScript({
+        if ($_ -eq '') { return $true }
+        if (-not (Test-Path -LiteralPath $_ -PathType Leaf)) { throw "SqlPath not found: $_" }
+        if ([System.IO.Path]::GetExtension($_) -ne '.sql') { throw "SqlPath must be .sql: $_" }
+        return $true
+    })]
+    [string]$SqlPath = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -35,7 +44,13 @@ Remove-Variable lines, markers, blocks, results, output, exitCode, logLines, out
 
 # --- Absolute paths ---
 $scriptDir = if ($PSScriptRoot) { $PSScriptRoot } else { (Get-Location).Path }
-$sqlAbs    = Join-Path $scriptDir "do-block-probe.sql"
+$sqlAbs = if (-not $SqlPath) {
+    Join-Path $scriptDir "do-block-probe.sql"
+} elseif ([System.IO.Path]::IsPathRooted($SqlPath)) {
+    $SqlPath
+} else {
+    Join-Path $scriptDir $SqlPath
+}
 $utc       = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH-mm-ssZ")
 
 $logName   = if ($Mode -eq "pre") { "step3-do-fail-succeeded.log" } else { "step6-do-pass.log" }
@@ -52,9 +67,13 @@ Write-Host "Log:      $logAbs" -ForegroundColor Cyan
 Write-Host "JSON:     $jsonAbs" -ForegroundColor Cyan
 Write-Host "===============================================" -ForegroundColor Cyan
 
-# --- Sanity: SQL file exists ---
+# --- Sanity: SQL file exists + is .sql ---
 if (-not (Test-Path -LiteralPath $sqlAbs -PathType Leaf)) {
     Write-Host "STOP: SQL file not found: $sqlAbs" -ForegroundColor Red
+    exit 2
+}
+if ([System.IO.Path]::GetExtension($sqlAbs) -ne '.sql') {
+    Write-Host "STOP: SQL file must be .sql: $sqlAbs" -ForegroundColor Red
     exit 2
 }
 
@@ -115,8 +134,28 @@ function ConvertTo-WslPath([string]$winPath) {
 # intentionally raises exactly 1 SQL ERROR per block, so with
 # ON_ERROR_STOP=1 psql stops and exits 3 -- NOT 1.
 $expect = switch ($Mode) {
-    "pre"  { [pscustomobject]@{ Exit = 3; Errors = 1; Notices = 0; Note = "fail-succeeded (SELECT granted); exit 3 (psql: script error w/ ON_ERROR_STOP=1) + 1 ERROR per block" } }
-    "post" { [pscustomobject]@{ Exit = 0; Errors = 0; Notices = 1; Note = "pass (containment applied); exit 0 + 0 ERROR + 1 NOTICE per block" } }
+    "pre"  {
+        [pscustomobject]@{
+            Exit           = 3
+            Errors         = 1
+            Notices        = 0
+            ExpectErrPart1 = "SELECT SUCCEEDED with count="
+            ExpectErrPart2 = "-- FAIL (SELECT privilege still active); cleanup_user=postgres"
+            ExpectNotice   = $null
+            Note           = "fail-succeeded; exit 3 + 1 ERROR + SELECT-SUCCEEDED pattern"
+        }
+    }
+    "post" {
+        [pscustomobject]@{
+            Exit           = 0
+            Errors         = 0
+            Notices        = 1
+            ExpectErrPart1 = $null
+            ExpectErrPart2 = $null
+            ExpectNotice   = "SQLSTATE=42501 -- PASS; cleanup_user=postgres"
+            Note           = "pass; exit 0 + 0 ERROR + 1 NOTICE"
+        }
+    }
 }
 
 # --- Run each block ---
@@ -149,9 +188,35 @@ for ($i = 0; $i -lt $blocks.Count; $i++) {
     $errCount    = ([regex]::Matches($outputText, '(?m)^(psql:.*)?ERROR:\s')).Count
     $noticeCount = ([regex]::Matches($outputText, '(?m)^(psql:.*)?NOTICE:\s')).Count
 
+    # B3 v2: message content verification
+    $firstErrLine    = ($outputText -split "`n" | Where-Object { $_ -match 'ERROR:' }   | Select-Object -First 1) -join ''
+    $firstNoticeLine = ($outputText -split "`n" | Where-Object { $_ -match 'NOTICE:' } | Select-Object -First 1) -join ''
+    $unexpectedSQLSTATE = $outputText.Contains('unexpected SQLSTATE=')
+
+    $messageMatchesExpected = $false
+    $expectedTablePrefix = "$($m.Table): "
+    if ($Mode -eq "pre") {
+        if ($firstErrLine -and $firstErrLine.Contains($expectedTablePrefix)) {
+            if ($firstErrLine.Contains($expect.ExpectErrPart1) -and $firstErrLine.Contains($expect.ExpectErrPart2)) {
+                $messageMatchesExpected = $true
+            }
+        }
+    } else {
+        if ($firstNoticeLine -and $firstNoticeLine.Contains($expectedTablePrefix)) {
+            if ($firstNoticeLine.Contains($expect.ExpectNotice)) {
+                $messageMatchesExpected = $true
+            }
+        }
+    }
+
+    # R-3: fail-closed on unknown pattern
+    $unknownFormat = (-not $messageMatchesExpected) -and (-not $unexpectedSQLSTATE) -and ($firstErrLine -or $firstNoticeLine)
+
     $blockPass = ($exitCode -eq $expect.Exit) -and
                  ($errCount -eq $expect.Errors) -and
-                 ($noticeCount -eq $expect.Notices)
+                 ($noticeCount -eq $expect.Notices) -and
+                 ($messageMatchesExpected) -and
+                 (-not $unexpectedSQLSTATE)
     if (-not $blockPass) { $overallPass = $false }
 
     Write-Host ("  exit={0} (exp {1})  errors={2} (exp {3})  notices={4} (exp {5})  -> {6}" -f `
@@ -168,16 +233,25 @@ for ($i = 0; $i -lt $blocks.Count; $i++) {
     $logLines += "# Per-block verdict:     $(if ($blockPass) { 'PASS' } else { 'FAIL' })"
     $logLines += ""
 
+    $firstErrMsg = if ($firstErrLine)    { if ($firstErrLine.Length    -gt 200) { $firstErrLine.Substring(0,200)    } else { $firstErrLine } }    else { $null }
+    $firstNtcMsg = if ($firstNoticeLine) { if ($firstNoticeLine.Length -gt 200) { $firstNoticeLine.Substring(0,200) } else { $firstNoticeLine } } else { $null }
+
     $results += [pscustomobject]@{
-        block                 = $m.Table
-        block_index           = $m.Block
-        exit_code             = $exitCode
-        expected_exit         = $expect.Exit
-        sql_error_count       = $errCount
-        expected_error_count  = $expect.Errors
-        notice_count          = $noticeCount
-        expected_notice_count = $expect.Notices
-        verdict               = $(if ($blockPass) { "PASS" } else { "FAIL" })
+        block                           = $m.Table
+        block_index                     = $m.Block
+        exit_code                       = $exitCode
+        expected_exit                   = $expect.Exit
+        sql_error_count                 = $errCount
+        expected_error_count            = $expect.Errors
+        notice_count                    = $noticeCount
+        expected_notice_count           = $expect.Notices
+        error_message_matches_expected  = $messageMatchesExpected
+        notice_message_matches_expected = $messageMatchesExpected
+        unexpected_sqlstate_present     = $unexpectedSQLSTATE
+        unknown_error_format            = $unknownFormat
+        first_error_message             = $firstErrMsg
+        first_notice_message            = $firstNtcMsg
+        verdict                         = $(if ($blockPass) { "PASS" } else { "FAIL" })
     }
 
     Remove-Item -LiteralPath $blockFile -Force -ErrorAction SilentlyContinue

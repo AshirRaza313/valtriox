@@ -1,0 +1,69 @@
+{
+    "wave":  "11-W7-B3",
+    "generated_utc":  "2026-10-20T19-42-15Z",
+    "mode":  "pre",
+    "database":  "pg17test2",
+    "invocation":  "per-block sudo -u postgres psql -d pg17test2 -v ON_ERROR_STOP=1 -f \u003cblock\u003e",
+    "sql_source":  "_temp-bad-table-2026-10-20T19-42-12Z.sql",
+    "mode_expectations":  {
+                              "exit_code_per_block":  3,
+                              "error_count_per_block":  1,
+                              "notice_count_per_block":  0,
+                              "note":  "fail-succeeded; exit 3 + 1 ERROR + SELECT-SUCCEEDED pattern"
+                          },
+    "blocks":  [
+                   {
+                       "block":  "Subscription",
+                       "block_index":  1,
+                       "exit_code":  3,
+                       "expected_exit":  3,
+                       "sql_error_count":  1,
+                       "expected_error_count":  1,
+                       "notice_count":  0,
+                       "expected_notice_count":  0,
+                       "error_message_matches_expected":  false,
+                       "notice_message_matches_expected":  false,
+                       "unexpected_sqlstate_present":  true,
+                       "unknown_error_format":  false,
+                       "first_error_message":  "psql:/mnt/c/Users/Aashir/AppData/Local/Temp/b3-blocks-2026-10-20T19-42-15Z/block-1-subscription.sql:24: ERROR:  Subscription: unexpected SQLSTATE=42P01 MSG=relation \"public.NonExistentTableXYZ123\" doe",
+                       "first_notice_message":  null,
+                       "verdict":  "FAIL"
+                   },
+                   {
+                       "block":  "Notification",
+                       "block_index":  2,
+                       "exit_code":  3,
+                       "expected_exit":  3,
+                       "sql_error_count":  1,
+                       "expected_error_count":  1,
+                       "notice_count":  0,
+                       "expected_notice_count":  0,
+                       "error_message_matches_expected":  true,
+                       "notice_message_matches_expected":  true,
+                       "unexpected_sqlstate_present":  false,
+                       "unknown_error_format":  false,
+                       "first_error_message":  "psql:/mnt/c/Users/Aashir/AppData/Local/Temp/b3-blocks-2026-10-20T19-42-15Z/block-2-notification.sql:24: ERROR:  Notification: SELECT SUCCEEDED with count=0 -- FAIL (SELECT privilege still active); cle",
+                       "first_notice_message":  null,
+                       "verdict":  "PASS"
+                   },
+                   {
+                       "block":  "PaymentProof",
+                       "block_index":  3,
+                       "exit_code":  3,
+                       "expected_exit":  3,
+                       "sql_error_count":  1,
+                       "expected_error_count":  1,
+                       "notice_count":  0,
+                       "expected_notice_count":  0,
+                       "error_message_matches_expected":  true,
+                       "notice_message_matches_expected":  true,
+                       "unexpected_sqlstate_present":  false,
+                       "unknown_error_format":  false,
+                       "first_error_message":  "psql:/mnt/c/Users/Aashir/AppData/Local/Temp/b3-blocks-2026-10-20T19-42-15Z/block-3-paymentproof.sql:24: ERROR:  PaymentProof: SELECT SUCCEEDED with count=0 -- FAIL (SELECT privilege still active); cle",
+                       "first_notice_message":  null,
+                       "verdict":  "PASS"
+                   }
+               ],
+    "runner_verdict":  "FAIL",
+    "runner_exit_code":  1
+}
