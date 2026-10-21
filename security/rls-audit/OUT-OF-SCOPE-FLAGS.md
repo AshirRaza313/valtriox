@@ -31,7 +31,7 @@ This file documents observations and follow-up items surfaced during the Phase 1
 
 **Observation:** Phase 10 NOLOGIN evidence recorded `rolconnlimit = -1` for `valtriox_evidence_ro`. Wave 4 A2 evidence recorded `rolconnlimit = 2`.
 
-**Change occurred between phases.** Source UNVERIFIED.
+**Production role change: UNVERIFIED.** Comparing Phase 10 evidence (disposable test environment) to Wave 4 A2 evidence (production) does not prove that a change occurred in production. The apparent `-1` vs `2` difference may reflect a genuine production change, snapshot timing differences, or a difference in the evidence capture environment. Confirm with production role owner.
 
 **Impact:** Connection-limit only; does not affect read-only privilege state. Phase A containment unaffected.
 
@@ -45,7 +45,7 @@ This file documents observations and follow-up items surfaced during the Phase 1
 
 **Observation:** Wave 4 A2 evidence shows a membership edge `postgres → valtriox_evidence_ro` (grantor `supabase_admin`, `admin_option=true`, `set_option=false`). This edge was not documented in Phase 10 NOLOGIN evidence.
 
-**New edge since Phase 10.** Source UNVERIFIED.
+**Whether edge is new since Phase 10: UNVERIFIED.** Comparison of Phase 10 evidence (disposable test environment) to Wave 4 A2 evidence (production) cannot prove that the edge newly appeared in production. The edge may have existed in production at Phase 10 time but not been captured, or may be genuinely new. Confirm with production role owner.
 
 **Impact:** `admin_option=true` allows `postgres` to administer the role; does not grant additional privileges to `valtriox_evidence_ro`. `set_option=false` prevents `postgres` from SET ROLE into it via this edge (superuser status separately allows it).
 

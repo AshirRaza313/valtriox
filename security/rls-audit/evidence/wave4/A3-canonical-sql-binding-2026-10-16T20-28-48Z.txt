@@ -92,6 +92,13 @@ Frozen PR #17 head SHA: 1e7c39886a53991d98fc8810b48daf7ef7f8d330
 All Wave 4 evidence binds to this commit.
 This binding is per-commit; any subsequent commit to PR #17 advances the head SHA and requires re-binding.
 
+[HISTORICAL: This section captures PR #17 head SHA at B4 close (2026-10-19).
+Subsequent commits (B5 v1, B5.1, B2 v2, B3 v2, B2 v2.1, JIT v7, docs) have
+advanced HEAD beyond 1e7c398. Current HEAD and bundle-manifest-v6 are the
+authoritative binding. This A3 document is a point-in-time historical record,
+not a continuously-updated reference. Per expert guidance: no endless
+self-SHA rebinding.]
+
 ## 8. Cross-References
 
 - PR #17 (dedicated security): https://github.com/AshirRaza313/valtriox/pull/17
