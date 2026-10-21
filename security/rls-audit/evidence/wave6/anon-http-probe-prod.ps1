@@ -115,15 +115,39 @@ try {
             }
         }
 
-        # ---- Additional post-mode 403 body inspection ----
-        $bodyIsJson    = $false
-        $bodyDbPermErr = $false
-        $bodyRaw       = if ($len -gt 0 -and (Test-Path $bf)) { [System.Text.Encoding]::UTF8.GetString($bytes).Trim() } else { "" }
+        # ---- Additional post-mode 403 body inspection (JSON-parse based) ----
+        $bodyIsJson        = $false
+        $bodyIsJsonValid   = $false
+        $bodyIsArray       = $false
+        $bodyHasData       = $false
+        $bodyDbPermErr     = $false
+        $bodyRaw           = if ($len -gt 0 -and (Test-Path $bf)) { [System.Text.Encoding]::UTF8.GetString($bytes).Trim() } else { "" }
         if ($bodyRaw.Length -gt 0) {
             $firstChar = $bodyRaw.Substring(0,1)
             if ($firstChar -eq "{" -or $firstChar -eq "[") { $bodyIsJson = $true }
-            if ($bodyRaw -match '"code"\s*:\s*"42501"')                          { $bodyDbPermErr = $true }
-            elseif ($bodyRaw -match 'permission denied for (table|relation|sequence)') { $bodyDbPermErr = $true }
+            try {
+                $parsed = $bodyRaw | ConvertFrom-Json -ErrorAction Stop
+                $bodyIsJsonValid = $true
+                if ($parsed -is [System.Array]) {
+                    $bodyIsArray = $true
+                    if ($parsed.Count -gt 0) { $bodyHasData = $true }
+                } elseif ($parsed -is [PSCustomObject]) {
+                    foreach ($df in @('rows','data','records','items')) {
+                        if ($parsed.PSObject.Properties.Name -contains $df) {
+                            $v = $parsed.$df
+                            if ($null -ne $v -and (@($v).Count -gt 0)) { $bodyHasData = $true; break }
+                        }
+                    }
+                    if (-not $bodyHasData) {
+                        $codeOk = $false; $msgOk = $false
+                        if ($parsed.PSObject.Properties.Name -contains 'code')    { if ([string]$parsed.code -eq '42501') { $codeOk = $true } }
+                        if ($parsed.PSObject.Properties.Name -contains 'message') { if ([string]$parsed.message -match 'permission denied for (table|relation|sequence)') { $msgOk = $true } }
+                        if ($codeOk -and $msgOk) { $bodyDbPermErr = $true }
+                    }
+                }
+            } catch {
+                # Malformed JSON - fail-closed (bodyIsJsonValid stays false)
+            }
         }
 
         # ---- Mode-aware classification ----
@@ -145,15 +169,19 @@ try {
                     $cls = "CRITICAL_LEAK ($httpStatus with Content-Range present)"
                     $leak = $true
                 }
-                elseif ($bodyDbPermErr) {
-                    $cls = "EXPECTED_DENIAL_DB_PERM ($httpStatus + PostgreSQL permission error in body)"
+                elseif ($bodyHasData) {
+                    $cls = "CRITICAL_LEAK ($httpStatus + data indicator in body)"
+                    $leak = $true
                 }
-                elseif (-not $bodyIsJson) {
-                    $cls = "PROBE_FAILED_NON_JSON_403 ($httpStatus + non-JSON body)"
+                elseif (-not $bodyIsJsonValid) {
+                    $cls = "PROBE_FAILED_NON_JSON_403 ($httpStatus + non-JSON or malformed body)"
                     $failed = $true
                 }
+                elseif ($bodyDbPermErr) {
+                    $cls = "EXPECTED_DENIAL_DB_PERM ($httpStatus + parsed PostgreSQL permission error)"
+                }
                 else {
-                    $cls = "PROBE_FAILED_GATEWAY_403 ($httpStatus + JSON body, no pg error)"
+                    $cls = "PROBE_FAILED_GATEWAY_403 ($httpStatus + valid JSON but not pg perm error)"
                     $failed = $true
                 }
             } else {
@@ -202,25 +230,31 @@ try {
         Write-Host "  Classification: $cls" -ForegroundColor $(if ($leak -or $failed) { "Red" } else { "Green" })
 
         $results += [pscustomobject]@{
-            table                 = $t
-            url                   = $url
-            http_status           = $httpStatus
-            curl_exit             = $curlExit
-            sb_error_code         = $sbErrCode
-            content_range_present = $crPresent
-            content_range_value   = $crValue
-            body_length_bytes     = $len
+            table                    = $t
+            url                      = $url
+            http_status              = $httpStatus
+            curl_exit                = $curlExit
+            sb_error_code            = $sbErrCode
+            content_range_present    = $crPresent
+            content_range_value      = $crValue
+            body_length_bytes        = $len
             body_shape               = $shape
             body_is_json             = $bodyIsJson
+            body_is_json_valid       = $bodyIsJsonValid
+            body_is_array            = $bodyIsArray
+            body_has_data            = $bodyHasData
             body_db_permission_error = $bodyDbPermErr
-            classification        = $cls
-            critical_leak         = $leak
-            probe_failed          = $failed
+            classification           = $cls
+            critical_leak            = $leak
+            probe_failed             = $failed
         }
     }
 
     # ---- Write sanitized JSON ----
     Write-Host "`n[4/4] Writing sanitized evidence..." -ForegroundColor Yellow
+    # R-1: Compute final process exit code BEFORE summary (single source of truth)
+    $finalExitCode = if ($criticalCount -gt 0) { 10 } elseif ($failedCount -gt 0) { 11 } else { 0 }
+
     $summary = [pscustomobject]@{
         wave                      = "11-W7-B2"
         generated_utc             = $utc
@@ -247,6 +281,7 @@ try {
         sanitization_not_captured = @("raw_row_data","anon_key_value","full_body")
         tables                    = $results
         escalation_protocol       = "If CRITICAL_DATA_LEAK: manual WhatsApp to expert with this JSON"
+        process_exit_code         = $finalExitCode
     }
     [System.IO.File]::WriteAllText($outJson, ($summary | ConvertTo-Json -Depth 10), [System.Text.UTF8Encoding]::new($false))
     $jsonHash = (Get-FileHash $outJson -Algorithm SHA256).Hash
@@ -267,13 +302,13 @@ try {
     if ($criticalCount -gt 0) {
         Write-Host "`n*** CRITICAL_DATA_LEAK DETECTED - $criticalCount table(s) ***" -ForegroundColor Red
         Write-Host "*** IMMEDIATE: WhatsApp expert with $outJson ***" -ForegroundColor Red
-        exit 10
+        # exit 10 (R-1: replaced by single exit $finalExitCode at end)
     } elseif ($failedCount -gt 0) {
         Write-Host "`n*** PROBE_FAILED - $failedCount table(s) ***" -ForegroundColor Red
-        exit 11
+        # exit 11 (R-1: replaced by single exit $finalExitCode at end)
     } else {
         Write-Host "`nAll probes completed. Sanitized evidence written." -ForegroundColor Green
-        exit 0
+        # exit 0 (R-1: replaced by single exit $finalExitCode at end)
     }
 }
 finally {
@@ -283,3 +318,4 @@ finally {
     $anonKey = $null
     [System.GC]::Collect()
 }
+exit $finalExitCode
