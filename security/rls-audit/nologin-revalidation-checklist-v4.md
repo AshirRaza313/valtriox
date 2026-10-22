@@ -21,11 +21,26 @@ Blanks in the template are execution-evidence fields, NOT placeholders.
 
 ---
 
+## 0.1 Scope Boundary
+
+**NOLOGIN action authorized by this checklist: `ALTER ROLE valtriox_evidence_ro NOLOGIN` on the single role `valtriox_evidence_ro` only.**
+
+Explicitly NOT authorized or implied by this checklist:
+- NOLOGIN on any other role
+- Password reset (`ALTER ROLE ... PASSWORD`)
+- Membership revoke (`REVOKE ... FROM ...`)
+- Session termination (`pg_terminate_backend`, `pg_cancel_backend`, or similar)
+- DROP ROLE / DROP USER / DROP-owned-objects
+
+Unknown password does not authorize password reset (credential custody verification is a pre-execution condition, not a permission grant). Approval for NOLOGIN does not extend to any of the above; each requires its own written approval.
+
+---
+
 ## 1. Corrected Wording — pg_stat_activity Limitation (Blocker 1)
 
 **NOLOGIN disables new direct logins only.** It does NOT:
 - Terminate existing sessions
-- Remove privileges
+- Remove privileges (direct or inherited)
 - Remove memberships
 - Remove SET ROLE paths from member roles
 
@@ -425,42 +440,38 @@ Recorded: ___________
 
 ## 9. Functions — Corrected Filters + Output Discipline (Blocker 3)
 
-### 9.1 Functions Referencing Role — with prokind filter
+### 9.1 Routines Referencing Role — Authoritative Query
+
+Single authoritative query covering functions (`f`) AND procedures (`p`).
+`pg_get_functiondef()` supports only `f` and `p` - it errors on
+aggregates (`a`) and window functions (`w`). Aggregates and window
+functions have no SQL source and cannot reference a role; they are
+correctly excluded by prokind IN ('f','p').
 
 ```sql
 SELECT n.nspname AS schema_name,
-       p.proname AS function_name,
+       p.proname AS routine_name,
        p.prokind AS kind,
        p.prosecdef,
        p.proconfig,
-       (pg_get_functiondef(p.oid) ~* 'valtriox_evidence_ro') AS references_role
+       pg_get_functiondef(p.oid) ~* 'valtriox_evidence_ro' AS references_role
 FROM pg_proc p
 JOIN pg_namespace n ON n.oid = p.pronamespace
-WHERE p.prokind IN ('f', 'p', 'a', 'w')
-ORDER BY schema_name, function_name;
+WHERE p.prokind IN ('f', 'p')
+ORDER BY schema_name, routine_name;
 ```
 
-**Output discipline:** `pg_get_functiondef()` returns full definition text. We **do not print definitions**. Instead, we output only sanitized routine identity + boolean `references_role`.
+**Output discipline:** `pg_get_functiondef()` returns full definition text.
+We do NOT print definitions. Output is restricted to sanitized routine
+identity (schema_name, routine_name, kind, prosecdef) + boolean
+`references_role`.
 
-`prokind` values:
-- `f` = normal function
-- `p` = procedure
-- `a` = aggregate (pg_get_functiondef unsupported — excluded from def check)
-- `w` = window function
+**Coverage:** `f` (function) and `p` (procedure) - both covered. `a`
+(aggregate) and `w` (window function) excluded because `pg_get_functiondef`
+does not support them and they have no SQL source.
 
-To avoid `pg_get_functiondef()` failing on aggregates/window, only call it for `prokind IN ('f','p')`:
-
-```sql
-SELECT n.nspname AS schema_name,
-       p.proname AS function_name,
-       p.prokind AS kind,
-       (p.prokind IN ('f','p')
-         AND pg_get_functiondef(p.oid) ~* 'valtriox_evidence_ro') AS references_role
-FROM pg_proc p
-JOIN pg_namespace n ON n.oid = p.pronamespace
-WHERE p.prokind = 'f'
-ORDER BY schema_name, function_name;
-```
+**Local PG17 evidence:** `evidence/wave6/nologin-routine-scan-<UTC>.log`
++ `.sha256`. Exact query output against pg17test2 (recorded below).
 
 Recorded (only rows where references_role = true): ___________
 
