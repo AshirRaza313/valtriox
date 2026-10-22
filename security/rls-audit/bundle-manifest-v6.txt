@@ -16,7 +16,7 @@ Phase 11 final submission. All Wave 1-6 corrections addressed.
 Canonical approval location: this PR (#17). NOLOGIN approval is
 a SEPARATE track (see evidence/nologin/).
 
-FILE INVENTORY (66 files)
+FILE INVENTORY (70 files)
 ----------------------------------------------------------------
 
 NOTE: This manifest describes the FINAL PR state after Wave 7
