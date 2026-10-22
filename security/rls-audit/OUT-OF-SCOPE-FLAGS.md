@@ -74,7 +74,7 @@ This file documents observations and follow-up items surfaced during the Phase 1
 
 **Observation:** Wave 6B (D2 probe) received HTTP `206 Partial Content` for Subscription and Notification, and HTTP `200 OK` for PaymentProof. PS1 script logged `206` as `UNEXPECTED_HTTP_206` due to a strict-`200`-only assumption in the classification logic.
 
-**Analysis:** `206` is the correct PostgREST response when `Prefer: count=exact` is set AND `Content-Range` header is returned AND body is truncated (via `limit=0`). `Content-Range: */2` etc. **confirms** anon has SELECT privilege (which is the desired pre-containment baseline). No data leak occurred.
+**Analysis:** `206` is the correct PostgREST response when `Prefer: count=exact` is set AND `Content-Range` header is returned AND body is truncated (via `limit=0`). `Content-Range: */2` etc. **confirms** anon has SELECT privilege (which is the desired pre-containment baseline). No row **bodies** were returned (limit=0 enforced). However, Content-Range disclosed row counts (`*/2`, `*/21`, `*/0`), which is metadata exposure (row counts) distinct from row-data exposure.
 
 **Impact:** Evidence is valid. Classification label was misleading, not the underlying data.
 
