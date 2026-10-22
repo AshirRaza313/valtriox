@@ -93,5 +93,5 @@
                    }
                ],
     "escalation_protocol":  "If CRITICAL_DATA_LEAK: manual WhatsApp to expert with this JSON",
-    "process_exit_code":  0
+    "calculated_exit_code":  0
 }

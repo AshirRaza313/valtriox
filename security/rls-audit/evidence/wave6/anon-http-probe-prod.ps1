@@ -281,7 +281,7 @@ try {
         sanitization_not_captured = @("raw_row_data","anon_key_value","full_body")
         tables                    = $results
         escalation_protocol       = "If CRITICAL_DATA_LEAK: manual WhatsApp to expert with this JSON"
-        process_exit_code         = $finalExitCode
+        calculated_exit_code         = $finalExitCode
     }
     [System.IO.File]::WriteAllText($outJson, ($summary | ConvertTo-Json -Depth 10), [System.Text.UTF8Encoding]::new($false))
     $jsonHash = (Get-FileHash $outJson -Algorithm SHA256).Hash
