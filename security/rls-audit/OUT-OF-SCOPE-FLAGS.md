@@ -47,7 +47,7 @@ This file documents observations and follow-up items surfaced during the Phase 1
 
 **Whether edge is new since Phase 10: UNVERIFIED.** Comparison of Phase 10 evidence (disposable test environment) to Wave 4 A2 evidence (production) cannot prove that the edge newly appeared in production. The edge may have existed in production at Phase 10 time but not been captured, or may be genuinely new. Confirm with production role owner.
 
-**Impact:** `admin_option=true` allows `postgres` to administer the role; does not grant additional privileges to `valtriox_evidence_ro`. `set_option=false` prevents `postgres` from SET ROLE into it via this edge (superuser status separately allows it).
+**Impact:** `admin_option=true` allows `postgres` to administer the role; does not grant additional privileges to `valtriox_evidence_ro`. `set_option=false` prevents `postgres` from SET ROLE into it via this edge. (Note: SQL Editor session role `postgres` is not superuser - see A3 Section 5 for the 42501 SET ROLE failure evidence.)
 
 **Recommended follow-up:** Confirm intentional. If not needed, consider revoking (requires approval — out of Phase A scope).
 
