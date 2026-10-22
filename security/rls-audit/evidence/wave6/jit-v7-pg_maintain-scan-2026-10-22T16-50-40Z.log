@@ -1,0 +1,12 @@
+     target_role      | anon_can_set | anon_can_use | auth_can_set | auth_can_use 
+----------------------+--------------+--------------+--------------+--------------
+ audit_readonly       | f            | f            | f            | f
+ authenticator        | f            | f            | f            | f
+ pg_maintain          | f            | f            | f            | f
+ pg_read_all_data     | f            | f            | f            | f
+ pg_write_all_data    | f            | f            | f            | f
+ postgres             | f            | f            | f            | f
+ service_role         | f            | f            | f            | f
+ valtriox_evidence_ro | f            | f            | f            | f
+(8 rows)
+

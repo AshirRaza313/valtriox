@@ -357,9 +357,10 @@ SELECT r.rolname AS target_role,
        pg_has_role('authenticated', r.rolname, 'SET') AS auth_can_set,
        pg_has_role('authenticated', r.rolname, 'USAGE') AS auth_can_use
 FROM pg_roles r
--- Include pg_read_all_data / pg_write_all_data: predefined roles that
--- grant table-level data access and would silently re-expose Phase A tables
-WHERE (r.rolname NOT LIKE 'pg\_%' OR r.rolname IN ('pg_read_all_data', 'pg_write_all_data'))
+-- Include pg_read_all_data / pg_write_all_data / pg_maintain: 
+-- predefined roles granting data-access or maintenance privileges
+-- on Phase A tables; would silently re-expose them via inheritance
+WHERE (r.rolname NOT LIKE 'pg\_%' OR r.rolname IN ('pg_read_all_data', 'pg_write_all_data', 'pg_maintain'))
   AND r.rolname NOT IN ('anon', 'authenticated')
 ORDER BY r.rolname;
 ```
@@ -373,7 +374,7 @@ For every role where `anon_can_set = true`, `auth_can_set = true`, `anon_can_use
 - That role's column privileges on Phase A target columns
 - Whether that path could re-expose revoked access
 
-**Stop condition:** Any outbound SET or USAGE path from anon/authenticated to a role that holds Phase A privileges → STOP + investigate. These are orthogonal risk paths per PostgreSQL `pg_has_role` docs: `SET` = ability to `SET ROLE` to the target (requires `set_option`); `USAGE` = implicit privilege inheritance without `SET ROLE` (requires `inherit_option`). Neither implies the other.
+**Stop condition:** Any outbound SET or USAGE path from anon/authenticated to a role that holds Phase A privileges → STOP + investigate. These are orthogonal risk paths per PostgreSQL `pg_has_role` docs: `SET` = ability to `SET ROLE` to the target (requires `set_option`); `USAGE` = implicit privilege inheritance without `SET ROLE` (requires `inherit_option`). Neither implies the other. Predefined roles pg_read_all_data (SELECT on all tables), pg_write_all_data (INSERT/UPDATE/DELETE on all tables), and pg_maintain (VACUUM/ANALYZE/CLUSTER/REFRESH MATERIALIZED VIEW/REINDEX/LOCK TABLE on all relations) are explicitly included in the query above; any SET or USAGE path to any of them is a stop condition.
 
 Recorded: ___________
 
@@ -627,7 +628,7 @@ Recorded: ___________
 - Client fail-on-error not verified
 - Deployment in progress (Section 1.4)
 - Pre-state column baseline (§6.3) does not match Phase 2.1 snapshot (i.e., unexpected column privileges appeared since Phase 2)
-- Any outbound SET or USAGE path from anon/authenticated to a role holding Phase A privileges (Section 8.1)
+- Any outbound SET or USAGE path from anon/authenticated to a role holding Phase A privileges (Section 8.1). Includes predefined roles pg_read_all_data, pg_write_all_data, pg_maintain (explicitly filtered in Section 8.1 query).
 - Any view/matview/SECURITY DEFINER function/procedure referencing Phase A tables in application schemas (Section 11)
 - Direct client Data API access on Phase A tables (Section 12)
 - SET LOCAL placement incorrect
