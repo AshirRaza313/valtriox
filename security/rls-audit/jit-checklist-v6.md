@@ -51,6 +51,8 @@ Recorded local SHA: ___________
 
 **Vercel Dashboard → Project → Deployments → Production → copy SHA.**
 
+**Preview SHA is NOT Production proof.** Only a Production deployment SHA is acceptable evidence. If no Production deployment exists for this branch, escalate to expert - do NOT substitute Preview SHA.
+
 ```powershell
 $localSha = git rev-parse HEAD
 $vercelSha = "VERCEL_DASHBOARD_ACCESS_BLOCKED_CASE_TNS_01svbbdIV5N1m04Q"
