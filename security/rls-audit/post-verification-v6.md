@@ -190,10 +190,11 @@ powershell -ExecutionPolicy Bypass -File .\anon-http-probe-prod.ps1 -Mode post
 |---|---|---|---|---|---:|
 | 200 / 206 | — | Present (anon SELECT) | `pre` | `EXPECTED_PRE_CONTAINMENT_EXPOSURE` | 0 |
 | 200 / 206 | — | Any | `post` | `CRITICAL_LEAK` | 10 |
-| 403 | — | Absent | `post` | `EXPECTED_DENIAL` (RLS blocked) | 0 |
+| 401 or 403 | — | Absent | `post` | `EXPECTED_DENIAL_DB_PERM` (body code=`42501`; GRANT/privilege revoked, not RLS policy) | 0 |
+| 401 or 403 | — | Absent | `post` | `PROBE_FAILED_GATEWAY_403` (body lacks code=`42501`) | 11 |
 | 403 | — | Absent | `pre` | `UNEXPECTED_PRE_CONTAINMENT_DENIAL` | 11 |
 | 401 | `UNAUTHORIZED_INVALID_API_KEY` | Any | `pre` / `post` | `PROBE_FAILED` (invalid API key) | 11 |
-| 401 | Any other value / absent | Any | `pre` / `post` | `PROBE_FAILED` (auth error) | 11 |
+| 401 | Any other value / absent | Any | `pre` | `PROBE_FAILED` (auth error in pre-mode) | 11 |
 | Any 2xx | — | Present + row-shaped body (`[\s*{\s*"id"`) | Any | `CRITICAL_DATA_LEAK` | 10 |
 | — | — | — | Any | Curl transport non-zero | 11 (`PROBE_FAILED`) |
 
@@ -238,7 +239,7 @@ The `-Mode` parameter and `sb-error-code` check added in Phase 11 Wave 7 B2 prev
 ### Pass Criteria — Post-Containment Mode (Wave 7 Post-Execution)
 
 - Script exit code = `0`
-- Each table: HTTP `403` (RLS denial)
+- Each table: HTTP `401` or `403` with body code=`42501` (permission denied for table/relation/sequence); GRANT/privilege revoked, not RLS policy
 - No `Content-Range` header
 - No row-shaped body
 - No `UNAUTHORIZED_INVALID_API_KEY` in any response
