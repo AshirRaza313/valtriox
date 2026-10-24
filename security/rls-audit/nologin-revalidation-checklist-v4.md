@@ -138,6 +138,12 @@ The project owner or authorized custodian must provide a written attestation con
 - Attestation UTC timestamp: ___________
 - Attestation reference (ticket / message ID): ___________
 
+**NOLOGIN independence from custody:** `ALTER ROLE
+valtriox_evidence_ro NOLOGIN` requires admin access, not password
+knowledge. If a custody item above cannot be confirmed, record the
+gap in the reference field and proceed. NOLOGIN does not require or
+imply password reset.
+
 ---
 
 ## 5. Secret Dependency — Multi-Source Non-Disclosing (Blocker 5)
@@ -432,6 +438,12 @@ WHERE refclassid = 'pg_authid'::regclass
 
 Any rows → investigate (means some object depends on the role).
 
+**Decision rule:** If Section 8.9 returns ANY rows referencing
+`valtriox_evidence_ro` (any deptype), NOLOGIN is BLOCKED until
+resolved. If Section 8.9 returns zero rows AND Section 5 finds no
+active external secret, NOLOGIN may proceed (written expert approval
+per E6 still required).
+
 Recorded: ___________
 
 **Expected: zero rows across 8.1–8.9.**
@@ -453,7 +465,7 @@ SELECT n.nspname AS schema_name,
        p.proname AS routine_name,
        p.prokind AS kind,
        p.prosecdef,
-       p.proconfig,
+       p.proconfig IS NOT NULL AS has_proconfig,
        pg_get_functiondef(p.oid) ~* 'valtriox_evidence_ro' AS references_role
 FROM pg_proc p
 JOIN pg_namespace n ON n.oid = p.pronamespace
@@ -473,6 +485,11 @@ does not support them and they have no SQL source.
 **Local PG17 evidence:** `evidence/wave6/nologin-routine-scan-<UTC>.log`
 + `.sha256`. Exact query output against pg17test2 (recorded below).
 
+**Reconciliation (2026-10-24):** Prior scan's zero-procedure result
+reflects pg17test2 state (no procedures existed), not a query gap.
+Focused procedure test `nologin-procedure-test-<UTC>.log` verifies
+Section 9.1 correctly captures `prokind='p'` rows.
+
 Recorded (only rows where references_role = true): ___________
 
 ### 9.2 SECURITY DEFINER Functions — proconfig inspection
@@ -481,7 +498,7 @@ Recorded (only rows where references_role = true): ___________
 SELECT n.nspname AS schema_name,
        p.proname AS function_name,
        pg_get_userbyid(p.proowner) AS owner,
-       p.proconfig AS config
+       p.proconfig IS NOT NULL AS has_config, array_length(p.proconfig, 1) AS config_count
 FROM pg_proc p
 JOIN pg_namespace n ON n.oid = p.pronamespace
 WHERE p.prosecdef = true

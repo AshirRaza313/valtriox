@@ -1,0 +1,37 @@
+C3 APPLY EVIDENCE - nologin-revalidation-checklist-v4.md 5 sub-issues
+Timestamp (UTC): 2026-10-24T11-51-00Z
+Pre-apply HEAD:  285fa45b1c4c46841542f0144185a29d00906623
+Branch:          security/rls-audit-containment-v1
+File:            security/rls-audit/nologin-revalidation-checklist-v4.md
+
+--- PRE-APPLY ---
+Pre SHA256:      F38605A45671FE02AD9B4EBB7EA8DBE6C5F28A7147415745BBC150FC5BFE362E
+Pre size (B):    19115
+Pre lines:       602
+Pre CRLF:        601
+Pre loneLF:      0
+Pre trailingNL:  False
+Pre blob==disk:  True
+
+--- RUNTIME DELTAS ---
+3a-1 (proconfig->has_proconfig):    +29
+3a-2 (proconfig->has_config+count): +62
+3c   (reconciliation note):         +259
+3d   (custody independence stance): +281
+3e   (dependency decision rule):    +292
+TOTAL:                              +923
+
+--- POST-WRITE ---
+Post SHA256:     3D0510B2F9D5AF01C63EBA07309BE8828D9907A5718DFC0AEC41C290B347970D
+Post size (B):   20038
+Post lines:      619
+Post CRLF:       618
+Post BOM:        None
+SHA changed:     True
+
+--- SCOPE ---
+Edits:           nologin-revalidation-checklist-v4.md only
+Production:      HOLD (no mutation)
+NOLOGIN:         HOLD (no mutation)
+
+--- END ---
