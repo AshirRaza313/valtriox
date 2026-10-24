@@ -33,7 +33,7 @@ vi.mock('@/lib/db', () => {
   );
   return {
     db: proxy,
-    isDbUnavailable: () => true,
+    isDbUnavailable: () => false,
     isSchemaError: () => false,
     withRetry: (fn: () => Promise<unknown>) => fn(),
     ensureDb: vi.fn().mockResolvedValue(undefined),
