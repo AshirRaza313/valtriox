@@ -1,0 +1,52 @@
+# ============================================================
+# security/rls-audit/.gitignore
+# ============================================================
+# Rules for the RLS audit evidence bundle (Phase 11 final).
+# ============================================================
+
+# --- Never commit secrets or credentials ---
+bundle-signed-urls-*.txt
+*.env
+*.env.*
+*.key
+*.pem
+*.token
+*_secret*
+credentials.*
+
+# --- Never commit local temp / editor artifacts ---
+*.tmp
+*.temp
+*.bak
+*~
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# --- Logs are committed as evidence (Wave 6 requires them) ---
+# Explicitly DO NOT ignore .log files in this folder.
+
+# --- Evidence allowlist (all wave subfolders) ---
+!evidence/
+!evidence/wave4/
+!evidence/wave4/*.txt
+!evidence/wave4/*.sql
+!evidence/wave4/*.ps1
+!evidence/wave4/*.csv
+!evidence/wave4/*.png
+!evidence/wave6/
+!evidence/wave6/*.txt
+!evidence/wave6/*.sql
+!evidence/wave6/*.ps1
+!evidence/wave6/*.json
+!evidence/wave6/*.sha256
+!evidence/wave6/*.log
+!evidence/wave6/*.md
+!evidence/nologin/
+!evidence/nologin/*.sql
+!evidence/wave10/
+!evidence/wave10/*.txt
+
+# --- Keep the gitignore itself tracked ---
+!.gitignore

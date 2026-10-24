@@ -1,0 +1,156 @@
+=== JIT §3 — Row Counts (informational) ===
+     tbl      | cnt 
+--------------+-----
+ Subscription |   2
+ Notification |  21
+ PaymentProof |   0
+(3 rows)
+
+
+=== JIT §4 — RLS State ===
+   relname    | relrowsecurity | relforcerowsecurity |  owner   
+--------------+----------------+---------------------+----------
+ Notification | t              | f                   | postgres
+ PaymentProof | t              | f                   | postgres
+ Subscription | t              | f                   | postgres
+(3 rows)
+
+
+=== JIT §5 — Table ACL summary (count per table, role) ===
+     tbl      |    grantee     | priv_count 
+--------------+----------------+------------
+ Notification | anon           |          8
+ Notification | audit_readonly |          1
+ Notification | authenticated  |          8
+ Notification | postgres       |          8
+ Notification | service_role   |          8
+ PaymentProof | anon           |          8
+ PaymentProof | audit_readonly |          1
+ PaymentProof | authenticated  |          8
+ PaymentProof | postgres       |          8
+ PaymentProof | service_role   |          8
+ Subscription | anon           |          8
+ Subscription | audit_readonly |          1
+ Subscription | authenticated  |          8
+ Subscription | postgres       |          8
+ Subscription | service_role   |          8
+(15 rows)
+
+
+=== JIT §6.1 — Column privileges via info_schema (summary) ===
+  table_name  |    grantee    | privilege_type | n_cols 
+--------------+---------------+----------------+--------
+ Notification | anon          | INSERT         |      6
+ Notification | anon          | REFERENCES     |      6
+ Notification | anon          | SELECT         |      6
+ Notification | anon          | UPDATE         |      6
+ Notification | authenticated | INSERT         |      6
+ Notification | authenticated | REFERENCES     |      6
+ Notification | authenticated | SELECT         |      6
+ Notification | authenticated | UPDATE         |      6
+ PaymentProof | anon          | INSERT         |      3
+ PaymentProof | anon          | REFERENCES     |      3
+ PaymentProof | anon          | SELECT         |      3
+ PaymentProof | anon          | UPDATE         |      3
+ PaymentProof | authenticated | INSERT         |      3
+ PaymentProof | authenticated | REFERENCES     |      3
+ PaymentProof | authenticated | SELECT         |      3
+ PaymentProof | authenticated | UPDATE         |      3
+ Subscription | anon          | INSERT         |      4
+ Subscription | anon          | REFERENCES     |      4
+ Subscription | anon          | SELECT         |      4
+ Subscription | anon          | UPDATE         |      4
+ Subscription | authenticated | INSERT         |      4
+ Subscription | authenticated | REFERENCES     |      4
+ Subscription | authenticated | SELECT         |      4
+ Subscription | authenticated | UPDATE         |      4
+(24 rows)
+
+
+=== JIT §6.2 — Direct column grants via pg_attribute ACL ===
+ table_name | column_name | grantee | privilege_type 
+------------+-------------+---------+----------------
+(0 rows)
+
+
+=== JIT §6.3 — Effective column access (summary per role × priv) ===
+   role_name   |    priv    | n_true | n_false 
+---------------+------------+--------+---------
+ anon          | INSERT     |     13 |       0
+ anon          | REFERENCES |     13 |       0
+ anon          | SELECT     |     13 |       0
+ anon          | UPDATE     |     13 |       0
+ authenticated | INSERT     |     13 |       0
+ authenticated | REFERENCES |     13 |       0
+ authenticated | SELECT     |     13 |       0
+ authenticated | UPDATE     |     13 |       0
+(8 rows)
+
+
+=== JIT §7 — 96-check matrix (per role summary) ===
+   role_name   | total | n_true | n_false 
+---------------+-------+--------+---------
+ anon          |    24 |     24 |       0
+ authenticated |    24 |     24 |       0
+ postgres      |    24 |     24 |       0
+ service_role  |    24 |     24 |       0
+(4 rows)
+
+
+=== JIT §8.1 — Outbound role paths from anon/authenticated (self-row excluded) ===
+ target_role | anon_can_set | auth_can_set 
+-------------+--------------+--------------
+(0 rows)
+
+
+=== JIT §8.2 — Outbound memberships of anon/authenticated ===
+ member_role | granted_role | grantor | admin_option | set_option | inherit_option 
+-------------+--------------+---------+--------------+------------+----------------
+(0 rows)
+
+
+=== JIT §8.3 — Inbound memberships into anon/authenticated ===
+ member_role | granted_role  | grantor  | admin_option | set_option | inherit_option 
+-------------+---------------+----------+--------------+------------+----------------
+ postgres    | anon          | postgres | f            | t          | t
+ postgres    | authenticated | postgres | f            | t          | t
+(2 rows)
+
+
+=== JIT §9 — Bypass roles ===
+       rolname        | rolsuper | rolinherit | rolbypassrls | rolcanlogin | rolcreaterole | rolcreatedb | rolreplication 
+----------------------+----------+------------+--------------+-------------+---------------+-------------+----------------
+ anon                 | f        | t          | f            | f           | f             | f           | f
+ audit_readonly       | f        | t          | f            | t           | f             | f           | f
+ authenticated        | f        | t          | f            | f           | f             | f           | f
+ postgres             | t        | t          | t            | t           | t             | t           | t
+ service_role         | f        | t          | t            | f           | f             | f           | f
+ valtriox_evidence_ro | f        | t          | f            | t           | f             | f           | f
+(6 rows)
+
+
+=== JIT §10 — Policies on Phase A tables ===
+ schemaname |  tablename   |    policyname    |     roles      |  cmd   
+------------+--------------+------------------+----------------+--------
+ public     | Notification | anon_read        | {anon}         | SELECT
+ public     | Notification | service_role_all | {service_role} | ALL
+ public     | PaymentProof | anon_read        | {anon}         | SELECT
+ public     | PaymentProof | service_role_all | {service_role} | ALL
+ public     | Subscription | anon_read        | {anon}         | SELECT
+ public     | Subscription | service_role_all | {service_role} | ALL
+(6 rows)
+
+
+=== JIT §11.2/11.3 — Views/Matviews with Phase A table refs (schema filter + word boundary) ===
+ kind | schemaname | name 
+------+------------+------
+(0 rows)
+
+
+=== JIT §11.4 — SECURITY DEFINER functions/procedures (schema filter + word boundary) ===
+ schema_name | proname | prokind 
+-------------+---------+---------
+(0 rows)
+
+
+=== JIT baseline COMPLETE ===

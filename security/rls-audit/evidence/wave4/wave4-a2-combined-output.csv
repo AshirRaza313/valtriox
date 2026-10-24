@@ -1,0 +1,11 @@
+section,k1,k2,k3,k4,k5
+A2.1 Session,session_user=postgres,current_user=postgres,current_role=postgres,db=postgres,svn=170006
+A2.2 Role attrs,rolsuper=false,rolcreatedb=false,rolcreaterole=false,rolbypassrls=false,rolcanlogin=true rolconnlimit=2
+A2.3 Subscription,SELECT=true,INSERT=false,UPDATE=false,DELETE=false,TRUNCATE=false
+A2.3 Notification,SELECT=true,INSERT=false,UPDATE=false,DELETE=false,TRUNCATE=false
+A2.3 PaymentProof,SELECT=true,INSERT=false,UPDATE=false,DELETE=false,TRUNCATE=false
+A2.4 Membership: postgres -> valtriox_evidence_ro,grantor=supabase_admin,admin_option=true,set_option=false,inherit_option=false,null
+A2.4 Membership: valtriox_evidence_ro -> pg_read_all_data,grantor=postgres,admin_option=false,set_option=true,inherit_option=true,null
+A2.6 cluster_name,setting=main,null,null,null,null
+A2.6 listen_addresses,setting=*,null,null,null,null
+A2.6 port,setting=5432,null,null,null,null

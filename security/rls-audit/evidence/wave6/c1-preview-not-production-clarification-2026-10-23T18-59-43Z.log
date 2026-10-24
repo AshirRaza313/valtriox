@@ -1,0 +1,73 @@
+C1 APPLY EVIDENCE - Preview != Production clarification
+EOL: LF (deterministic)
+Timestamp (UTC): 2026-10-23T18-59-43Z
+Pre-apply HEAD:  9cf7ca329ed80d15e4b32520fe8789ef03f91376
+Branch:          security/rls-audit-containment-v1
+File:            security/rls-audit/jit-checklist-v6.md
+
+--- PRE-APPLY ---
+Pre SHA256:      5E475E1A04B60F6BD7F95CD12B75212C0D07C90B38C9A3237D3985C9B678E65C
+Pre size (B):    23338
+Pre lines:       658
+Pre CRLF:        657
+Pre loneLF:      0
+Pre trailingNL:  False
+Pre blob==disk:  True (P14 via git cat-file blob)
+
+--- ANCHORS ---
+Anchor old (B):      60
+Anchor new (B):      265
+Clarification (B):   201
+Delta (B):           +205
+Delta (lines):       +2
+Delta (CRLF):        +2
+
+--- COMPUTE-VERIFY (pre-write) ---
+countOld(raw):       1
+loneLf(raw):         0
+ByteCount(exp):      23543 (via UTF8Encoding.GetByteCount)
+CharCount(exp):      23463 (informational only, NOT asserted)
+countOld(exp):       0 [OK - C3/C4 safety]
+countNew(exp):       1
+crlf(exp):           659
+lines(exp):          660
+trailingNL(exp):     False
+L52 marker preserved: True
+L56 marker preserved: True
+L73 marker preserved: True
+L624 marker preserved: True
+
+--- WRITE ---
+Write method:    [System.IO.File]::WriteAllText (UTF8NoBOM)
+Write success:   True
+
+--- POST-WRITE ---
+Post SHA256:     7C5466FDBC4111B9955B985B0D2D957A8F000A50DD87825889929C620ABD7838
+Post size (B):   23543
+Post lines:      660
+Post CRLF:       659
+Post loneLF:     0
+Post trailingNL: False
+Post BOM:        None
+Post bytecount:  23543 (via UTF8Encoding.GetByteCount)
+SHA changed:     True (pre != post)
+
+--- P14 NOTE ---
+Pre-apply blob==disk verified.
+Post-write P14 (git-add vs disk) deferred to COMMIT step per
+separate gate; both must pass before final commit.
+
+--- TREE (post-write, pre-evidence) ---
+ M security/rls-audit/jit-checklist-v6.md
+
+--- SCOPE ---
+Edits:            jit-checklist-v6.md S1.3 only
+L52 preserved:    True
+L56 preserved:    True
+L73 preserved:    True
+L624 preserved:   True
+Other files:      untouched
+Production:       HOLD (no mutation)
+NOLOGIN:          HOLD (no mutation)
+
+--- END ---

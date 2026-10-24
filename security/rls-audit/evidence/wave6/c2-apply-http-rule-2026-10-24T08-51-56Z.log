@@ -1,0 +1,57 @@
+C2 APPLY EVIDENCE - post-verification-v6.md HTTP rule + GRANT wording (RT2.5d)
+Timestamp (UTC): 2026-10-24T08-51-56Z
+Pre-apply HEAD:  2c31769131283c31e9b78f78bacb9c81fa8907a0
+Branch:          security/rls-audit-containment-v1
+File:            security/rls-audit/post-verification-v6.md
+
+--- PRE-APPLY ---
+Pre SHA256:      B60478519BA210D9E2999B31907C087D306FDD28848656D796E19C2E25BB4B16
+Pre size (B):    29809
+Pre lines:       719
+Pre CRLF:        718
+Pre loneLF:      0
+Pre trailingNL:  False
+Pre blob==disk:  True
+
+--- ANCHOR EXTRACTION ---
+Arrow codepoint: U+2014 (length 1)
+old_1 bytes:     670  (7 CRLF, 8 lines)
+new_1 bytes:     835  (8 CRLF, 9 lines)
+old_2 bytes:     37
+new_2 bytes:     145
+
+--- DELTA ---
+delta_1:         165
+delta_2:         108
+totalDelta:      273
+targetSize:      30082  (29809 + 273)
+
+--- COMPUTE-VERIFY ---
+countOld1(raw):  1
+countOld2(raw):  1
+expected bytecount: 30082
+crlf(exp):       719
+lines(exp):      720
+trailingNL(exp): False
+loneLF(exp):     0
+non-ASCII(exp):  88 (informational; markdown prose)
+
+--- POST-WRITE ---
+Post SHA256:     760631B189D42E7507EEC0920EC52E34D60A5B8A0894C736D6E5B192ED02B056
+Post size (B):   30082
+Post lines:      720
+Post CRLF:       719
+Post loneLF:     0
+Post trailingNL: False
+Post BOM:        None
+SHA changed:     True
+
+--- SCOPE ---
+Edits:           post-verification-v6.md only
+Preserved:       RLS State, Lesson Learned, all untouched rows
+Probe (read-only): evidence/wave6/anon-http-probe-prod.ps1
+  classification L265-273; body check L143-145; branch L166
+Production:      HOLD (no mutation)
+NOLOGIN:         HOLD (no mutation)
+
+--- END ---

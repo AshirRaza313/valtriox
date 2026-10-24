@@ -1,0 +1,26 @@
+[
+  {
+    "metric": "server_version_num",
+    "value": "170006"
+  },
+  {
+    "metric": "server_version",
+    "value": "17.6"
+  },
+  {
+    "metric": "current_database",
+    "value": "postgres"
+  },
+  {
+    "metric": "current_user",
+    "value": "postgres"
+  },
+  {
+    "metric": "current_role",
+    "value": "postgres"
+  },
+  {
+    "metric": "utc_timestamp",
+    "value": "2026-10-08T15:08:23Z"
+  }
+]

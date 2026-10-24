@@ -1,0 +1,57 @@
+# do-block-probe runner log
+# Generated UTC: 2026-10-18T21-00-55Z
+# Mode:          post
+# Database:      pg17test2
+# SQL source:    C:\Users\Aashir\Projects\valtriox-trackb\security\rls-audit\evidence\wave6\do-block-probe.sql
+# Invocation:    per-block sudo -u postgres psql -d pg17test2 -v ON_ERROR_STOP=1 -f <block>
+# Expectations:  exit=0, errors=0, notices=1 (pass (containment applied); exit 0 + 0 ERROR + 1 NOTICE per block)
+
+
+=== DO probe 1/3: Subscription ===
+psql:/mnt/c/Users/Aashir/AppData/Local/Temp/b3-blocks-2026-10-18T21-00-55Z/block-1-subscription.sql:24: NOTICE:  Subscription: SQLSTATE=42501 -- PASS; cleanup_user=postgres
+DO
+ post_cleanup_user | post_cleanup_role 
+-------------------+-------------------
+ postgres          | postgres
+(1 row)
+
+
+# Per-block exit_code:   0  (expected 0)
+# Per-block sql_errors:  0  (expected 0)
+# Per-block notices:     1  (expected 1)
+# Per-block verdict:     PASS
+
+
+=== DO probe 2/3: Notification ===
+psql:/mnt/c/Users/Aashir/AppData/Local/Temp/b3-blocks-2026-10-18T21-00-55Z/block-2-notification.sql:24: NOTICE:  Notification: SQLSTATE=42501 -- PASS; cleanup_user=postgres
+DO
+ post_cleanup_user | post_cleanup_role 
+-------------------+-------------------
+ postgres          | postgres
+(1 row)
+
+
+# Per-block exit_code:   0  (expected 0)
+# Per-block sql_errors:  0  (expected 0)
+# Per-block notices:     1  (expected 1)
+# Per-block verdict:     PASS
+
+
+=== DO probe 3/3: PaymentProof ===
+psql:/mnt/c/Users/Aashir/AppData/Local/Temp/b3-blocks-2026-10-18T21-00-55Z/block-3-paymentproof.sql:24: NOTICE:  PaymentProof: SQLSTATE=42501 -- PASS; cleanup_user=postgres
+DO
+ post_cleanup_user | post_cleanup_role 
+-------------------+-------------------
+ postgres          | postgres
+(1 row)
+
+
+=== DO-block probe COMPLETE ===
+# Per-block exit_code:   0  (expected 0)
+# Per-block sql_errors:  0  (expected 0)
+# Per-block notices:     1  (expected 1)
+# Per-block verdict:     PASS
+
+=== DO-block probe COMPLETE ===
+# Runner verdict: PASS
+# Runner exit:    0

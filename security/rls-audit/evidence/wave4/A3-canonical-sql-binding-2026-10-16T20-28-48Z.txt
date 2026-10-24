@@ -1,0 +1,116 @@
+# Wave 4 (A3) - Canonical SQL Binding Report
+# Generated (UTC): 2026-10-16T20-28-48Z
+# Updated (UTC): 2026-10-19T15:56:22Z
+# Repository: C:\Users\Aashir\Projects\valtriox-trackb
+# Branch: security/rls-audit-containment-v1
+
+## 1. Canonical SQL Files (in PR #17)
+
+phase-a-containment-v3.sql
+  Byte size (disk):       1041
+  SHA256 (disk):          59C62F1A92510BD45889BA519957BD1F893934DF18557EFD3DAA1636B1227A3C
+  Expected (manifest v5): 59C62F1A92510BD45889BA519957BD1F893934DF18557EFD3DAA1636B1227A3C
+  Match:                  True
+
+phase-a-rollback-v2.sql
+  Byte size (disk):       987
+  SHA256 (disk):          8CEDA08FAA167F39CA9E0778D44F1661C9FF987143FB2E4AFC0A498ED8787E4D
+  Expected (manifest v5): 8CEDA08FAA167F39CA9E0778D44F1661C9FF987143FB2E4AFC0A498ED8787E4D
+  Match:                  True
+
+## 2. Remote SHA Binding (re-bound at B4 fix)
+
+Main base (origin/main):                    bebd61f4c971dafdf42aa3fee7b97bde8203feea
+PR branch (origin/security/rls-audit-...):  1e7c39886a53991d98fc8810b48daf7ef7f8d330
+Local HEAD:                                 1e7c39886a53991d98fc8810b48daf7ef7f8d330
+Ahead/behind (HEAD vs origin):              0	0
+
+PR #17 metadata (via gh api):
+{"base":"bebd61f4c971dafdf42aa3fee7b97bde8203feea","base_ref":"main","head":"1e7c39886a53991d98fc8810b48daf7ef7f8d330","number":17,"state":"open","url":"https://github.com/AshirRaza313/valtriox/pull/17"}
+
+Deployment environment:  Preview (Vercel)
+Production deployment:   None for this branch (verified via gh api
+                         repos/AshirRaza313/valtriox/deployments -
+                         all entries environment='Preview' as of 2026-10-19T15:56:22Z)
+Latest Preview deployment (1e7c398): id=7161196726, 2026-10-18T21:44:32Z
+
+## 3. Target Project Binding
+
+Project ref:  wqwsagnxkamblnefhpzx
+Source:       Supabase dashboard URL bar (screenshot in this folder)
+Reporter:     Ashir Raza
+Plan:         Supabase Pro
+
+## 4. Precise Table Scope
+
+Three tables (confirmed exposed in pre-change snapshot):
+  1. public."Subscription"
+  2. public."Notification"
+  3. public."PaymentProof"
+
+Containment action:  REVOKE ALL PRIVILEGES FROM PUBLIC, anon, authenticated
+Rollback action:     GRANT pre-change set (incl. PG17 MAINTAIN)
+
+## 5. Wave 4 (A2) Evidence - Method & Limitations
+
+Method:    Static catalog proof via has_table_privilege() and
+           has_column_privilege(). SET ROLE was attempted first and
+           failed with SQLSTATE 42501 (permission denied).
+           Root cause: membership edge postgres -> valtriox_evidence_ro
+           has set_option=false; SQL Editor connection role is not
+           superuser, so SET ROLE is disallowed by PostgreSQL.
+           No password was available in custody; reset forbidden
+           (no ALTER ROLE per expert rule).
+Session:   Connection role = postgres (SQL Editor default). Target
+           role valtriox_evidence_ro privileges are demonstrated
+           statically via catalog functions; no role switching.
+Limitation: session_user = current_user = current_role = postgres.
+           Direct psql login as valtriox_evidence_ro would give
+           session_user = current_user = role (cleaner binding), but
+           password is not available. Static proof is a valid,
+           non-mutating alternative.
+
+A2 evidence files in this folder:
+  - wave4-a2-combined-v2.sql | 3815 bytes | A3C5A2E23FB474672010B1801E06D6264763048BC3EC8D43D9D8EFD5B8C8254C
+  - wave4-a2-combined-output.csv | 921 bytes | 72C295C4DE7C1A5434BA16F9910C8B8F4696A946BACD3FB2F9B8BDAC42EA7092
+  - A2-project-ref-screenshot.png | 72759 bytes | 1DF698A4779EA2FE74B24227A631B1BF69F0AE73D30C5F00ED9CAA7890BF12A5
+
+## 6. No-Mutation Attestation
+
+As of 2026-10-16T20-28-48Z:
+- No ALTER ROLE executed
+- No DROP ROLE executed
+- No REVOKE executed
+- No GRANT executed
+- No NOLOGIN executed
+- No production mutation of any kind
+- SET ROLE / RESET ROLE are session-scoped operations only; no catalog change
+
+## 7. Wave 4 Evidence Anchoring
+
+Frozen PR #17 head SHA: 1e7c39886a53991d98fc8810b48daf7ef7f8d330
+All Wave 4 evidence binds to this commit.
+This binding is per-commit; any subsequent commit to PR #17 advances the head SHA and requires re-binding.
+
+[HISTORICAL: This section captures PR #17 head SHA at B4 close (2026-10-19).
+Subsequent commits (B5 v1, B5.1, B2 v2, B3 v2, B2 v2.1, JIT v7, docs) have
+advanced HEAD beyond 1e7c398. Current HEAD and bundle-manifest-v6 are the
+authoritative binding. This A3 document is a point-in-time historical record,
+not a continuously-updated reference. Per expert guidance: no endless
+self-SHA rebinding.]
+
+## 8. Cross-References
+
+- PR #17 (dedicated security): https://github.com/AshirRaza313/valtriox/pull/17
+- PR #13 (historical, frontend): https://github.com/AshirRaza313/valtriox/pull/13
+- Manifest v6: bundle-manifest-v6.txt
+- Wave 1 evidence: ../wave1-identity/
+- Wave 2 evidence: ../wave2-manifest-integrity/
+
+## 9. Evidence Chain
+
+- A2 SQL source:            wave4-a2-combined-v2.sql
+- A2 SQL output (evidence): wave4-a2-combined-output.csv
+- A2 supplementary image:   A2-project-ref-screenshot.png
+- A3 report (this file):    A3-canonical-sql-binding-2026-10-16T20-28-48Z.txt
+- A3 hash manifest:         A3-file-hashes-2026-10-16T20-28-48Z.txt

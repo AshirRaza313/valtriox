@@ -1,0 +1,51 @@
+{
+  "wave": "11-W7-B3",
+  "generated_utc": "2026-10-18T20-54-56Z",
+  "mode": "pre",
+  "database": "pg17test2",
+  "invocation": "per-block sudo -u postgres psql -d pg17test2 -v ON_ERROR_STOP=1 -f <block>",
+  "sql_source": "do-block-probe.sql",
+  "mode_expectations": {
+    "exit_code_per_block": 3,
+    "error_count_per_block": 1,
+    "notice_count_per_block": 0,
+    "note": "fail-succeeded (SELECT granted); exit 3 (psql: script error w/ ON_ERROR_STOP=1) + 1 ERROR per block"
+  },
+  "blocks": [
+    {
+      "block": "Subscription",
+      "block_index": 1,
+      "exit_code": 3,
+      "expected_exit": 3,
+      "sql_error_count": 1,
+      "expected_error_count": 1,
+      "notice_count": 0,
+      "expected_notice_count": 0,
+      "verdict": "PASS"
+    },
+    {
+      "block": "Notification",
+      "block_index": 2,
+      "exit_code": 3,
+      "expected_exit": 3,
+      "sql_error_count": 1,
+      "expected_error_count": 1,
+      "notice_count": 0,
+      "expected_notice_count": 0,
+      "verdict": "PASS"
+    },
+    {
+      "block": "PaymentProof",
+      "block_index": 3,
+      "exit_code": 3,
+      "expected_exit": 3,
+      "sql_error_count": 1,
+      "expected_error_count": 1,
+      "notice_count": 0,
+      "expected_notice_count": 0,
+      "verdict": "PASS"
+    }
+  ],
+  "runner_verdict": "PASS",
+  "runner_exit_code": 0
+}
