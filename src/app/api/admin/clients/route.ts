@@ -99,7 +99,7 @@ export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx) => {
       error: "Database temporarily unavailable"
     });
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 20, windowSeconds: 60 });
+}, { requireRole: ["platform_owner", "platform_admin", "valtriox_team"], requireOrg: false }), { maxRequests: 20, windowSeconds: 60 });
 
 // POST /api/admin/clients - Admin-only: register a new brand/client
 //
@@ -462,4 +462,4 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
       { status: 500 }
     );
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 20, windowSeconds: 60 });
+}, { requireRole: ["platform_owner", "platform_admin", "valtriox_team"], requireOrg: false }), { maxRequests: 20, windowSeconds: 60 });

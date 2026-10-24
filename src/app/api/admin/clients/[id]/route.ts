@@ -183,7 +183,7 @@ export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx, cont
     }
     return NextResponse.json({ error: "Failed to fetch client details", details: undefined }, { status: 500 });
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 30, windowSeconds: 60 });
+}, { requireRole: ["platform_owner", "platform_admin", "valtriox_team"], requireOrg: false }), { maxRequests: 30, windowSeconds: 60 });
 
 // PUT /api/admin/clients/[id] - Admin-only: manage client (suspend, ban, change plan, etc.)
 export const PUT = withRateLimit(withAuth(async (req: NextRequest, authCtx, context) => {
@@ -363,7 +363,7 @@ export const PUT = withRateLimit(withAuth(async (req: NextRequest, authCtx, cont
     }
     return NextResponse.json({ error: "Failed to manage client", details: undefined }, { status: 500 });
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 30, windowSeconds: 60 });
+}, { requireRole: ["platform_owner", "platform_admin", "valtriox_team"], requireOrg: false }), { maxRequests: 30, windowSeconds: 60 });
 
 // DELETE /api/admin/clients/[id] - Admin-only: permanently delete a client and all associated data
 export const DELETE = withRateLimit(withAuth(async (req: NextRequest, authCtx, context) => {
@@ -465,4 +465,4 @@ export const DELETE = withRateLimit(withAuth(async (req: NextRequest, authCtx, c
     }
     return NextResponse.json({ error: "Failed to delete client", details: undefined }, { status: 500 });
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 30, windowSeconds: 60 });
+}, { requireRole: ["platform_owner", "platform_admin", "valtriox_team"], requireOrg: false }), { maxRequests: 30, windowSeconds: 60 });
