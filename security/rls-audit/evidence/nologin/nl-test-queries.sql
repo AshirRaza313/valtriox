@@ -1,3 +1,34 @@
+-- ==================================================================
+-- STATUS: PARTIALLY HISTORICAL (as of 2026-10-25, Phase 12E)
+-- ==================================================================
+-- This file retains queries originally executed as part of the
+-- nologin-routine-scan-2026-10-22 evidence generation. Sections
+-- 7 (membership), 8 (ownership), and 10 (pre-mutation role state)
+-- remain authoritative and are safe to execute on disposable PG17
+-- or as part of execution-window prechecks.
+--
+-- Sections 9.1 and 9.2 in THIS FILE ARE SUPERSEDED:
+--   9.1 in this file filters prokind = 'f' (functions only).
+--        The authoritative replacement is in
+--        nologin-revalidation-checklist-v4.md Section 9.1, which
+--        covers prokind IN ('f','p') and outputs a sanitized
+--        has_proconfig boolean instead of raw proconfig.
+--   9.2 in this file outputs raw p.proconfig AS config.
+--        The authoritative replacement is in
+--        nologin-revalidation-checklist-v4.md Section 9.2, which
+--        outputs has_config + config_count, no raw values.
+--
+-- Do NOT execute Sections 9.1 or 9.2 from THIS FILE for Production
+-- or JIT evidence. Use the checklist versions above.
+--
+-- Historical scan evidence generated FROM THIS FILE'S QUERIES at
+-- scan time (2026-10-22), BEFORE this historical header was
+-- prepended:
+--   evidence/wave6/nologin-routine-scan-2026-10-22T19-06-25Z.log
+--   (superseded for procedure coverage by
+--    evidence/wave6/nologin-procedure-test-2026-10-24T11-51-00Z.log)
+-- ==================================================================
+
 \echo '=== NL §2: Production target identity ==='
 SELECT current_database() AS db,
        current_user,

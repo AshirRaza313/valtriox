@@ -144,6 +144,16 @@ knowledge. If a custody item above cannot be confirmed, record the
 gap in the reference field and proceed. NOLOGIN does not require or
 imply password reset.
 
+**Custody strengthening (Phase 12E, 2026-10-25):**
+
+1. **Variable-name inspection limitation:** Section 5 records secret VARIABLE NAMES only (no values). This preserves custody but is NOT sufficient to prove the role is unused. A generic secret name like DATABASE_URL may embed valtriox_evidence_ro inside its value without the role name appearing in the variable name. Whether the role is actively referenced by any external system must be attested by the authorized custodian who can inspect secret VALUES, without transmitting those values to this record.
+
+2. **Custodian dependency assessment (required for NOLOGIN):** The authorized custodian must provide a written, non-disclosing YES/NO/UNKNOWN assessment per secret source (GitHub repo Actions, GitHub environments, GitHub org, Dependabot, Codespaces, Vercel project env, Vercel team shared, Vercel integrations, password manager, other CI) stating whether valtriox_evidence_ro is referenced as a DB username inside that source. Record against Sections 5.1-5.3 without transmitting values.
+
+3. **Fresh Production prechecks (execution window):** Custody decision and the zero-rows dependency check (Section 8.9) must be re-verified at the execution window via fresh Production queries. A stale checklist attestation alone is not sufficient for NOLOGIN approval.
+
+4. **Separate authorization from Phase A:** NOLOGIN is a distinct mutation and requires its own written expert approval. Phase A approval does NOT extend to NOLOGIN, and NOLOGIN approval does NOT extend to Phase A. Both are separate decisions per E6.
+
 ---
 
 ## 5. Secret Dependency — Multi-Source Non-Disclosing (Blocker 5)
@@ -443,6 +453,19 @@ Any rows → investigate (means some object depends on the role).
 resolved. If Section 8.9 returns zero rows AND Section 5 finds no
 active external secret, NOLOGIN may proceed (written expert approval
 per E6 still required).
+
+**Scope of Section 8.9 evidence (Phase 12E, 2026-10-25):**
+
+`pg_shdepend` zero rows = catalog-level dependency evidence ONLY. It proves no catalog object (relation, function, type, cast, config, etc.) references the role. It does NOT prove:
+- Zero live database connections by the role (that check is Section 10.2 - must be re-run at execution window)
+- Zero external secret usage (that is custodian-attested per Section 4 - not catalog-visible)
+
+For NOLOGIN approval, all three must independently clear:
+1. Section 8.9 zero rows (catalog-level - re-verified at execution window)
+2. Section 10.2 zero active sessions (live-connection - re-verified at execution window)
+3. Custodian YES/NO/UNKNOWN assessment per Section 4.2 (external-secret - re-confirmed at execution window)
+
+Zero rows in Section 8.9 alone is NOT sufficient evidence for NOLOGIN approval.
 
 Recorded: ___________
 

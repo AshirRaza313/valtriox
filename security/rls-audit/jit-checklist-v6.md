@@ -47,28 +47,57 @@ git rev-parse HEAD
 
 Recorded local SHA: ___________
 
-### 1.3 Deployed SHA Hard Equality
+### 1.3 Deployed Identity Bindings (Two Independent Bindings)
 
-**Vercel Dashboard → Project → Deployments → Production → copy SHA.**
+**Design note (Phase 12E follow-up):** This gate replaces the prior "PR HEAD == Vercel Production SHA" equality check, which could never pass for a Preview-only branch (gh api evidence: 0 deployments for branch, sole HEAD deployment env=Preview). The two bindings below are INDEPENDENT. No equality between them is required or expected. Fail-closed discipline is preserved by requiring BOTH bindings to be verified - mismatch on either one is STOP.
 
-**Preview SHA is NOT Production proof.** Only a Production deployment SHA is acceptable evidence. If no Production deployment exists for this branch, escalate to expert - do NOT substitute Preview SHA.
+**Binding 1 - Reviewed SQL SHA (source of truth: this repo's committed artifacts):**
+
+| File | Expected SHA256 | Expected Size (B) |
+|------|-----------------|-------------------|
+| phase-a-containment-v3.sql | 59C62F1A92510BD45889BA519957BD1F893934DF18557EFD3DAA1636B1227A3C | 1041 |
+| phase-a-rollback-v2.sql | 8CEDA08FAA167F39CA9E0778D44F1661C9FF987143FB2E4AFC0A498ED8787E4D | 987 |
 
 ```powershell
-$localSha = git rev-parse HEAD
-$vercelSha = "VERCEL_DASHBOARD_ACCESS_BLOCKED_CASE_TNS_01svbbdIV5N1m04Q"
-if ($localSha -eq $vercelSha) {
-  Write-Host "SHA MATCH -- OK"
+$containmentExpected = "59C62F1A92510BD45889BA519957BD1F893934DF18557EFD3DAA1636B1227A3C"
+$rollbackExpected    = "8CEDA08FAA167F39CA9E0778D44F1661C9FF987143FB2E4AFC0A498ED8787E4D"
+$containmentActual   = (Get-FileHash -LiteralPath ".\phase-a-containment-v3.sql" -Algorithm SHA256).Hash
+$rollbackActual      = (Get-FileHash -LiteralPath ".\phase-a-rollback-v2.sql"    -Algorithm SHA256).Hash
+if ($containmentActual -eq $containmentExpected) { Write-Host "SQL CONTAINMENT SHA -- OK" } else { Write-Host "SQL CONTAINMENT SHA -- STOP" -ForegroundColor Red }
+if ($rollbackActual    -eq $rollbackExpected)    { Write-Host "SQL ROLLBACK SHA -- OK" }    else { Write-Host "SQL ROLLBACK SHA -- STOP"    -ForegroundColor Red }
+```
+
+**Required:** Both files must be on disk with SHA256 matching the values above at execution time. Mismatch on either -> STOP.
+
+Recorded:
+- Containment SHA actual: ___________
+- Containment match (yes/no): ___________
+- Rollback SHA actual: ___________
+- Rollback match (yes/no): ___________
+
+**Binding 2 - Actual Production app SHA (obtained at execution window):**
+
+At the execution window, obtain the SHA of the commit currently deployed to Vercel Production (Dashboard -> Project -> Deployments -> Production -> copy SHA). Record it below. This SHA is expected to be a 40-char hex commit SHA of WHATEVER COMMIT IS LIVE. It does NOT need to equal the SQL SHA, the branch HEAD, or any other value.
+
+```powershell
+$productionAppSha = "<PASTE_PRODUCTION_DEPLOYMENT_SHA_HERE>"
+if ($productionAppSha -match '^[0-9a-f]{40}$') {
+  Write-Host "PRODUCTION APP SHA RECORDED -- OK"
 } else {
-  Write-Host "SHA MISMATCH -- STOP" -ForegroundColor Red
+  Write-Host "PRODUCTION APP SHA INVALID -- STOP" -ForegroundColor Red
 }
 ```
 
-**Required:** exact string equality. Mismatch → STOP.
+**Required:** Production app SHA must be a 40-char lowercase hex string captured at execution window. Any other value -> STOP.
+
+**Preview SHA is NOT Production proof.** Only a Production deployment SHA is acceptable evidence. If no Production deployment exists for this branch, escalate to expert - do NOT substitute Preview SHA.
 
 Recorded:
-- Local SHA: ___________
-- Vercel SHA: ___________
-- Match (yes/no): ___________
+- Production app SHA: ___________
+- Production deployment timestamp (UTC): ___________
+- Vercel dashboard URL/screenshot reference: ___________
+
+**Why two bindings:** The SQL runs against the production database regardless of which app commit is currently serving production traffic. Binding 1 proves exactly which SQL and rollback scripts will be executed. Binding 2 proves what code is currently live. Neither substitutes for the other.
 
 ### 1.4 Deployment Freeze During Execution Window
 
@@ -623,7 +652,8 @@ Recorded: ___________
 ## 15. Stop Conditions (Abort on Any)
 
 - Working tree not clean (Section 1.1)
-- Local SHA != Vercel SHA (Section 1.3)
+- Binding 1 (SQL/rollback SHA) mismatch vs Section 1.3
+- Binding 2 (Production app SHA) missing or invalid vs Section 1.3
 - Project ref binding NULL/unavailable (Section 2.2)
 - current_user != 'postgres'
 - svn < 170000

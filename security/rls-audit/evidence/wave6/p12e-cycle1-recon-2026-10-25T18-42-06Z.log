@@ -1,0 +1,975 @@
+Phase 12E CYCLE 1 RECON - ITEM A + ITEM C
+UTC: 2026-10-25T18-42-06Z
+
+=== [BASELINE] State at recon start ===
+HEAD:   97808f81c451c4ae957c10afaedc81e857518b13
+Branch: security/rls-audit-containment-v1
+Tree entries at start: 0
+
+============================================================
+ITEM A - jit-checklist-v6.md Section 1.3 gate reconcile
+============================================================
+
+--- [A.1] File identity ---
+Path:           security/rls-audit/jit-checklist-v6.md
+Disk SHA256:    7C5466FDBC4111B9955B985B0D2D957A8F000A50DD87825889929C620ABD7838
+HEAD blob SHA:  7C5466FDBC4111B9955B985B0D2D957A8F000A50DD87825889929C620ABD7838
+P14 match:      True
+Expected SHA:   7C5466FDBC4111B9955B985B0D2D957A8F000A50DD87825889929C620ABD7838
+Size:           23543 B (expected 23543)
+Lines:          660 (expected 660)
+CRLF:           659
+loneLF:         0
+Trailing NL:    False
+
+--- [A.2] Section 1.3 region (verbatim) ---
+Found at line 50; dumping 50-73:
+  50: ### 1.3 Deployed SHA Hard Equality
+  51: 
+  52: **Vercel Dashboard ? Project ? Deployments ? Production ? copy SHA.**
+  53: 
+  54: **Preview SHA is NOT Production proof.** Only a Production deployment SHA is acceptable evidence. If no Production deployment exists for this branch, escalate to expert - do NOT substitute Preview SHA.
+  55: 
+  56: ```powershell
+  57: $localSha = git rev-parse HEAD
+  58: $vercelSha = "VERCEL_DASHBOARD_ACCESS_BLOCKED_CASE_TNS_01svbbdIV5N1m04Q"
+  59: if ($localSha -eq $vercelSha) {
+  60:   Write-Host "SHA MATCH -- OK"
+  61: } else {
+  62:   Write-Host "SHA MISMATCH -- STOP" -ForegroundColor Red
+  63: }
+  64: ```
+  65: 
+  66: **Required:** exact string equality. Mismatch ? STOP.
+  67: 
+  68: Recorded:
+  69: - Local SHA: ___________
+  70: - Vercel SHA: ___________
+  71: - Match (yes/no): ___________
+  72: 
+  73: ### 1.4 Deployment Freeze During Execution Window
+
+=== PATTERN: 'phase-a-containment|containment-v3|containment\.sql' (ctx=4 cap=10) ===
+total hits: 1
+--- hit at line 594 ---
+    590: 
+    591: ## 13. SET LOCAL Placement
+    592: 
+    593: ```powershell
+>>  594: Get-Content "C:\Users\Aashir\Projects\evidence-phase1\phase5-phase-a-package\phase-a-containment-v3.sql" |
+    595:   Select-String "BEGIN;|SET LOCAL|COMMIT;"
+    596: ```
+    597: 
+    598: **Expected order:**
+
+=== PATTERN: 'phase-a-rollback|rollback-v2|rollback\.sql' (ctx=4 cap=10) ===
+(no matches)
+
+=== PATTERN: 'Vercel' (ctx=3 cap=15) ===
+total hits: 6
+--- hit at line 52 ---
+     49: 
+     50: ### 1.3 Deployed SHA Hard Equality
+     51: 
+>>   52: **Vercel Dashboard ? Project ? Deployments ? Production ? copy SHA.**
+     53: 
+     54: **Preview SHA is NOT Production proof.** Only a Production deployment SHA is acceptable evidence. If no Production deployment exists for this branch, escalate to expert - do NOT substitute Preview SHA.
+     55: 
+--- hit at line 58 ---
+     55: 
+     56: ```powershell
+     57: $localSha = git rev-parse HEAD
+>>   58: $vercelSha = "VERCEL_DASHBOARD_ACCESS_BLOCKED_CASE_TNS_01svbbdIV5N1m04Q"
+     59: if ($localSha -eq $vercelSha) {
+     60:   Write-Host "SHA MATCH -- OK"
+     61: } else {
+--- hit at line 59 ---
+     56: ```powershell
+     57: $localSha = git rev-parse HEAD
+     58: $vercelSha = "VERCEL_DASHBOARD_ACCESS_BLOCKED_CASE_TNS_01svbbdIV5N1m04Q"
+>>   59: if ($localSha -eq $vercelSha) {
+     60:   Write-Host "SHA MATCH -- OK"
+     61: } else {
+     62:   Write-Host "SHA MISMATCH -- STOP" -ForegroundColor Red
+--- hit at line 70 ---
+     67: 
+     68: Recorded:
+     69: - Local SHA: ___________
+>>   70: - Vercel SHA: ___________
+     71: - Match (yes/no): ___________
+     72: 
+     73: ### 1.4 Deployment Freeze During Execution Window
+--- hit at line 75 ---
+     72: 
+     73: ### 1.4 Deployment Freeze During Execution Window
+     74: 
+>>   75: **Confirmed:** No deployment in progress on Vercel during the JIT + containment window.  
+     76: GitHub Actions: no workflow run queued/in-progress for production branch.
+     77: 
+     78: Recorded: ___________
+--- hit at line 626 ---
+    623: ## 15. Stop Conditions (Abort on Any)
+    624: 
+    625: - Working tree not clean (Section 1.1)
+>>  626: - Local SHA != Vercel SHA (Section 1.3)
+    627: - Project ref binding NULL/unavailable (Section 2.2)
+    628: - current_user != 'postgres'
+    629: - svn < 170000
+
+=== PATTERN: 'Production SHA|Production deployment|Production app' (ctx=3 cap=15) ===
+total hits: 1
+--- hit at line 54 ---
+     51: 
+     52: **Vercel Dashboard ? Project ? Deployments ? Production ? copy SHA.**
+     53: 
+>>   54: **Preview SHA is NOT Production proof.** Only a Production deployment SHA is acceptable evidence. If no Production deployment exists for this branch, escalate to expert - do NOT substitute Preview SHA.
+     55: 
+     56: ```powershell
+     57: $localSha = git rev-parse HEAD
+
+=== PATTERN: 'equal|equality|==' (ctx=3 cap=20) ===
+total hits: 3
+--- hit at line 23 ---
+     20: 
+     21: ---
+     22: 
+>>   23: ## 1. Working Tree + Deployed SHA ? Hard Equality (P1-6)
+     24: 
+     25: ### 1.1 Working Tree Must Be Clean
+     26: 
+--- hit at line 50 ---
+     47: 
+     48: Recorded local SHA: ___________
+     49: 
+>>   50: ### 1.3 Deployed SHA Hard Equality
+     51: 
+     52: **Vercel Dashboard ? Project ? Deployments ? Production ? copy SHA.**
+     53: 
+--- hit at line 66 ---
+     63: }
+     64: ```
+     65: 
+>>   66: **Required:** exact string equality. Mismatch ? STOP.
+     67: 
+     68: Recorded:
+     69: - Local SHA: ___________
+
+=== PATTERN: 'Stop Conditions|STOP|Mismatch' (ctx=3 cap=15) ===
+total hits: 14
+--- hit at line 33 ---
+     30: if ([string]::IsNullOrEmpty($porcelain)) {
+     31:   Write-Host "WORKING TREE CLEAN -- OK"
+     32: } else {
+>>   33:   Write-Host "WORKING TREE DIRTY -- STOP" -ForegroundColor Red
+     34:   Write-Host $porcelain
+     35: }
+     36: ```
+--- hit at line 38 ---
+     35: }
+     36: ```
+     37: 
+>>   38: **Required:** empty output ? OK. Any non-empty output ? STOP.
+     39: 
+     40: Recorded (empty = pass): ___________
+     41: 
+--- hit at line 62 ---
+     59: if ($localSha -eq $vercelSha) {
+     60:   Write-Host "SHA MATCH -- OK"
+     61: } else {
+>>   62:   Write-Host "SHA MISMATCH -- STOP" -ForegroundColor Red
+     63: }
+     64: ```
+     65: 
+--- hit at line 66 ---
+     63: }
+     64: ```
+     65: 
+>>   66: **Required:** exact string equality. Mismatch ? STOP.
+     67: 
+     68: Recorded:
+     69: - Local SHA: ___________
+--- hit at line 141 ---
+    138: **Path C ? Direct connection:**
+    139: Sanitized DSN hostname must contain wqwsagnxkamblnefhpzx. Password redacted.
+    140: 
+>>  141: **Required:** Project-ref binding confirmed via Path A, B, or C. NULL/unavailable binding ? STOP.
+    142: 
+    143: Recorded path used: ___________  
+    144: Binding confirmed (yes/no): ___________
+--- hit at line 164 ---
+    161: - Named executor: ___________
+    162: - Execution client: ___________ (SQL Editor / psql / app)
+    163: - Execution client fail-on-error verified: ___________
+>>  164: - ON_ERROR_STOP (psql) or per-statement execution verified (Editor): ___________
+    165: 
+    166: ---
+    167: 
+--- hit at line 298 ---
+    295: 
+    296: **Pre-state (JIT):** Record the baseline output here. Because `anon`/`authenticated` hold table-level grants, effective column access is expected to be **true** across all columns for SELECT (and for other privs where table grants exist). The output IS the baseline. **Zero rows is the POST-containment expectation** (`post-verification-v6.md ?3.3`) ? not a JIT expectation.
+    297: 
+>>  298: **STOP condition:** if the baseline differs from Phase 2.1 snapshot (i.e., unexpected column privileges appeared since Phase 2), halt and investigate.
+    299: 
+    300: Recorded baseline (JIT): ___________
+    301: 
+--- hit at line 343 ---
+    340: | service_role | 24 / 24 | ___ / 24 |
+    341: | postgres | 24 / 24 | ___ / 24 |
+    342: 
+>>  343: Any deviation from 24/24 for these roles in pre-state ? STOP + investigate (unexpected pre-state).
+    344: 
+    345: **Post-containment expectation** (`post-verification-v6.md ?2`): anon = 0/24, authenticated = 0/24, service_role = 24/24 (unchanged), postgres = 24/24 (unchanged).
+    346: 
+--- hit at line 379 ---
+    376: - That role's column privileges on Phase A target columns
+    377: - Whether that path could re-expose revoked access
+    378: 
+>>  379: **Stop condition:** Any outbound SET or USAGE path from anon/authenticated to a role that holds Phase A privileges ? STOP + investigate. These are orthogonal risk paths per PostgreSQL `pg_has_role` docs: `SET` = ability to `SET ROLE` to the target (requires `set_option`); `USAGE` = implicit privilege inheritance without `SET ROLE` (requires `inherit_option`). Neither implies the other. Predefined roles pg_read_all_data (SELECT on all tables), pg_write_all_data (INSERT/UPDATE/DELETE on all tables), and pg_maintain (VACUUM/ANALYZE/CLUSTER/REFRESH MATERIALIZED VIEW/REINDEX/LOCK TABLE on all relations) are explicitly included in the query above; any SET or USAGE path to any of them is a stop condition.
+    380: 
+    381: Recorded: ___________
+    382: 
+--- hit at line 415 ---
+    412: - `postgres` (project owner role)
+    413: - `cli_login_postgres` (Supabase CLI ? if present)
+    414: 
+>>  415: Any other member_role showing an inbound edge ? STOP + investigate.
+    416: 
+    417: Recorded: ___________
+    418: 
+--- hit at line 617 ---
+    614: - No PUBLIC grants
+    615: - No unexpected inherited path
+    616: 
+>>  617: **Mismatch ? STOP + regenerate rollback.** Rollback remains separately authorized break-glass exposure restoration. This checklist does NOT approve rollback execution.
+    618: 
+    619: Recorded: ___________
+    620: 
+--- hit at line 623 ---
+    620: 
+    621: ---
+    622: 
+>>  623: ## 15. Stop Conditions (Abort on Any)
+    624: 
+    625: - Working tree not clean (Section 1.1)
+    626: - Local SHA != Vercel SHA (Section 1.3)
+--- hit at line 637 ---
+    634: - Any view/matview/SECURITY DEFINER function/procedure referencing Phase A tables in application schemas (Section 11)
+    635: - Direct client Data API access on Phase A tables (Section 12)
+    636: - SET LOCAL placement incorrect
+>>  637: - Rollback comparison mismatch
+    638: - Supabase outage / maintenance
+    639: 
+    640: **On stop: Do NOT execute. No partial. No auto-rollback. Report.**
+--- hit at line 640 ---
+    637: - Rollback comparison mismatch
+    638: - Supabase outage / maintenance
+    639: 
+>>  640: **On stop: Do NOT execute. No partial. No auto-rollback. Report.**
+    641: 
+    642: ---
+    643: 
+
+--- [A.7] git diff 9fa6190..97808f81 -- jit-checklist-v6.md (C1 changes) ---
+
+
+Non-ASCII count in jit file: 47
+
+============================================================
+ITEM C - nologin-revalidation + nl-test-queries.sql
+============================================================
+
+--- [C.1a] nologin-revalidation-checklist-v4.md identity ---
+Path:           security/rls-audit/nologin-revalidation-checklist-v4.md
+Disk SHA256:    3D0510B2F9D5AF01C63EBA07309BE8828D9907A5718DFC0AEC41C290B347970D
+HEAD blob SHA:  3D0510B2F9D5AF01C63EBA07309BE8828D9907A5718DFC0AEC41C290B347970D
+P14 match:      True
+Expected SHA:   3D0510B2F9D5AF01C63EBA07309BE8828D9907A5718DFC0AEC41C290B347970D
+Size:           20038 B (expected 20038)
+Lines:          619 (expected 619)
+CRLF:           618
+loneLF:         0
+Trailing NL:    False
+
+--- [C.1b] nl-test-queries.sql identity ---
+Path:           security/rls-audit/evidence/nologin/nl-test-queries.sql
+Disk SHA256:    3EAE2AEE257D1A64D575722025F1BC99F89E14F842D780FB56FCF393392883B0
+HEAD blob SHA:  3EAE2AEE257D1A64D575722025F1BC99F89E14F842D780FB56FCF393392883B0
+P14 match:      True
+Size:           6258 B
+Lines:          168
+CRLF:           167
+loneLF:         0
+Trailing NL:    False
+
+--- [C.2] nl-test-queries.sql FULL content ---
+   1: \echo '=== NL ?2: Production target identity ==='
+   2: SELECT current_database() AS db,
+   3:        current_user,
+   4:        session_user,
+   5:        current_role,
+   6:        inet_server_addr() AS server_ip,
+   7:        inet_server_port() AS server_port,
+   8:        current_setting('server_version_num') AS svn,
+   9:        current_setting('server_version') AS sv,
+  10:        to_char(now() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS utc_now;
+  11: 
+  12: \echo ''
+  13: \echo '=== NL ?7.1: Direct outbound memberships ==='
+  14: SELECT m.member::regrole::text AS member,
+  15:        m.roleid::regrole::text AS granted_role,
+  16:        m.grantor::regrole::text AS grantor,
+  17:        m.admin_option, m.set_option, m.inherit_option
+  18: FROM pg_auth_members m
+  19: WHERE m.member = 'valtriox_evidence_ro'::regrole
+  20: ORDER BY granted_role;
+  21: 
+  22: \echo ''
+  23: \echo '=== NL ?7.2: Direct inbound memberships ==='
+  24: SELECT m.member::regrole::text AS member,
+  25:        m.roleid::regrole::text AS granted_role,
+  26:        m.grantor::regrole::text AS grantor,
+  27:        m.admin_option, m.set_option, m.inherit_option
+  28: FROM pg_auth_members m
+  29: WHERE m.roleid = 'valtriox_evidence_ro'::regrole
+  30: ORDER BY member;
+  31: 
+  32: \echo ''
+  33: \echo '=== NL ?7.3: Transitive SET ==='
+  34: WITH RECURSIVE set_chain AS (
+  35:   SELECT m.member::regrole::text AS role_name,
+  36:          m.roleid::regrole::text AS reached_role,
+  37:          m.set_option, 1 AS depth,
+  38:          ARRAY[m.member::regrole::text] AS path
+  39:   FROM pg_auth_members m
+  40:   WHERE m.roleid = 'valtriox_evidence_ro'::regrole
+  41:     AND m.set_option = true
+  42:   UNION ALL
+  43:   SELECT m.member::regrole::text, m.roleid::regrole::text,
+  44:          m.set_option, sc.depth + 1, sc.path || m.member::regrole::text
+  45:   FROM pg_auth_members m
+  46:   JOIN set_chain sc ON m.roleid::regrole::text = sc.role_name
+  47:   WHERE m.set_option = true AND sc.depth < 5
+  48: )
+  49: SELECT role_name, reached_role, depth, path
+  50: FROM set_chain ORDER BY depth, role_name;
+  51: 
+  52: \echo ''
+  53: \echo '=== NL ?7.4: Independent SET/USE paths ==='
+  54: SELECT r.rolname AS role_name,
+  55:        pg_has_role(r.rolname, 'valtriox_evidence_ro', 'SET') AS can_set,
+  56:        pg_has_role(r.rolname, 'valtriox_evidence_ro', 'USAGE') AS can_use
+  57: FROM pg_roles r
+  58: WHERE r.rolname NOT LIKE 'pg\_%'
+  59:   AND r.rolname != 'valtriox_evidence_ro'
+  60:   AND (pg_has_role(r.rolname, 'valtriox_evidence_ro', 'SET') = true
+  61:        OR pg_has_role(r.rolname, 'valtriox_evidence_ro', 'USAGE') = true)
+  62: ORDER BY r.rolname;
+  63: 
+  64: \echo ''
+  65: \echo '=== NL ?7.5: Login roles with SET ==='
+  66: SELECT r.rolname AS login_role,
+  67:        pg_has_role(r.rolname, 'valtriox_evidence_ro', 'SET') AS can_set
+  68: FROM pg_roles r
+  69: WHERE r.rolcanlogin = true
+  70:   AND r.rolname NOT LIKE 'pg\_%'
+  71:   AND r.rolname != 'valtriox_evidence_ro'
+  72: ORDER BY r.rolname;
+  73: 
+  74: \echo ''
+  75: \echo '=== NL ?8.1: Relations owned ==='
+  76: SELECT n.nspname, c.relname, c.relkind
+  77: FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+  78: WHERE pg_get_userbyid(c.relowner) = 'valtriox_evidence_ro';
+  79: 
+  80: \echo ''
+  81: \echo '=== NL ?8.2: Schemas owned ==='
+  82: SELECT nspname FROM pg_namespace
+  83: WHERE pg_get_userbyid(nspowner) = 'valtriox_evidence_ro';
+  84: 
+  85: \echo ''
+  86: \echo '=== NL ?8.3: Functions owned ==='
+  87: SELECT n.nspname, p.proname, p.prokind
+  88: FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+  89: WHERE pg_get_userbyid(p.proowner) = 'valtriox_evidence_ro';
+  90: 
+  91: \echo ''
+  92: \echo '=== NL ?8.4: Types owned ==='
+  93: SELECT n.nspname, t.typname, t.typtype
+  94: FROM pg_type t JOIN pg_namespace n ON n.oid = t.typnamespace
+  95: WHERE pg_get_userbyid(t.typowner) = 'valtriox_evidence_ro';
+  96: 
+  97: \echo ''
+  98: \echo '=== NL ?8.5: Operators owned ==='
+  99: SELECT n.nspname, o.oprname
+ 100: FROM pg_operator o JOIN pg_namespace n ON n.oid = o.oprnamespace
+ 101: WHERE pg_get_userbyid(o.oprowner) = 'valtriox_evidence_ro';
+ 102: 
+ 103: \echo ''
+ 104: \echo '=== NL ?8.6: Conversions owned ==='
+ 105: SELECT n.nspname, c.conname
+ 106: FROM pg_conversion c JOIN pg_namespace n ON n.oid = c.connamespace
+ 107: WHERE pg_get_userbyid(c.conowner) = 'valtriox_evidence_ro';
+ 108: 
+ 109: \echo ''
+ 110: \echo '=== NL ?8.7: Collations owned ==='
+ 111: SELECT n.nspname, c.collname
+ 112: FROM pg_collation c JOIN pg_namespace n ON n.oid = c.collnamespace
+ 113: WHERE pg_get_userbyid(c.collowner) = 'valtriox_evidence_ro';
+ 114: 
+ 115: \echo ''
+ 116: \echo '=== NL ?8.8: Text search dicts/configs ==='
+ 117: SELECT n.nspname, d.dictname AS object_name, 'dictionary' AS object_type
+ 118: FROM pg_ts_dict d JOIN pg_namespace n ON n.oid = d.dictnamespace
+ 119: WHERE pg_get_userbyid(d.dictowner) = 'valtriox_evidence_ro'
+ 120: UNION ALL
+ 121: SELECT n.nspname, c.cfgname, 'configuration'
+ 122: FROM pg_ts_config c JOIN pg_namespace n ON n.oid = c.cfgnamespace
+ 123: WHERE pg_get_userbyid(c.cfgowner) = 'valtriox_evidence_ro';
+ 124: 
+ 125: \echo ''
+ 126: \echo '=== NL ?8.9: Shared dependencies (replaces pg_cast.castowner) ==='
+ 127: SELECT classid::regclass::text AS catalog,
+ 128:        objid::text AS object_id,
+ 129:        objsubid::int AS sub_id,
+ 130:        refclassid::regclass::text AS ref_catalog,
+ 131:        refobjid::text AS ref_object_id,
+ 132:        deptype
+ 133: FROM pg_shdepend
+ 134: WHERE refclassid = 'pg_authid'::regclass
+ 135:   AND refobjid = (SELECT oid FROM pg_roles WHERE rolname = 'valtriox_evidence_ro');
+ 136: 
+ 137: \echo ''
+ 138: \echo '=== NL ?9.1: Functions referencing role (prokind=f) ==='
+ 139: SELECT n.nspname AS schema_name,
+ 140:        p.proname AS function_name,
+ 141:        p.prokind AS kind,
+ 142:        (p.prokind IN ('f','p')
+ 143:          AND pg_get_functiondef(p.oid) ~* 'valtriox_evidence_ro') AS references_role
+ 144: FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+ 145: WHERE p.prokind = 'f'
+ 146: ORDER BY schema_name, function_name;
+ 147: 
+ 148: \echo ''
+ 149: \echo '=== NL ?9.2: SECURITY DEFINER functions ==='
+ 150: SELECT n.nspname AS schema_name,
+ 151:        p.proname AS function_name,
+ 152:        pg_get_userbyid(p.proowner) AS owner,
+ 153:        p.proconfig AS config
+ 154: FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+ 155: WHERE p.prosecdef = true AND p.prokind = 'f'
+ 156: ORDER BY schema_name, function_name;
+ 157: 
+ 158: \echo ''
+ 159: \echo '=== NL ?10: Pre-mutation role state ==='
+ 160: SELECT rolname, rolcanlogin, rolsuper, rolcreaterole, rolcreatedb,
+ 161:        rolreplication, rolbypassrls, rolconnlimit, rolvaliduntil, rolconfig
+ 162: FROM pg_roles WHERE rolname = 'valtriox_evidence_ro';
+ 163: 
+ 164: \echo ''
+ 165: \echo '=== NL ?10: Zero active sessions check ==='
+ 166: SELECT pid, usename, application_name, state, backend_start
+ 167: FROM pg_stat_activity
+ 168: WHERE usename = 'valtriox_evidence_ro';
+
+=== PATTERN: 'custody|password|credential' (ctx=4 cap=20) ===
+total hits: 17
+--- hit at line 30 ---
+     26: **NOLOGIN action authorized by this checklist: `ALTER ROLE valtriox_evidence_ro NOLOGIN` on the single role `valtriox_evidence_ro` only.**
+     27: 
+     28: Explicitly NOT authorized or implied by this checklist:
+     29: - NOLOGIN on any other role
+>>   30: - Password reset (`ALTER ROLE ... PASSWORD`)
+     31: - Membership revoke (`REVOKE ... FROM ...`)
+     32: - Session termination (`pg_terminate_backend`, `pg_cancel_backend`, or similar)
+     33: - DROP ROLE / DROP USER / DROP-owned-objects
+     34: 
+--- hit at line 35 ---
+     31: - Membership revoke (`REVOKE ... FROM ...`)
+     32: - Session termination (`pg_terminate_backend`, `pg_cancel_backend`, or similar)
+     33: - DROP ROLE / DROP USER / DROP-owned-objects
+     34: 
+>>   35: Unknown password does not authorize password reset (credential custody verification is a pre-execution condition, not a permission grant). Approval for NOLOGIN does not extend to any of the above; each requires its own written approval.
+     36: 
+     37: ---
+     38: 
+     39: ## 1. Corrected Wording ? pg_stat_activity Limitation (Blocker 1)
+--- hit at line 75 ---
+     71: 
+     72: **Project-ref binding (choose one):**
+     73: - SQL Editor: screenshot of dashboard showing project name + ref in URL bar
+     74: - psql: sanitized `\conninfo` output (hostname contains `wqwsagnxkamblnefhpzx`)
+>>   75: - DSN hostname (sanitized; password redacted)
+     76: 
+     77: NULL/unavailable ? STOP.
+     78: 
+     79: Recorded:
+--- hit at line 104 ---
+    100: - If actual timestamp outside window ? STOP + re-approval required.
+    101: 
+    102: ---
+    103: 
+>>  104: ## 4. Credential Custody Attestation (Blocker 4 ? no values)
+    105: 
+    106: **No credential values captured or transmitted.**
+    107: 
+    108: ### 4.1 Local State Verification (output discipline ? no line content)
+--- hit at line 106 ---
+    102: ---
+    103: 
+    104: ## 4. Credential Custody Attestation (Blocker 4 ? no values)
+    105: 
+>>  106: **No credential values captured or transmitted.**
+    107: 
+    108: ### 4.1 Local State Verification (output discipline ? no line content)
+    109: 
+    110: ```powershell
+--- hit at line 131 ---
+    127: ### 4.2 Authorized Custodian Attestation
+    128: 
+    129: The project owner or authorized custodian must provide a written attestation confirming (without disclosing values):
+    130: 
+>>  131: - [ ] Custodian is aware of the `valtriox_evidence_ro` password existence
+    132: - [ ] Custodian confirms whether they currently hold or have held the credential
+    133: - [ ] Credential is not currently used by any active external system, CI, or manual workflow
+    134: - [ ] If held, storage category stated (password manager / Vercel env / not stored)
+    135: - [ ] No other party is known to hold the credential
+--- hit at line 132 ---
+    128: 
+    129: The project owner or authorized custodian must provide a written attestation confirming (without disclosing values):
+    130: 
+    131: - [ ] Custodian is aware of the `valtriox_evidence_ro` password existence
+>>  132: - [ ] Custodian confirms whether they currently hold or have held the credential
+    133: - [ ] Credential is not currently used by any active external system, CI, or manual workflow
+    134: - [ ] If held, storage category stated (password manager / Vercel env / not stored)
+    135: - [ ] No other party is known to hold the credential
+    136: 
+--- hit at line 133 ---
+    129: The project owner or authorized custodian must provide a written attestation confirming (without disclosing values):
+    130: 
+    131: - [ ] Custodian is aware of the `valtriox_evidence_ro` password existence
+    132: - [ ] Custodian confirms whether they currently hold or have held the credential
+>>  133: - [ ] Credential is not currently used by any active external system, CI, or manual workflow
+    134: - [ ] If held, storage category stated (password manager / Vercel env / not stored)
+    135: - [ ] No other party is known to hold the credential
+    136: 
+    137: - Attestation recorded by (name + role): ___________
+--- hit at line 134 ---
+    130: 
+    131: - [ ] Custodian is aware of the `valtriox_evidence_ro` password existence
+    132: - [ ] Custodian confirms whether they currently hold or have held the credential
+    133: - [ ] Credential is not currently used by any active external system, CI, or manual workflow
+>>  134: - [ ] If held, storage category stated (password manager / Vercel env / not stored)
+    135: - [ ] No other party is known to hold the credential
+    136: 
+    137: - Attestation recorded by (name + role): ___________
+    138: - Attestation UTC timestamp: ___________
+--- hit at line 135 ---
+    131: - [ ] Custodian is aware of the `valtriox_evidence_ro` password existence
+    132: - [ ] Custodian confirms whether they currently hold or have held the credential
+    133: - [ ] Credential is not currently used by any active external system, CI, or manual workflow
+    134: - [ ] If held, storage category stated (password manager / Vercel env / not stored)
+>>  135: - [ ] No other party is known to hold the credential
+    136: 
+    137: - Attestation recorded by (name + role): ___________
+    138: - Attestation UTC timestamp: ___________
+    139: - Attestation reference (ticket / message ID): ___________
+--- hit at line 141 ---
+    137: - Attestation recorded by (name + role): ___________
+    138: - Attestation UTC timestamp: ___________
+    139: - Attestation reference (ticket / message ID): ___________
+    140: 
+>>  141: **NOLOGIN independence from custody:** `ALTER ROLE
+    142: valtriox_evidence_ro NOLOGIN` requires admin access, not password
+    143: knowledge. If a custody item above cannot be confirmed, record the
+    144: gap in the reference field and proceed. NOLOGIN does not require or
+    145: imply password reset.
+--- hit at line 142 ---
+    138: - Attestation UTC timestamp: ___________
+    139: - Attestation reference (ticket / message ID): ___________
+    140: 
+    141: **NOLOGIN independence from custody:** `ALTER ROLE
+>>  142: valtriox_evidence_ro NOLOGIN` requires admin access, not password
+    143: knowledge. If a custody item above cannot be confirmed, record the
+    144: gap in the reference field and proceed. NOLOGIN does not require or
+    145: imply password reset.
+    146: 
+--- hit at line 143 ---
+    139: - Attestation reference (ticket / message ID): ___________
+    140: 
+    141: **NOLOGIN independence from custody:** `ALTER ROLE
+    142: valtriox_evidence_ro NOLOGIN` requires admin access, not password
+>>  143: knowledge. If a custody item above cannot be confirmed, record the
+    144: gap in the reference field and proceed. NOLOGIN does not require or
+    145: imply password reset.
+    146: 
+    147: ---
+--- hit at line 145 ---
+    141: **NOLOGIN independence from custody:** `ALTER ROLE
+    142: valtriox_evidence_ro NOLOGIN` requires admin access, not password
+    143: knowledge. If a custody item above cannot be confirmed, record the
+    144: gap in the reference field and proceed. NOLOGIN does not require or
+>>  145: imply password reset.
+    146: 
+    147: ---
+    148: 
+    149: ## 5. Secret Dependency ? Multi-Source Non-Disclosing (Blocker 5)
+--- hit at line 187 ---
+    183: | project env | | | |
+    184: | team shared | | | |
+    185: | integrations | | | |
+    186: 
+>>  187: ### 5.3 Password Manager / Other CI
+    188: 
+    189: - Password manager vault item names (names only)
+    190: - Other CI (CircleCI, GitLab, etc.) secret names
+    191: 
+--- hit at line 189 ---
+    185: | integrations | | | |
+    186: 
+    187: ### 5.3 Password Manager / Other CI
+    188: 
+>>  189: - Password manager vault item names (names only)
+    190: - Other CI (CircleCI, GitLab, etc.) secret names
+    191: 
+    192: Recorded:
+    193: | Source | Variable name | Scope | Match yes/no |
+--- hit at line 608 ---
+    604: ---
+    605: 
+    606: ## 12. Break-Glass Rollback
+    607: 
+>>  608: `nologin-rollback.sql` is a **separately authorized break-glass action** because credential custody remains UNVERIFIED. Do not execute without separate written approval.
+    609: 
+    610: ---
+    611: 
+    612: ## 13. Status
+
+=== PATTERN: 'depend|pg_shdepend' (ctx=4 cap=20) ===
+total hits: 9
+--- hit at line 141 ---
+    137: - Attestation recorded by (name + role): ___________
+    138: - Attestation UTC timestamp: ___________
+    139: - Attestation reference (ticket / message ID): ___________
+    140: 
+>>  141: **NOLOGIN independence from custody:** `ALTER ROLE
+    142: valtriox_evidence_ro NOLOGIN` requires admin access, not password
+    143: knowledge. If a custody item above cannot be confirmed, record the
+    144: gap in the reference field and proceed. NOLOGIN does not require or
+    145: imply password reset.
+--- hit at line 149 ---
+    145: imply password reset.
+    146: 
+    147: ---
+    148: 
+>>  149: ## 5. Secret Dependency ? Multi-Source Non-Disclosing (Blocker 5)
+    150: 
+    151: For each source below, record:
+    152: - Variable name
+    153: - Scope (repo/env/org/team)
+--- hit at line 162 ---
+    158: 
+    159: - GitHub repo ? Settings ? Secrets and variables ? Actions
+    160: - GitHub repo ? Settings ? Environments
+    161: - GitHub org ? Secrets
+>>  162: - Dependabot secrets
+    163: - Codespaces secrets
+    164: 
+    165: Recorded:
+    166: | Source | Variable name | Scope | Match yes/no |
+--- hit at line 171 ---
+    167: |--------|---------------|-------|--------------|
+    168: | repo Actions | | | |
+    169: | repo env | | | |
+    170: | org | | | |
+>>  171: | Dependabot | | | |
+    172: | Codespaces | | | |
+    173: 
+    174: ### 5.2 Vercel
+    175: 
+--- hit at line 298 ---
+    294: ```
+    295: 
+    296: Recorded: ___________
+    297: 
+>>  298: ### 7.4 Independent SET/USE Paths into the Role
+    299: 
+    300: ```sql
+    301: SELECT r.rolname AS role_name,
+    302:        pg_has_role(r.rolname, 'valtriox_evidence_ro', 'SET') AS can_set,
+--- hit at line 334 ---
+    330: ---
+    331: 
+    332: ## 8. Ownership Search ? Corrected for PG17 (Blocker 2)
+    333: 
+>>  334: `pg_cast` catalog in PostgreSQL 17 does **not** have a `castowner` column. Cast dependency must be derived via source/target types and cast function owners, or comprehensively via `pg_shdepend`.
+    335: 
+    336: ### 8.1 Relations
+    337: 
+    338: ```sql
+--- hit at line 425 ---
+    421: ```
+    422: 
+    423: Recorded: ___________
+    424: 
+>>  425: ### 8.9 Shared Dependencies (Comprehensive, Replaces pg_cast.castowner)
+    426: 
+    427: ```sql
+    428: SELECT classid::regclass::text AS catalog,
+    429:        objid::text AS object_id,
+--- hit at line 434 ---
+    430:        objsubid::int AS sub_id,
+    431:        refclassid::regclass::text AS ref_catalog,
+    432:        refobjid::text AS ref_object_id,
+    433:        deptype
+>>  434: FROM pg_shdepend
+    435: WHERE refclassid = 'pg_authid'::regclass
+    436:   AND refobjid = (SELECT oid FROM pg_roles WHERE rolname = 'valtriox_evidence_ro');
+    437: ```
+    438: 
+--- hit at line 439 ---
+    435: WHERE refclassid = 'pg_authid'::regclass
+    436:   AND refobjid = (SELECT oid FROM pg_roles WHERE rolname = 'valtriox_evidence_ro');
+    437: ```
+    438: 
+>>  439: Any rows ? investigate (means some object depends on the role).
+    440: 
+    441: **Decision rule:** If Section 8.9 returns ANY rows referencing
+    442: `valtriox_evidence_ro` (any deptype), NOLOGIN is BLOCKED until
+    443: resolved. If Section 8.9 returns zero rows AND Section 5 finds no
+
+=== PATTERN: 'DATABASE_URL|secret|variable' (ctx=3 cap=20) ===
+total hits: 14
+--- hit at line 149 ---
+    146: 
+    147: ---
+    148: 
+>>  149: ## 5. Secret Dependency ? Multi-Source Non-Disclosing (Blocker 5)
+    150: 
+    151: For each source below, record:
+    152: - Variable name
+--- hit at line 152 ---
+    149: ## 5. Secret Dependency ? Multi-Source Non-Disclosing (Blocker 5)
+    150: 
+    151: For each source below, record:
+>>  152: - Variable name
+    153: - Scope (repo/env/org/team)
+    154: - Match yes/no (does it contain the role name?)
+    155: - **NEVER** the value
+--- hit at line 159 ---
+    156: 
+    157: ### 5.1 GitHub
+    158: 
+>>  159: - GitHub repo ? Settings ? Secrets and variables ? Actions
+    160: - GitHub repo ? Settings ? Environments
+    161: - GitHub org ? Secrets
+    162: - Dependabot secrets
+--- hit at line 161 ---
+    158: 
+    159: - GitHub repo ? Settings ? Secrets and variables ? Actions
+    160: - GitHub repo ? Settings ? Environments
+>>  161: - GitHub org ? Secrets
+    162: - Dependabot secrets
+    163: - Codespaces secrets
+    164: 
+--- hit at line 162 ---
+    159: - GitHub repo ? Settings ? Secrets and variables ? Actions
+    160: - GitHub repo ? Settings ? Environments
+    161: - GitHub org ? Secrets
+>>  162: - Dependabot secrets
+    163: - Codespaces secrets
+    164: 
+    165: Recorded:
+--- hit at line 163 ---
+    160: - GitHub repo ? Settings ? Environments
+    161: - GitHub org ? Secrets
+    162: - Dependabot secrets
+>>  163: - Codespaces secrets
+    164: 
+    165: Recorded:
+    166: | Source | Variable name | Scope | Match yes/no |
+--- hit at line 166 ---
+    163: - Codespaces secrets
+    164: 
+    165: Recorded:
+>>  166: | Source | Variable name | Scope | Match yes/no |
+    167: |--------|---------------|-------|--------------|
+    168: | repo Actions | | | |
+    169: | repo env | | | |
+--- hit at line 176 ---
+    173: 
+    174: ### 5.2 Vercel
+    175: 
+>>  176: - Vercel Dashboard ? Project ? Settings ? Environment Variables
+    177: - Vercel Team ? Shared environment variables
+    178: - Vercel ? Integrations
+    179: 
+--- hit at line 177 ---
+    174: ### 5.2 Vercel
+    175: 
+    176: - Vercel Dashboard ? Project ? Settings ? Environment Variables
+>>  177: - Vercel Team ? Shared environment variables
+    178: - Vercel ? Integrations
+    179: 
+    180: Recorded:
+--- hit at line 181 ---
+    178: - Vercel ? Integrations
+    179: 
+    180: Recorded:
+>>  181: | Source | Variable name | Scope | Match yes/no |
+    182: |--------|---------------|-------|--------------|
+    183: | project env | | | |
+    184: | team shared | | | |
+--- hit at line 190 ---
+    187: ### 5.3 Password Manager / Other CI
+    188: 
+    189: - Password manager vault item names (names only)
+>>  190: - Other CI (CircleCI, GitLab, etc.) secret names
+    191: 
+    192: Recorded:
+    193: | Source | Variable name | Scope | Match yes/no |
+--- hit at line 193 ---
+    190: - Other CI (CircleCI, GitLab, etc.) secret names
+    191: 
+    192: Recorded:
+>>  193: | Source | Variable name | Scope | Match yes/no |
+    194: |--------|---------------|-------|--------------|
+    195: | | | | |
+    196: 
+--- hit at line 197 ---
+    194: |--------|---------------|-------|--------------|
+    195: | | | | |
+    196: 
+>>  197: **If any match = yes for a variable that contains `valtriox_evidence_ro` as a DB username ? STOP + assess before NOLOGIN.**
+    198: 
+    199: ---
+    200: 
+--- hit at line 444 ---
+    441: **Decision rule:** If Section 8.9 returns ANY rows referencing
+    442: `valtriox_evidence_ro` (any deptype), NOLOGIN is BLOCKED until
+    443: resolved. If Section 8.9 returns zero rows AND Section 5 finds no
+>>  444: active external secret, NOLOGIN may proceed (written expert approval
+    445: per E6 still required).
+    446: 
+    447: Recorded: ___________
+
+=== PATTERN: 'precheck|execution window' (ctx=3 cap=15) ===
+total hits: 5
+--- hit at line 20 ---
+     17: 
+     18: Blanks in the template are execution-evidence fields, NOT placeholders.
+     19: 
+>>   20: **Status of this document:** The checklist DESIGN is updated. It is **NOT "10 gaps closed"** ? the gaps are closed structurally. **Execution evidence is pending** (to be filled after PG17 dry-run + production execution window).
+     21: 
+     22: ---
+     23: 
+--- hit at line 90 ---
+     87: 
+     88: ---
+     89: 
+>>   90: ## 3. Named Executor + Approved Execution Window (Blocker 8)
+     91: 
+     92: **Corrected from equality to range:** The runbook does NOT require the execution timestamp to equal the pre-recorded JIT timestamp (time naturally advances). Instead, execution must fall within an **approved time window**.
+     93: 
+--- hit at line 97 ---
+     94: - Named executor: ___________
+     95: - Execution client: ___________
+     96: - Client fail-on-error verified: ___________
+>>   97: - **Approved execution window (UTC start?end):** ___________
+     98: - Window approved by (name + reference): ___________
+     99: - Actual execution timestamp (filled at run time, must fall within window): ___________
+    100: - If actual timestamp outside window ? STOP + re-approval required.
+--- hit at line 565 ---
+    562:        to_char(now() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS utc_now;
+    563: ```
+    564: 
+>>  565: Verify timestamp falls within **Section 3 approved execution window**.
+    566: 
+    567: ### 11.2 Final Pre-Check ? Zero Sessions
+    568: 
+--- hit at line 619 ---
+    616: **Prepared by:** Ashir Raza  
+    617: **Date:** 2026-10-12
+    618: 
+>>  619: **Note:** This checklist design closes the 9 structural gaps identified in Phase 9 review. The actual evidence fields will be populated on PG17 disposable first, then on production during the approved execution window. The claim "10 gaps closed" is not used; the correct status is "design updated; execution evidence pending".
+
+--- [C.4] Section 9.1 authoritative query (for nl-test reconcile reference) ---
+Found at line 455; dumping 455-515:
+ 455: ### 9.1 Routines Referencing Role ? Authoritative Query
+ 456: 
+ 457: Single authoritative query covering functions (`f`) AND procedures (`p`).
+ 458: `pg_get_functiondef()` supports only `f` and `p` - it errors on
+ 459: aggregates (`a`) and window functions (`w`). Aggregates and window
+ 460: functions have no SQL source and cannot reference a role; they are
+ 461: correctly excluded by prokind IN ('f','p').
+ 462: 
+ 463: ```sql
+ 464: SELECT n.nspname AS schema_name,
+ 465:        p.proname AS routine_name,
+ 466:        p.prokind AS kind,
+ 467:        p.prosecdef,
+ 468:        p.proconfig IS NOT NULL AS has_proconfig,
+ 469:        pg_get_functiondef(p.oid) ~* 'valtriox_evidence_ro' AS references_role
+ 470: FROM pg_proc p
+ 471: JOIN pg_namespace n ON n.oid = p.pronamespace
+ 472: WHERE p.prokind IN ('f', 'p')
+ 473: ORDER BY schema_name, routine_name;
+ 474: ```
+ 475: 
+ 476: **Output discipline:** `pg_get_functiondef()` returns full definition text.
+ 477: We do NOT print definitions. Output is restricted to sanitized routine
+ 478: identity (schema_name, routine_name, kind, prosecdef) + boolean
+ 479: `references_role`.
+ 480: 
+ 481: **Coverage:** `f` (function) and `p` (procedure) - both covered. `a`
+ 482: (aggregate) and `w` (window function) excluded because `pg_get_functiondef`
+ 483: does not support them and they have no SQL source.
+ 484: 
+ 485: **Local PG17 evidence:** `evidence/wave6/nologin-routine-scan-<UTC>.log`
+ 486: + `.sha256`. Exact query output against pg17test2 (recorded below).
+ 487: 
+ 488: **Reconciliation (2026-10-24):** Prior scan's zero-procedure result
+ 489: reflects pg17test2 state (no procedures existed), not a query gap.
+ 490: Focused procedure test `nologin-procedure-test-<UTC>.log` verifies
+ 491: Section 9.1 correctly captures `prokind='p'` rows.
+ 492: 
+ 493: Recorded (only rows where references_role = true): ___________
+ 494: 
+ 495: ### 9.2 SECURITY DEFINER Functions ? proconfig inspection
+ 496: 
+ 497: ```sql
+ 498: SELECT n.nspname AS schema_name,
+ 499:        p.proname AS function_name,
+ 500:        pg_get_userbyid(p.proowner) AS owner,
+ 501:        p.proconfig IS NOT NULL AS has_config, array_length(p.proconfig, 1) AS config_count
+ 502: FROM pg_proc p
+ 503: JOIN pg_namespace n ON n.oid = p.pronamespace
+ 504: WHERE p.prosecdef = true
+ 505:   AND p.prokind = 'f'
+ 506: ORDER BY schema_name, function_name;
+ 507: ```
+ 508: 
+ 509: Recorded: ___________
+ 510: 
+ 511: **Expected: no SECURITY DEFINER function references `valtriox_evidence_ro`.**
+ 512: 
+ 513: ---
+ 514: 
+ 515: ## 10. Preconditions ? Immediate Pre-Mutation Role State (Blocker 7)
+
+--- [C.5] nologin-routine-scan reference check ---
+=== PATTERN: 'nologin-routine-scan|2026-10-22T19-06' (ctx=3 cap=8) ===
+total hits: 1
+--- hit at line 485 ---
+    482: (aggregate) and `w` (window function) excluded because `pg_get_functiondef`
+    483: does not support them and they have no SQL source.
+    484: 
+>>  485: **Local PG17 evidence:** `evidence/wave6/nologin-routine-scan-<UTC>.log`
+    486: + `.sha256`. Exact query output against pg17test2 (recorded below).
+    487: 
+    488: **Reconciliation (2026-10-24):** Prior scan's zero-procedure result
+
+
+=== [POST-RECON] Tree state ===
+Tree entries post-recon: 0 (recon log itself may appear as ??)
+
+=== DONE ===
