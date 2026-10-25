@@ -126,4 +126,4 @@ export const GET = withRateLimit(withAuth(async (req: NextRequest, authCtx, cont
     }
     return NextResponse.json({ error: "Failed to fetch client orders", details: undefined }, { status: 500 });
   }
-}, { requireRole: ["admin", "owner", "platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 30, windowSeconds: 60 });
+}, { requireRole: ["platform_owner", "platform_admin"], requireOrg: false }), { maxRequests: 30, windowSeconds: 60 });
