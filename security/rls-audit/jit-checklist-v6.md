@@ -59,12 +59,26 @@ Recorded local SHA: ___________
 | phase-a-rollback-v2.sql | 8CEDA08FAA167F39CA9E0778D44F1661C9FF987143FB2E4AFC0A498ED8787E4D | 987 |
 
 ```powershell
+# Rule 37: resolve paths from git toplevel
+$repoRoot = ((& git rev-parse --show-toplevel) -join "").Trim()
+$containmentSrc = Join-Path $repoRoot "security\rls-audit\phase-a-containment-v3.sql"
+$rollbackSrc    = Join-Path $repoRoot "security\rls-audit\phase-a-rollback-v2.sql"
+$containmentCmt = Join-Path $repoRoot "security\rls-audit\evidence\wave6\containment-v3-copy.sql"
+
 $containmentExpected = "59C62F1A92510BD45889BA519957BD1F893934DF18557EFD3DAA1636B1227A3C"
 $rollbackExpected    = "8CEDA08FAA167F39CA9E0778D44F1661C9FF987143FB2E4AFC0A498ED8787E4D"
-$containmentActual   = (Get-FileHash -LiteralPath ".\phase-a-containment-v3.sql" -Algorithm SHA256).Hash
-$rollbackActual      = (Get-FileHash -LiteralPath ".\phase-a-rollback-v2.sql"    -Algorithm SHA256).Hash
-if ($containmentActual -eq $containmentExpected) { Write-Host "SQL CONTAINMENT SHA -- OK" } else { Write-Host "SQL CONTAINMENT SHA -- STOP" -ForegroundColor Red }
-if ($rollbackActual    -eq $rollbackExpected)    { Write-Host "SQL ROLLBACK SHA -- OK" }    else { Write-Host "SQL ROLLBACK SHA -- STOP"    -ForegroundColor Red }
+
+if (-not (Test-Path -LiteralPath $containmentSrc)) { throw "SQL CONTAINMENT SRC -- STOP (missing)" }
+if (-not (Test-Path -LiteralPath $rollbackSrc))    { throw "SQL ROLLBACK SRC -- STOP (missing)" }
+if (-not (Test-Path -LiteralPath $containmentCmt)) { throw "SQL CONTAINMENT CMT -- STOP (missing)" }
+
+$h1 = (Get-FileHash -LiteralPath $containmentSrc -Algorithm SHA256).Hash
+$h2 = (Get-FileHash -LiteralPath $rollbackSrc    -Algorithm SHA256).Hash
+$h3 = (Get-FileHash -LiteralPath $containmentCmt -Algorithm SHA256).Hash
+
+if ($h1 -eq $containmentExpected) { Write-Host "SQL CONTAINMENT SRC SHA -- OK" } else { Write-Host "SQL CONTAINMENT SRC SHA -- STOP (got $h1)" -ForegroundColor Red }
+if ($h2 -eq $rollbackExpected)    { Write-Host "SQL ROLLBACK SRC SHA -- OK" }    else { Write-Host "SQL ROLLBACK SRC SHA -- STOP (got $h2)"    -ForegroundColor Red }
+if ($h3 -eq $containmentExpected) { Write-Host "SQL CONTAINMENT CMT SHA -- OK" } else { Write-Host "SQL CONTAINMENT CMT SHA -- STOP (got $h3)" -ForegroundColor Red }
 ```
 
 **Required:** Both files must be on disk with SHA256 matching the values above at execution time. Mismatch on either -> STOP.
@@ -77,25 +91,49 @@ Recorded:
 
 **Binding 2 - Actual Production app SHA (obtained at execution window):**
 
-At the execution window, obtain the SHA of the commit currently deployed to Vercel Production (Dashboard -> Project -> Deployments -> Production -> copy SHA). Record it below. This SHA is expected to be a 40-char hex commit SHA of WHATEVER COMMIT IS LIVE. It does NOT need to equal the SQL SHA, the branch HEAD, or any other value.
+At the execution window, capture ALL 5 fields from Vercel Production Dashboard:
 
 ```powershell
-$productionAppSha = "<PASTE_PRODUCTION_DEPLOYMENT_SHA_HERE>"
-if ($productionAppSha -match '^[0-9a-f]{40}$') {
-  Write-Host "PRODUCTION APP SHA RECORDED -- OK"
-} else {
-  Write-Host "PRODUCTION APP SHA INVALID -- STOP" -ForegroundColor Red
+# Rule 38: capture full deployment metadata, not just SHA
+$productionAppSha       = "<PASTE_40_CHAR_SHA_FROM_VERCEL_PRODUCTION>"
+$productionProjectId    = "<PASTE_VERCEL_PROJECT_ID>"
+$productionDeploymentId = "<PASTE_VERCEL_DEPLOYMENT_ID>"
+$productionEnvironment  = "<PASTE_VERCEL_ENVIRONMENT (must be production)>"
+$productionStatus       = "<PASTE_VERCEL_STATUS (must be READY or LIVE)>"
+
+if ($productionAppSha -notmatch '^[0-9a-f]{40}$') {
+  throw "PRODUCTION SHA FORMAT -- STOP (need 40-char lowercase hex)"
 }
+if ($productionEnvironment.ToLower() -ne "production") {
+  throw "PRODUCTION ENV -- STOP (got '$productionEnvironment', expected production)"
+}
+if ($productionStatus.ToUpper() -notin @('READY','LIVE')) {
+  throw "PRODUCTION STATUS -- STOP (got '$productionStatus', expected READY or LIVE)"
+}
+
+$ghDeployShas = ((& gh api "repos/AshirRaza313/valtriox/deployments?per_page=100" --jq '.[] | .sha' 2>&1) -join "`n")
+if ($LASTEXITCODE -ne 0) {
+  Write-Host "PRODUCTION SHA CROSS-CHECK -- DEGRADED (gh api unavailable; Vercel Dashboard below is authoritative)"
+} elseif ($ghDeployShas -match [regex]::Escape($productionAppSha)) {
+  Write-Host "PRODUCTION SHA CROSS-CHECK -- OK (found in gh deployments API)"
+} else {
+  Write-Host "PRODUCTION SHA CROSS-CHECK -- INFO (not in gh deployments; Vercel Dashboard below is authoritative)"
+}
+Write-Host "PRODUCTION IDENTITY -- OK (project=$productionProjectId deployment=$productionDeploymentId env=$productionEnvironment status=$productionStatus)"
 ```
 
-**Required:** Production app SHA must be a 40-char lowercase hex string captured at execution window. Any other value -> STOP.
+**Required:** All 5 fields captured at execution window. Format, environment, and status are hard STOPs. gh deployments cross-check is informative only; if 0 matches, Vercel Dashboard evidence below is authoritative.
 
 **Preview SHA is NOT Production proof.** Only a Production deployment SHA is acceptable evidence. If no Production deployment exists for this branch, escalate to expert - do NOT substitute Preview SHA.
 
 Recorded:
 - Production app SHA: ___________
+- Production project ID: ___________
+- Production deployment ID: ___________
+- Production environment: ___________
+- Production status: ___________
 - Production deployment timestamp (UTC): ___________
-- Vercel dashboard URL/screenshot reference: ___________
+- Vercel Dashboard URL / screenshot reference: ___________
 
 **Why two bindings:** The SQL runs against the production database regardless of which app commit is currently serving production traffic. Binding 1 proves exactly which SQL and rollback scripts will be executed. Binding 2 proves what code is currently live. Neither substitutes for the other.
 
@@ -592,11 +630,25 @@ Recorded: ___________
 ```powershell
 cd C:\Users\Aashir\Projects\valtriox-trackb
 
-# Working tree must be clean (also confirmed in Section 1.1)
-git status --porcelain
-
-# Exact deployed SHA
-git rev-parse HEAD
+# Rule 39: use Production app SHA from Section 1.3 Binding 2 (NOT local HEAD)
+$prodSha = "<PASTE_FROM_SECTION_1_3_BINDING_2_PRODUCTION_APP_SHA>"
+if ($prodSha -notmatch '^[0-9a-f]{40}$') {
+  throw "DEPLOYED SHA -- STOP (invalid format)"
+}
+git fetch origin $prodSha
+if ($LASTEXITCODE -ne 0) {
+  throw "DEPLOYED SHA FETCH -- STOP (commit $prodSha not reachable from origin)"
+}
+$grepOut = ((& git grep -n -E 'Subscription|Notification|PaymentProof|NotificationReadReceipt' $prodSha -- 'src/**/*.ts' 'src/**/*.tsx' 'src/**/*.js' 'src/**/*.jsx' 2>&1) -join "`n")
+$grepExit = $LASTEXITCODE
+if ($grepExit -eq 1) {
+  Write-Host "DEPLOYED CODE SCAN -- OK (no references in deployed commit $prodSha)"
+} elseif ($grepExit -eq 0) {
+  Write-Host "DEPLOYED CODE SCAN -- REVIEW ($prodSha has client refs; confirm each is expected):"
+  Write-Host $grepOut
+} else {
+  throw "DEPLOYED CODE SCAN -- STOP (git grep exit $grepExit)"
+}
 
 # Scan exact commit content for Phase A table names in client code
 Get-ChildItem -Recurse -File -Include "*.ts","*.tsx","*.js","*.jsx","*.mjs","*.cjs" |
@@ -620,8 +672,19 @@ Recorded classification: ___________
 ## 13. SET LOCAL Placement
 
 ```powershell
-Get-Content "C:\Users\Aashir\Projects\evidence-phase1\phase5-phase-a-package\phase-a-containment-v3.sql" |
-  Select-String "BEGIN;|SET LOCAL|COMMIT;"
+# Rule 40: use hash-verified committed artifact, NOT stale absolute path
+$repoRoot = ((& git rev-parse --show-toplevel) -join "").Trim()
+$containmentCmt = Join-Path $repoRoot "security\rls-audit\evidence\wave6\containment-v3-copy.sql"
+$containmentExpected = "59C62F1A92510BD45889BA519957BD1F893934DF18557EFD3DAA1636B1227A3C"
+
+if (-not (Test-Path -LiteralPath $containmentCmt)) {
+  throw "COMMITTED ARTIFACT -- STOP (missing)"
+}
+$cmtHash = (Get-FileHash -LiteralPath $containmentCmt -Algorithm SHA256).Hash
+if ($cmtHash -ne $containmentExpected) {
+  throw "COMMITTED ARTIFACT -- STOP (hash mismatch: got $cmtHash)"
+}
+Get-Content -LiteralPath $containmentCmt | Select-String "BEGIN;|SET LOCAL|COMMIT;"
 ```
 
 **Expected order:**

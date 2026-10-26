@@ -1,0 +1,24 @@
+Phase 12F Cycle A APPLY EVIDENCE
+UTC: 2026-10-26T15-53-11Z
+Pre-apply HEAD: 5c96a154e42f7d568be26847e26b9068742ec7de
+
+--- JIT DELTAS ---
+A-1 path fix:       873
+A-2 prod binding:   1269
+A-3 deployed scan:  802
+A-4 artifact ref:   561
+jit total:          3505 (26310 -> 29815)
+
+--- NOLOGIN DELTAS ---
+N-2 STOP custody:   11
+N-2b STOP dep:      506
+N-6 window mandate: 838
+nologin total:      1355 (22492 -> 23847)
+
+Post jit SHA:     A40D8FE746412C9831A475B222C68B987D78B0E78E8F85A959A8B9715E636951
+Post nologin SHA: C167E33923CC22DCCBA231F83C6CBA01991B2F3E94443B2984EB50C575729381
+Non-ASCII preserved: jit=42 nologin=39
+
+Temp-file writes and separate Move-Item operations; recovery on failure
+Production: HOLD. NOLOGIN: HOLD.
+--- END ---
