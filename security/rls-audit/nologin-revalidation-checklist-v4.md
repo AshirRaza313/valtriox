@@ -154,7 +154,7 @@ imply password reset.
 
 4. **Separate authorization from Phase A:** NOLOGIN is a distinct mutation and requires its own written expert approval. Phase A approval does NOT extend to NOLOGIN, and NOLOGIN approval does NOT extend to Phase A. Both are separate decisions per E6.
 
-5. **STOP rule for UNKNOWN custody (Phase 12F, 2026-10-26):** If ANY custody item (Section 4.2 checklist or Section 5 source-by-source assessment) resolves to UNKNOWN or unconfirmed, NOLOGIN execution is BLOCKED. Do NOT proceed with a recorded gap. Only a definite YES (custodian confirms role not in active use anywhere) or a definite NO (custodian confirms role absent from every source) allows proceed. UNKNOWN = STOP. No exceptions. This supersedes any earlier language permitting proceed-with-gap.
+5. **STOP rule for UNKNOWN custody (Phase 12F, 2026-10-26; rule-consistency fix Phase 12G):** If ANY custody item (Section 4.2 checklist or Section 5 source-by-source assessment) resolves to UNKNOWN or unconfirmed, NOLOGIN execution is BLOCKED. Do NOT proceed with a recorded gap. Decision rule per source: YES (active reference present) = STOP; NO (confirmed absent from ALL sources) = PASS only if ALL sources are NO; UNKNOWN = STOP. No exceptions. This supersedes any earlier language permitting proceed-with-gap.
 
 ---
 
@@ -469,7 +469,7 @@ For NOLOGIN approval, all three must independently clear:
 
 Zero rows in Section 8.9 alone is NOT sufficient evidence for NOLOGIN approval.
 
-**STOP rule for UNKNOWN dependency (Phase 12F, 2026-10-26):** If ANY of the three items above resolves to UNKNOWN or cannot be verified in the current execution window, NOLOGIN execution is BLOCKED. Zero rows in Section 8.9 = PASS for catalog scope only. Zero sessions in Section 10.2 = PASS for live-connection scope only. Custodian YES per Section 4.2 = PASS for external-secret scope only. If ANY of the three is UNKNOWN, do NOT proceed. UNKNOWN = STOP. No exceptions.
+**STOP rule for UNKNOWN dependency (Phase 12F, 2026-10-26; rule-consistency fix Phase 12G):** If ANY of the three items above resolves to UNKNOWN or cannot be verified in the current execution window, NOLOGIN execution is BLOCKED. Zero rows in Section 8.9 = PASS for catalog scope only. Zero sessions in Section 10.2 = PASS for live-connection scope only. Custodian NO (confirmed absent from ALL sources) per Section 4.2 = PASS for external-secret scope only; Custodian YES (active reference present) = STOP. If ANY of the three is UNKNOWN, do NOT proceed. UNKNOWN = STOP. No exceptions.
 
 **Same-window mandate (Phase 12F, 2026-10-26):** All three checks above MUST be captured within the SAME approved execution window. Attestations from different windows or staggered timestamps do NOT constitute a valid NOLOGIN approval. If any check cannot be re-run in the current window, NOLOGIN is BLOCKED until a new window with all three checks completes.
 

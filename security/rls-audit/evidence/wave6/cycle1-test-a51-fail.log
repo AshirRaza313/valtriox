@@ -1,0 +1,20 @@
+# Test A5-1-FAIL
+# PG17 prelude present for environment hygiene only -- A5-1/N5-1 tests are PS-logic, not SQL.
+# E7 mandate applies to SQL files (jit, nologin), not to these test scripts.
+# Captured (UTC): 2026-10-27T19:17:22Z
+# Branch: security/rls-audit-containment-v1
+#
+## Scenario
+h1 = WRONG (64 zeros)
+h2 = 8CEDA08FAA167F39CA9E0778D44F1661C9FF987143FB2E4AFC0A498ED8787E4D (correct)
+h3 = 59C62F1A92510BD45889BA519957BD1F893934DF18557EFD3DAA1636B1227A3C (correct)
+#
+## Extracted from live jit-checklist-v6.md
+line1: if ($h1 -eq $containmentExpected) { Write-Host "SQL CONTAINMENT SRC SHA -- OK" } else { throw "SQL CONTAINMENT SRC SHA -- STOP (got $h1)" }
+line2: if ($h2 -eq $rollbackExpected)    { Write-Host "SQL ROLLBACK SRC SHA -- OK" }    else { throw "SQL ROLLBACK SRC SHA -- STOP (got $h2)" }
+line3: if ($h3 -eq $containmentExpected) { Write-Host "SQL CONTAINMENT CMT SHA -- OK" } else { throw "SQL CONTAINMENT CMT SHA -- STOP (got $h3)" }
+#
+## Result
+THROW_FIRED: yes
+THROW_MSG: SQL CONTAINMENT SRC SHA -- STOP (got 0000000000000000000000000000000000000000000000000000000000000000)
+ASSERTION: PASS (throw fired on wrong SHA, message contains SQL CONTAINMENT SRC SHA -- STOP)

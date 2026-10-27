@@ -1,0 +1,16 @@
+# Test N5-1-NO
+# PG17 prelude present for environment hygiene only -- A5-1/N5-1 tests are PS-logic, not SQL.
+# E7 mandate applies to SQL files (jit, nologin), not to these test scripts.
+# Captured (UTC): 2026-10-27T19:37:38Z
+# Branch: security/rls-audit-containment-v1
+#
+## Rule text verified present in nologin-revalidation-checklist-v4.md
+Section 4.2: Decision rule per source: YES (active reference present) = STOP
+Section 8.9: Custodian NO (confirmed absent from ALL sources) per Section 4.2 = PASS
+#
+## Scenario
+Sources = [NO,NO,NO]  (all sources report absent)
+#
+## Result
+DECISION: PASS
+ASSERTION: PASS (all NO = PASS)

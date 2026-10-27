@@ -1,0 +1,56 @@
+# Cycle 1 Apply Log - Post-Execution Verification
+# Phase 12G - A5-1 + A5-3 + N5-1
+# Captured (UTC): 2026-10-27T19:07:46Z
+# Branch: security/rls-audit-containment-v1
+# Pre-commit HEAD: 206e4e214fc138c3530295d0c99d65696ee15de0
+#
+# Scope: 2 markdown files modified. No SQL executed. No DB touched.
+# No Phase A or NOLOGIN production mutation. Both HOLD.
+#
+## Files Modified
+security/rls-audit/jit-checklist-v6.md
+security/rls-audit/nologin-revalidation-checklist-v4.md
+#
+## Pre-Apply State
+jit-pre-SHA:  A40D8FE746412C9831A475B222C68B987D78B0E78E8F85A959A8B9715E636951
+jit-pre-size: 29815
+jit-pre-CRLF: 752
+nol-pre-SHA:  C167E33923CC22DCCBA231F83C6CBA01991B2F3E94443B2984EB50C575729381
+nol-pre-size: 23847
+nol-pre-CRLF: 647
+#
+## Post-Apply State (verified at capture time)
+jit-post-SHA:  22AFF9F73536AE7733E12114B2AD6ED5F3F65C3EE0F7B4599FAE6EF1316C0D2D
+jit-post-size: 30106
+jit-post-CRLF: 751
+nol-post-SHA:  B1DCCF75A5B1A159CA887FD0E86E067EEBA1A72BB4DCB98BA9D27DE1E2BCF56F
+nol-post-size: 23977
+nol-post-CRLF: 647
+#
+## Byte Deltas
+jit-delta-bytes: 291
+jit-delta-CRLF:  -1
+nol-delta-bytes: 130
+nol-delta-CRLF:  0
+#
+## Structural Markers Verified Present
+A5-1: 3 throw statements (CONTAINMENT SRC, ROLLBACK SRC, CONTAINMENT CMT)
+A5-3: DEPLOYED CODE SCAN 2 -- OK marker; broadened pathspec with exclusions
+N5-1-4.2: YES (active reference present) = STOP
+N5-1-8.9: Custodian NO (confirmed absent from ALL sources) = PASS
+#
+## Structural Markers Verified Absent
+A5-1: old Write-Host ... -ForegroundColor Red fail branches removed
+A5-3: old Get-ChildItem -Recurse local-tree scan removed
+N5-1-4.2: old 'Only a definite YES ... allows proceed' removed
+N5-1-8.9: old 'Custodian YES ... = PASS' removed
+#
+## Verification Assertions
+All post-SHA / size / CRLF / marker assertions: PASS
+#
+## E7 Note
+This log captures file edits only. No SQL executed. No PG17 connection required.
+Cycle 1 tests (A5-1, N5-1) are PS-logic tests, not SQL.
+#
+## Attestation
+No Phase A or NOLOGIN production mutation. Both HOLD.

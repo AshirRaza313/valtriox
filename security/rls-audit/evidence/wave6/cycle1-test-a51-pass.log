@@ -1,0 +1,14 @@
+# Test A5-1-PASS
+# PG17 prelude present for environment hygiene only -- A5-1/N5-1 tests are PS-logic, not SQL.
+# E7 mandate applies to SQL files (jit, nologin), not to these test scripts.
+# Captured (UTC): 2026-10-27T19:17:40Z
+# Branch: security/rls-audit-containment-v1
+#
+## Scenario
+h1 = 59C62F1A92510BD45889BA519957BD1F893934DF18557EFD3DAA1636B1227A3C (correct)
+h2 = 8CEDA08FAA167F39CA9E0778D44F1661C9FF987143FB2E4AFC0A498ED8787E4D    (correct)
+h3 = 59C62F1A92510BD45889BA519957BD1F893934DF18557EFD3DAA1636B1227A3C (correct)
+#
+## Result
+THROW_FIRED: no
+ASSERTION: PASS (no throw on all-correct SHA; control flow printed OK markers)

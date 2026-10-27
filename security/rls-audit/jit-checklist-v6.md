@@ -76,9 +76,9 @@ $h1 = (Get-FileHash -LiteralPath $containmentSrc -Algorithm SHA256).Hash
 $h2 = (Get-FileHash -LiteralPath $rollbackSrc    -Algorithm SHA256).Hash
 $h3 = (Get-FileHash -LiteralPath $containmentCmt -Algorithm SHA256).Hash
 
-if ($h1 -eq $containmentExpected) { Write-Host "SQL CONTAINMENT SRC SHA -- OK" } else { Write-Host "SQL CONTAINMENT SRC SHA -- STOP (got $h1)" -ForegroundColor Red }
-if ($h2 -eq $rollbackExpected)    { Write-Host "SQL ROLLBACK SRC SHA -- OK" }    else { Write-Host "SQL ROLLBACK SRC SHA -- STOP (got $h2)"    -ForegroundColor Red }
-if ($h3 -eq $containmentExpected) { Write-Host "SQL CONTAINMENT CMT SHA -- OK" } else { Write-Host "SQL CONTAINMENT CMT SHA -- STOP (got $h3)" -ForegroundColor Red }
+if ($h1 -eq $containmentExpected) { Write-Host "SQL CONTAINMENT SRC SHA -- OK" } else { throw "SQL CONTAINMENT SRC SHA -- STOP (got $h1)" }
+if ($h2 -eq $rollbackExpected)    { Write-Host "SQL ROLLBACK SRC SHA -- OK" }    else { throw "SQL ROLLBACK SRC SHA -- STOP (got $h2)" }
+if ($h3 -eq $containmentExpected) { Write-Host "SQL CONTAINMENT CMT SHA -- OK" } else { throw "SQL CONTAINMENT CMT SHA -- STOP (got $h3)" }
 ```
 
 **Required:** Both files must be on disk with SHA256 matching the values above at execution time. Mismatch on either -> STOP.
@@ -650,19 +650,18 @@ if ($grepExit -eq 1) {
   throw "DEPLOYED CODE SCAN -- STOP (git grep exit $grepExit)"
 }
 
-# Scan exact commit content for Phase A table names in client code
-Get-ChildItem -Recurse -File -Include "*.ts","*.tsx","*.js","*.jsx","*.mjs","*.cjs" |
-  Where-Object { $_.FullName -notmatch 'node_modules|\.next|\.git|dist|build' } |
-  Select-String -Pattern @(
-    'Subscription',
-    'Notification',
-    'PaymentProof',
-    'rest/v1/Subscription',
-    'rest/v1/Notification',
-    'rest/v1/PaymentProof'
-  ) |
-  Select-Object Path, LineNumber |
-  Format-List
+# Rule 39: both scans use the fetched Production SHA, NOT the local working tree.
+# Scan 2 - committed tree of Production SHA for Phase A table names in client code.
+$grep2Out = ((& git grep -n -E 'Subscription|Notification|PaymentProof|rest/v1/(Subscription|Notification|PaymentProof)' $prodSha -- '*.ts' '*.tsx' '*.js' '*.jsx' '*.mjs' '*.cjs' ':(exclude)**/node_modules/**' ':(exclude)**/.next/**' ':(exclude)**/dist/**' ':(exclude)**/build/**' 2>&1) -join "`n")
+$grep2Exit = $LASTEXITCODE
+if ($grep2Exit -eq 1) {
+  Write-Host "DEPLOYED CODE SCAN 2 -- OK (no Phase A refs in deployed commit $prodSha)"
+} elseif ($grep2Exit -eq 0) {
+  Write-Host "DEPLOYED CODE SCAN 2 -- REVIEW ($prodSha has client refs; confirm each is expected):"
+  Write-Host $grep2Out
+} else {
+  throw "DEPLOYED CODE SCAN 2 -- STOP (git grep exit $grep2Exit)"
+}
 ```
 
 Recorded classification: ___________
