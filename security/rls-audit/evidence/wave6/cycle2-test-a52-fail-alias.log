@@ -1,0 +1,12 @@
+# Test A5-2-FAIL-ALIAS
+# Fixture on disk NEVER modified; mutation in-memory only (m3)
+# Fixtures recon-time (2026-10-27 UTC). Execution authoritative (C2)
+# PG17 prelude for hygiene only; PS-logic, not SQL (E7)
+# UTC: 2026-10-28T17:45:40Z
+# Branch: security/rls-audit-containment-v1
+# MUTATION: aliases = ['something-else.com'] (no valtriox.com, no www.valtriox.com)
+# THROW_FIRED: yes
+# THROW_MSG: BINDING 2 ALIAS -- STOP (valtriox.com / www.valtriox.com absent)
+# MATCH: ALIAS
+# ASSERTION: PASS
+

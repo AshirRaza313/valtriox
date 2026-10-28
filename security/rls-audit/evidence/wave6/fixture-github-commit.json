@@ -1,0 +1,11 @@
+{
+    "sha":  "bebd61f4c971dafdf42aa3fee7b97bde8203feea",
+    "commit":  {
+                   "message":  "Merge pull request #8 from AshirRaza313/fix/beta-early-adopter-copy\n\nfix(marketing): align public claims with beta stage",
+                   "author":  {
+                                  "name":  "Muhammad Ashir Raza",
+                                  "email":  "aashirm313@gmail.com",
+                                  "date":  "2026-08-24T06:15:54Z"
+                              }
+               }
+}

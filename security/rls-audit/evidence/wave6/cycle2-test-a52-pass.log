@@ -1,0 +1,13 @@
+# Test A5-2-PASS
+# Fixture on disk NEVER modified (m3)
+# Fixtures recon-time (2026-10-27 UTC). Execution authoritative (C2)
+# PG17 prelude for hygiene only; PS-logic, not SQL (E7)
+# UTC: 2026-10-28T17:50:08Z
+# Branch: security/rls-audit-containment-v1
+# NO MUTATION -- all assertions should pass
+# Bug #17 covered: inspect fixture retains 'Fetching deployment ...' prefix;
+#   Get-JsonBody strips it; parse succeeds; assertions pass
+# THROW_FIRED: no
+# MATCH: N/A (positive test)
+# ASSERTION: PASS (all checks cleared)
+

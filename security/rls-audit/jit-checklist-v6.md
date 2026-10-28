@@ -89,50 +89,115 @@ Recorded:
 - Rollback SHA actual: ___________
 - Rollback match (yes/no): ___________
 
-**Binding 2 - Actual Production app SHA (obtained at execution window):**
+**Binding 2 - Actual Production deployment (execution window, authoritative):**
 
-At the execution window, capture ALL 5 fields from Vercel Production Dashboard:
+Run BOTH commands at execution window. Both must succeed. Do NOT paste fields manually.
 
 ```powershell
-# Rule 38: capture full deployment metadata, not just SHA
-$productionAppSha       = "<PASTE_40_CHAR_SHA_FROM_VERCEL_PRODUCTION>"
-$productionProjectId    = "<PASTE_VERCEL_PROJECT_ID>"
-$productionDeploymentId = "<PASTE_VERCEL_DEPLOYMENT_ID>"
-$productionEnvironment  = "<PASTE_VERCEL_ENVIRONMENT (must be production)>"
-$productionStatus       = "<PASTE_VERCEL_STATUS (must be READY or LIVE)>"
+# Rule 38: full deployment metadata via CLI (authoritative, not manual paste)
+# Rule 39: use fetched production SHA, not local HEAD
+# C' commit-level cross-check replaces broken deployment-level C
+#   (GitHub Deployments integration stale since 2026-06-06)
+# Bug #17: vercel CLI prepends progress lines before JSON (e.g.,
+#   "Fetching deployment ..."). Strip via Get-JsonBody before ConvertFrom-Json.
 
-if ($productionAppSha -notmatch '^[0-9a-f]{40}$') {
-  throw "PRODUCTION SHA FORMAT -- STOP (need 40-char lowercase hex)"
-}
-if ($productionEnvironment.ToLower() -ne "production") {
-  throw "PRODUCTION ENV -- STOP (got '$productionEnvironment', expected production)"
-}
-if ($productionStatus.ToUpper() -notin @('READY','LIVE')) {
-  throw "PRODUCTION STATUS -- STOP (got '$productionStatus', expected READY or LIVE)"
+function Get-JsonBody {
+  param([string]$Raw, [string]$Label)
+  if (-not $Raw) { throw "BINDING 2 $Label -- STOP (empty output)" }
+  $b1 = $Raw.IndexOf('{'); $b2 = $Raw.IndexOf('[')
+  $s = -1
+  if     ($b1 -ge 0 -and $b2 -ge 0) { $s = [Math]::Min($b1,$b2) }
+  elseif ($b1 -ge 0)                { $s = $b1 }
+  elseif ($b2 -ge 0)                { $s = $b2 }
+  if ($s -lt 0) { throw "BINDING 2 $Label -- STOP (no JSON opener '{' or '[' in raw output)" }
+  $body = $Raw.Substring($s)
+  if (-not $body -or $body.Length -lt 2) { throw "BINDING 2 $Label -- STOP (JSON body empty after strip)" }
+  return $body
 }
 
-$ghDeployShas = ((& gh api "repos/AshirRaza313/valtriox/deployments?per_page=100" --jq '.[] | .sha' 2>&1) -join "`n")
-if ($LASTEXITCODE -ne 0) {
-  Write-Host "PRODUCTION SHA CROSS-CHECK -- DEGRADED (gh api unavailable; Vercel Dashboard below is authoritative)"
-} elseif ($ghDeployShas -match [regex]::Escape($productionAppSha)) {
-  Write-Host "PRODUCTION SHA CROSS-CHECK -- OK (found in gh deployments API)"
-} else {
-  Write-Host "PRODUCTION SHA CROSS-CHECK -- INFO (not in gh deployments; Vercel Dashboard below is authoritative)"
+$lsOut  = (& vercel ls valtriox --environment=production --format=json 2>&1 | Out-String)
+$lsExit = $LASTEXITCODE
+if ($lsExit -ne 0) { throw "BINDING 2 LS -- STOP (vercel ls exit $lsExit)" }
+if (-not $lsOut)   { throw "BINDING 2 LS -- STOP (empty output)" }
+$lsBody = Get-JsonBody $lsOut "LS"
+try { $lsObj = $lsBody | ConvertFrom-Json } catch { throw "BINDING 2 LS -- STOP (parse: $($_.Exception.Message))" }
+$lsDeps = if ($lsObj.deployments) { @($lsObj.deployments) } else { @($lsObj) }
+if ($lsDeps.Count -lt 1) { throw "BINDING 2 LS -- STOP (no deployments)" }
+$prodSha       = $lsDeps[0].meta.githubCommitSha
+$deploymentUrl = $lsDeps[0].url
+$vercelMsg     = $lsDeps[0].meta.githubCommitMessage
+$action        = $lsDeps[0].meta.action
+if ($prodSha) { $prodSha = $prodSha.ToLower() }
+if (-not $prodSha -or $prodSha -notmatch '^[0-9a-f]{40}$') { throw "BINDING 2 SHA FORMAT -- STOP (need 40-char lowercase hex, got '$prodSha')" }
+
+$inspectOut  = (& vercel inspect "https://valtriox.com" --format=json 2>&1 | Out-String)
+$inspectExit = $LASTEXITCODE
+if ($inspectExit -ne 0) { throw "BINDING 2 INSPECT -- STOP (exit $inspectExit)" }
+if (-not $inspectOut)   { throw "BINDING 2 INSPECT -- STOP (empty output)" }
+$inspBody = Get-JsonBody $inspectOut "INSPECT"
+try { $inspectObj = $inspBody | ConvertFrom-Json } catch { throw "BINDING 2 INSPECT -- STOP (parse: $($_.Exception.Message))" }
+$deploymentId = $inspectObj.id
+$inspectUrl   = $inspectObj.url
+$target       = $inspectObj.target
+$state        = $inspectObj.readyState
+$aliases      = $inspectObj.aliases
+$createdAtMs  = $inspectObj.createdAt
+
+if (-not $deploymentId -or $deploymentId -notmatch '^dpl_') { throw "BINDING 2 DEPLOY-ID -- STOP (got '$deploymentId')" }
+if (-not $inspectUrl) { throw "BINDING 2 INSPECT -- STOP (url missing)" }
+if ($deploymentUrl -ne $inspectUrl) { throw "BINDING 2 URL-MATCH -- STOP (ls.url != inspect.url)" }
+if ($target -ne "production") { throw "BINDING 2 TARGET -- STOP (got '$target', expected 'production')" }
+if ($state -ne "READY") { throw "BINDING 2 STATE -- STOP (got '$state', expected 'READY')" }
+if (-not $aliases) { throw "BINDING 2 ALIAS -- STOP (aliases[] absent)" }
+$aliasArr = @($aliases)
+if (($aliasArr -notcontains "valtriox.com") -and ($aliasArr -notcontains "www.valtriox.com")) {
+  throw "BINDING 2 ALIAS -- STOP (valtriox.com / www.valtriox.com absent)"
 }
-Write-Host "PRODUCTION IDENTITY -- OK (project=$productionProjectId deployment=$productionDeploymentId env=$productionEnvironment status=$productionStatus)"
+
+$ghRaw  = (& gh api "repos/AshirRaza313/valtriox/commits/$prodSha" 2>&1 | Out-String)
+$ghExit = $LASTEXITCODE
+if ($ghExit -ne 0) { throw "BINDING 2 CROSS-CHECK -- STOP (gh api exit $ghExit)" }
+$ghBody = Get-JsonBody $ghRaw "CROSS-CHECK"
+try { $ghObj = $ghBody | ConvertFrom-Json } catch { throw "BINDING 2 CROSS-CHECK -- STOP (parse: $($_.Exception.Message))" }
+$ghMsg = $ghObj.commit.message
+if (-not $ghMsg) { throw "BINDING 2 CROSS-CHECK -- STOP (commit $prodSha has no message)" }
+$needle = if ($vercelMsg -and $vercelMsg.Length -gt 60) { $vercelMsg.Substring(0,60) } else { $vercelMsg }
+if ($needle -and ($ghMsg -notmatch [regex]::Escape($needle))) {
+  throw "BINDING 2 CROSS-CHECK -- STOP (Vercel/GitHub messages diverge for $prodSha)"
+}
+
+Write-Host "BINDING 2 -- OK (sha=$prodSha dpl=$deploymentId env=$target state=$state action=$action)"
+Write-Host "BINDING 2 current-live -- OK (alias valtriox.com confirmed)"
+Write-Host "BINDING 2 C' cross-check -- OK (GitHub $prodSha message matches)"
 ```
 
-**Required:** All 5 fields captured at execution window. Format, environment, and status are hard STOPs. gh deployments cross-check is informative only; if 0 matches, Vercel Dashboard evidence below is authoritative.
+**Required:** Both CLI commands must succeed. Format, deployment ID, URL-match, target, state, alias-match are hard STOPs. C' cross-check is a hard STOP.
 
-**Preview SHA is NOT Production proof.** Only a Production deployment SHA is acceptable evidence. If no Production deployment exists for this branch, escalate to expert - do NOT substitute Preview SHA.
+**C' limitation (disclosed):** verifies $prodSha exists on GitHub and message matches Vercel metadata. Does NOT prove GitHub saw Vercel's deploy. Current-live proof is exclusively from B (URL-match + alias-match).
+
+**GH deployments deployment-level cross-check (informational):** GitHub Deployments API for this repo is stale (latest 2026-06-06, no match for 2026-09-11 production deploy). C' substituted per Reviewer approval.
+
+**DEFERRAL (expert verbatim intent):** Actual CLI + gh invocation happens at execution window only. Fixtures under `evidence/wave6/fixture-*.json` are recon-time snapshots for test determinism -- NOT execution evidence.
+
+**Fixtures staleness (Reviewer C2):** Fixtures represent recon-time schema (2026-10-27 UTC). Schema drift is caught at execution time, not pre-verified.
+
+**redeploy note (Reviewer M1):** `meta.action = "redeploy"` captured as informational field, NOT asserted. Proof is SHA + alias match regardless of redeploy origin.
+
+**SHA coincidence (Reviewer M3):** $prodSha == main SHA == base SHA is incidental. Assertions do NOT rely on any equality.
+
+**Preview SHA is NOT Production proof.** Only a Production deployment SHA is acceptable.
 
 Recorded:
-- Production app SHA: ___________
-- Production project ID: ___________
-- Production deployment ID: ___________
-- Production environment: ___________
-- Production status: ___________
-- Production deployment timestamp (UTC): ___________
+- prod SHA: ___________
+- deployment ID: ___________
+- deployment URL: ___________
+- target: ___________
+- state: ___________
+- aliases: ___________
+- createdAt (epoch ms): ___________
+- C' commit exists on GitHub: ___________
+- C' message match: ___________
+- redeploy action: ___________
 - Vercel Dashboard URL / screenshot reference: ___________
 
 **Why two bindings:** The SQL runs against the production database regardless of which app commit is currently serving production traffic. Binding 1 proves exactly which SQL and rollback scripts will be executed. Binding 2 proves what code is currently live. Neither substitutes for the other.

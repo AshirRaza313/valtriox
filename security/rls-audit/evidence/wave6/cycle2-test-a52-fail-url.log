@@ -1,0 +1,11 @@
+# Test A5-2-FAIL-URL
+# Fixture on disk NEVER modified; mutation in-memory only (m3)
+# Fixtures recon-time (2026-10-27 UTC). Execution authoritative (C2)
+# PG17 prelude for hygiene only; PS-logic, not SQL (E7)
+# UTC: 2026-10-28T17:45:39Z
+# Branch: security/rls-audit-containment-v1
+# THROW_FIRED: yes
+# THROW_MSG: BINDING 2 URL-MATCH -- STOP (ls.url != inspect.url)
+# MATCH: URL-MATCH
+# ASSERTION: PASS
+

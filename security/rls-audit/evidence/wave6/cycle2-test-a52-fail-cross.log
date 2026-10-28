@@ -1,0 +1,12 @@
+# Test A5-2-FAIL-CROSS
+# Fixture on disk NEVER modified; mutation in-memory only (m3)
+# Fixtures recon-time (2026-10-27 UTC). Execution authoritative (C2)
+# PG17 prelude for hygiene only; PS-logic, not SQL (E7)
+# UTC: 2026-10-28T17:45:43Z
+# Branch: security/rls-audit-containment-v1
+# MUTATION: gh.commit.message = 'unrelated commit message...'
+# THROW_FIRED: yes
+# THROW_MSG: BINDING 2 CROSS-CHECK -- STOP (Vercel/GitHub messages diverge for bebd61f4c971dafdf42aa3fee7b97bde8203feea)
+# MATCH: CROSS-CHECK
+# ASSERTION: PASS
+
