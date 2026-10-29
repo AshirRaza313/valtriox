@@ -154,21 +154,26 @@ if (($aliasArr -notcontains "valtriox.com") -and ($aliasArr -notcontains "www.va
   throw "BINDING 2 ALIAS -- STOP (valtriox.com / www.valtriox.com absent)"
 }
 
+# C' cross-check - CONSISTENCY CHECK ONLY, NOT live-deployment proof
+# Phase 12H Item 1 P0: STOP on null/blank messages. Live proof = alias-match above.
 $ghRaw  = (& gh api "repos/AshirRaza313/valtriox/commits/$prodSha" 2>&1 | Out-String)
 $ghExit = $LASTEXITCODE
 if ($ghExit -ne 0) { throw "BINDING 2 CROSS-CHECK -- STOP (gh api exit $ghExit)" }
 $ghBody = Get-JsonBody $ghRaw "CROSS-CHECK"
 try { $ghObj = $ghBody | ConvertFrom-Json } catch { throw "BINDING 2 CROSS-CHECK -- STOP (parse: $($_.Exception.Message))" }
 $ghMsg = $ghObj.commit.message
-if (-not $ghMsg) { throw "BINDING 2 CROSS-CHECK -- STOP (commit $prodSha has no message)" }
-$needle = if ($vercelMsg -and $vercelMsg.Length -gt 60) { $vercelMsg.Substring(0,60) } else { $vercelMsg }
-if ($needle -and ($ghMsg -notmatch [regex]::Escape($needle))) {
+if ($null -eq $ghMsg) { throw "BINDING 2 CROSS-CHECK -- STOP (GitHub commit message is null for $prodSha)" }
+if ($ghMsg -is [string] -and $ghMsg.Trim().Length -eq 0) { throw "BINDING 2 CROSS-CHECK -- STOP (GitHub commit message is blank for $prodSha)" }
+if ($null -eq $vercelMsg) { throw "BINDING 2 CROSS-CHECK -- STOP (Vercel githubCommitMessage is null; cannot verify consistency)" }
+if ($vercelMsg -is [string] -and $vercelMsg.Trim().Length -eq 0) { throw "BINDING 2 CROSS-CHECK -- STOP (Vercel githubCommitMessage is blank; cannot verify consistency)" }
+$needle = if ($vercelMsg.Length -gt 60) { $vercelMsg.Substring(0,60) } else { $vercelMsg }
+if ($ghMsg -notmatch [regex]::Escape($needle)) {
   throw "BINDING 2 CROSS-CHECK -- STOP (Vercel/GitHub messages diverge for $prodSha)"
 }
 
 Write-Host "BINDING 2 -- OK (sha=$prodSha dpl=$deploymentId env=$target state=$state action=$action)"
-Write-Host "BINDING 2 current-live -- OK (alias valtriox.com confirmed)"
-Write-Host "BINDING 2 C' cross-check -- OK (GitHub $prodSha message matches)"
+Write-Host "BINDING 2 current-live -- OK (alias valtriox.com confirmed; THIS IS LIVE-DEPLOYMENT PROOF)"
+Write-Host "BINDING 2 C' cross-check -- OK (consistency only, NOT live proof: Vercel msg matched GitHub msg for $prodSha)"
 ```
 
 **Required:** Both CLI commands must succeed. Format, deployment ID, URL-match, target, state, alias-match are hard STOPs. C' cross-check is a hard STOP.

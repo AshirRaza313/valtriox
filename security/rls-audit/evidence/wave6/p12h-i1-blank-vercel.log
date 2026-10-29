@@ -1,0 +1,12 @@
+# Test p12h-i1-blank-vercel
+# Extracted from live jit via anchors (post-apply); NOT reconstructed
+# jit SHA pre==post: 0BCC9C68EA72BECCD269D7204EDF7CBE08AB786D3602E275DB9ED0593373E166 (unchanged)
+# PG17 prelude for hygiene only; PS-logic, not SQL (E7)
+# UTC: 2026-10-29T19:01:08Z
+# Branch: security/rls-audit-containment-v1
+# MUTATION: vercelMsg = whitespace only (3 spaces)
+# THROW_FIRED: yes
+# THROW_MSG: BINDING 2 CROSS-CHECK -- STOP (Vercel githubCommitMessage is blank; cannot verify consistency)
+# MATCH: Vercel githubCommitMessage is blank
+# ASSERTION: PASS
+
