@@ -1,0 +1,10 @@
+# Test p12h-i2-sha-format-bad
+# Extracted full B block from live jit (function Get-JsonBody -> final OK); vercel shadowed by local mock
+# UTC: 2026-10-29T21:03:02Z
+# Branch: security/rls-audit-containment-v1
+# MUTATION: currentDep.meta.githubCommitSha = notahexstring
+# THROW_FIRED: yes
+# THROW_MSG: BINDING 2 SHA FORMAT -- STOP (need 40-char lowercase hex, got 'notahexstring')
+# MATCH: SHA FORMAT -- STOP
+# ASSERTION: PASS
+

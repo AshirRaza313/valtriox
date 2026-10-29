@@ -1,0 +1,10 @@
+# Test p12h-i2-rollback-not-in-ls
+# Extracted full B block from live jit (function Get-JsonBody -> final OK); vercel shadowed by local mock
+# UTC: 2026-10-29T21:03:02Z
+# Branch: security/rls-audit-containment-v1
+# MUTATION: ls entries all have URL != current alias URL (rollback simulated)
+# THROW_FIRED: yes
+# THROW_MSG: BINDING 2 CURRENT-DEPLOYMENT -- STOP (no ls entry matches current alias URL 'valtriox-7aalfh3wq-ashirraza313s-projects.vercel.app'; possible rollback or list/alias divergence - NOT relying on newest list item)
+# MATCH: CURRENT-DEPLOYMENT -- STOP
+# ASSERTION: PASS
+

@@ -1,0 +1,10 @@
+# Test p12h-i2-whoami-mismatch
+# Extracted full B block from live jit (function Get-JsonBody -> final OK); vercel shadowed by local mock
+# UTC: 2026-10-29T21:02:59Z
+# Branch: security/rls-audit-containment-v1
+# MUTATION: vercel whoami returns wronguser
+# THROW_FIRED: yes
+# THROW_MSG: BINDING 2 WHOAMI -- STOP (got 'wronguser', expected 'ashirraza313')
+# MATCH: WHOAMI -- STOP
+# ASSERTION: PASS
+

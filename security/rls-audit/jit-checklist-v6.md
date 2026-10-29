@@ -91,7 +91,7 @@ Recorded:
 
 **Binding 2 - Actual Production deployment (execution window, authoritative):**
 
-Run BOTH commands at execution window. Both must succeed. Do NOT paste fields manually.
+Run ALL commands at execution window. All must succeed. Do NOT paste fields manually.
 
 ```powershell
 # Rule 38: full deployment metadata via CLI (authoritative, not manual paste)
@@ -100,6 +100,7 @@ Run BOTH commands at execution window. Both must succeed. Do NOT paste fields ma
 #   (GitHub Deployments integration stale since 2026-06-06)
 # Bug #17: vercel CLI prepends progress lines before JSON (e.g.,
 #   "Fetching deployment ..."). Strip via Get-JsonBody before ConvertFrom-Json.
+# Phase 12H Item 2 P0: trusted team/project ID bind + current-by-alias resolution.
 
 function Get-JsonBody {
   param([string]$Raw, [string]$Label)
@@ -115,6 +116,45 @@ function Get-JsonBody {
   return $body
 }
 
+# --- 2e: CLI version + auth capture ---
+$cliVerOut  = (& vercel --version 2>&1 | Out-String).Trim()
+$cliVerExit = $LASTEXITCODE
+if ($cliVerExit -ne 0) { throw "BINDING 2 CLI-VERSION -- STOP (vercel --version exit $cliVerExit)" }
+if (-not $cliVerOut)   { throw "BINDING 2 CLI-VERSION -- STOP (empty output)" }
+$cliVerMatch = [regex]::Match($cliVerOut, '\d+\.\d+\.\d+')
+if (-not $cliVerMatch.Success) { throw "BINDING 2 CLI-VERSION -- STOP (no semver in output '$cliVerOut')" }
+$cliVersion = $cliVerMatch.Value
+
+$whoOut  = (& vercel whoami 2>&1 | Out-String).Trim()
+$whoExit = $LASTEXITCODE
+if ($whoExit -ne 0) { throw "BINDING 2 WHOAMI -- STOP (vercel whoami exit $whoExit)" }
+if (-not $whoOut)   { throw "BINDING 2 WHOAMI -- STOP (empty output)" }
+if ($whoOut -ne "ashirraza313") { throw "BINDING 2 WHOAMI -- STOP (got '$whoOut', expected 'ashirraza313')" }
+
+# --- 2c: trusted team ID bind ---
+$EXPECTED_TEAM_ID = "team_8vDPo2phuKNoRPPXbRLbv4Zs"
+$teamsJson = (& vercel teams ls --format=json 2>&1 | Out-String)
+$teamsExit = $LASTEXITCODE
+if ($teamsExit -ne 0) { throw "BINDING 2 TEAMS -- STOP (vercel teams ls exit $teamsExit)" }
+$teamsBody = Get-JsonBody $teamsJson "TEAMS"
+try { $teamsObj = $teamsBody | ConvertFrom-Json } catch { throw "BINDING 2 TEAMS -- STOP (parse: $($_.Exception.Message))" }
+$teamArr = if ($teamsObj.teams) { @($teamsObj.teams) } else { @($teamsObj) }
+$teamMatch = $teamArr | Where-Object { $_.id -eq $EXPECTED_TEAM_ID } | Select-Object -First 1
+if (-not $teamMatch) { throw "BINDING 2 TEAM-ID -- STOP (trusted teamId '$EXPECTED_TEAM_ID' not in teams ls JSON)" }
+
+# --- 2c: trusted project ID bind ---
+$EXPECTED_PROJECT_ID = "prj_fritS4Net6BtpkfG7ryf5zSLAOii"
+$projJson = (& vercel projects ls --format=json 2>&1 | Out-String)
+$projExit = $LASTEXITCODE
+if ($projExit -ne 0) { throw "BINDING 2 PROJECTS -- STOP (vercel projects ls exit $projExit)" }
+$projBody = Get-JsonBody $projJson "PROJECTS"
+try { $projObj = $projBody | ConvertFrom-Json } catch { throw "BINDING 2 PROJECTS -- STOP (parse: $($_.Exception.Message))" }
+$projArr = if ($projObj.projects) { @($projObj.projects) } else { @($projObj) }
+$projMatch = $projArr | Where-Object { $_.name -eq "valtriox" } | Select-Object -First 1
+if (-not $projMatch) { throw "BINDING 2 PROJECT-NAME -- STOP (no project named 'valtriox' in projects ls)" }
+if ($projMatch.id -ne $EXPECTED_PROJECT_ID) { throw "BINDING 2 PROJECT-ID -- STOP (trusted projectId '$EXPECTED_PROJECT_ID' != actual '$($projMatch.id)')" }
+
+# --- LS: production deployment list ---
 $lsOut  = (& vercel ls valtriox --environment=production --format=json 2>&1 | Out-String)
 $lsExit = $LASTEXITCODE
 if ($lsExit -ne 0) { throw "BINDING 2 LS -- STOP (vercel ls exit $lsExit)" }
@@ -123,13 +163,8 @@ $lsBody = Get-JsonBody $lsOut "LS"
 try { $lsObj = $lsBody | ConvertFrom-Json } catch { throw "BINDING 2 LS -- STOP (parse: $($_.Exception.Message))" }
 $lsDeps = if ($lsObj.deployments) { @($lsObj.deployments) } else { @($lsObj) }
 if ($lsDeps.Count -lt 1) { throw "BINDING 2 LS -- STOP (no deployments)" }
-$prodSha       = $lsDeps[0].meta.githubCommitSha
-$deploymentUrl = $lsDeps[0].url
-$vercelMsg     = $lsDeps[0].meta.githubCommitMessage
-$action        = $lsDeps[0].meta.action
-if ($prodSha) { $prodSha = $prodSha.ToLower() }
-if (-not $prodSha -or $prodSha -notmatch '^[0-9a-f]{40}$') { throw "BINDING 2 SHA FORMAT -- STOP (need 40-char lowercase hex, got '$prodSha')" }
 
+# --- INSPECT: resolve CURRENT deployment via live alias ---
 $inspectOut  = (& vercel inspect "https://valtriox.com" --format=json 2>&1 | Out-String)
 $inspectExit = $LASTEXITCODE
 if ($inspectExit -ne 0) { throw "BINDING 2 INSPECT -- STOP (exit $inspectExit)" }
@@ -145,7 +180,6 @@ $createdAtMs  = $inspectObj.createdAt
 
 if (-not $deploymentId -or $deploymentId -notmatch '^dpl_') { throw "BINDING 2 DEPLOY-ID -- STOP (got '$deploymentId')" }
 if (-not $inspectUrl) { throw "BINDING 2 INSPECT -- STOP (url missing)" }
-if ($deploymentUrl -ne $inspectUrl) { throw "BINDING 2 URL-MATCH -- STOP (ls.url != inspect.url)" }
 if ($target -ne "production") { throw "BINDING 2 TARGET -- STOP (got '$target', expected 'production')" }
 if ($state -ne "READY") { throw "BINDING 2 STATE -- STOP (got '$state', expected 'READY')" }
 if (-not $aliases) { throw "BINDING 2 ALIAS -- STOP (aliases[] absent)" }
@@ -154,6 +188,24 @@ if (($aliasArr -notcontains "valtriox.com") -and ($aliasArr -notcontains "www.va
   throw "BINDING 2 ALIAS -- STOP (valtriox.com / www.valtriox.com absent)"
 }
 
+# --- 2b/2d: resolve CURRENT deployment by URL, NOT newest list item ---
+$currentDep = $lsDeps | Where-Object { $_.url -eq $inspectUrl } | Select-Object -First 1
+if (-not $currentDep) {
+  throw "BINDING 2 CURRENT-DEPLOYMENT -- STOP (no ls entry matches current alias URL '$inspectUrl'; possible rollback or list/alias divergence - NOT relying on newest list item)"
+}
+
+# SHA from ls entry matched by URL (NOT inspect.meta; inspect has no meta in Vercel CLI 51.5.0)
+$prodSha   = $currentDep.meta.githubCommitSha
+$vercelMsg = $currentDep.meta.githubCommitMessage
+$action    = $currentDep.meta.action
+if ($prodSha) { $prodSha = $prodSha.ToLower() }
+if (-not $prodSha -or $prodSha -notmatch '^[0-9a-f]{40}$') {
+  throw "BINDING 2 SHA FORMAT -- STOP (need 40-char lowercase hex, got '$prodSha')"
+}
+
+Write-Host "BINDING 2 identity -- OK (cli=$cliVersion user=$whoOut team=$EXPECTED_TEAM_ID project=$EXPECTED_PROJECT_ID)"
+Write-Host "BINDING 2 current-by-alias -- OK (deployment $deploymentId is CURRENT for valtriox.com; sha=$prodSha; NOT relying on newest list item)"
+```
 # C' cross-check - CONSISTENCY CHECK ONLY, NOT live-deployment proof
 # Phase 12H Item 1 P0: STOP on null/blank messages. Live proof = alias-match above.
 $ghRaw  = (& gh api "repos/AshirRaza313/valtriox/commits/$prodSha" 2>&1 | Out-String)

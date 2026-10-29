@@ -1,0 +1,10 @@
+# Test p12h-i2-cli-version-bad
+# Extracted full B block from live jit (function Get-JsonBody -> final OK); vercel shadowed by local mock
+# UTC: 2026-10-29T21:02:58Z
+# Branch: security/rls-audit-containment-v1
+# MUTATION: vercel --version returns "no semver here"
+# THROW_FIRED: yes
+# THROW_MSG: BINDING 2 CLI-VERSION -- STOP (no semver in output 'no semver here')
+# MATCH: CLI-VERSION -- STOP
+# ASSERTION: PASS
+
