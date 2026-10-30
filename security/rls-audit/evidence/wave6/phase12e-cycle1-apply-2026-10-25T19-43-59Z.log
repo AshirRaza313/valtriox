@@ -1,0 +1,223 @@
+Phase 12E Cycle 1 APPLY EVIDENCE - ITEM A + ITEM C (combined)
+Timestamp (UTC): 2026-10-25T19-43-59Z
+Pre-apply HEAD:  97808f81c451c4ae957c10afaedc81e857518b13
+Branch:          security/rls-audit-containment-v1
+
+--- PRE-APPLY FILE SHAs ---
+jit-checklist-v6.md:                  7C5466FDBC4111B9955B985B0D2D957A8F000A50DD87825889929C620ABD7838
+nologin-revalidation-checklist-v4.md: 3D0510B2F9D5AF01C63EBA07309BE8828D9907A5718DFC0AEC41C290B347970D
+nl-test-queries.sql:                  3EAE2AEE257D1A64D575722025F1BC99F89E14F842D780FB56FCF393392883B0
+p12e-cycle1-recon log:                1A313C3F4954B1890AAE35DC57ED9A5441B7250E702930FE26F19F164FBEB4BE
+
+--- EDITS ---
+ITEM A: jit-checklist-v6.md
+  Replace Section 1.3 region: 734 chars -> 3428 chars
+  Update L626 stop-condition: 39 chars -> 122 chars
+  Section 1.3 non-ASCII: old=5 new=0
+  L626 non-ASCII: old=0 new=0
+
+ITEM C-2: nologin-revalidation-checklist-v4.md
+  Insert custody strengthening (4 paragraphs) after C3 independence stance
+  Insert dependency scope block after C3 decision rule
+  Custody delta non-ASCII: 0
+  Dependency delta non-ASCII: 0
+
+ITEM C-1: nl-test-queries.sql
+  Prepend historical-status header
+  EOL detected: CRLF
+  Header non-ASCII: 0 (ASCII-only)
+  Original bytes preserved below header: \echo '=== NL Section 2: Production target identity ==='
+SELECT current_database() AS db,
+       current_user,
+       session_user,
+       current_role,
+       inet_server_addr() AS server_ip,
+       inet_server_port() AS server_port,
+       current_setting('server_version_num') AS svn,
+       current_setting('server_version') AS sv,
+       to_char(now() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS utc_now;
+
+\echo ''
+\echo '=== NL Section 7.1: Direct outbound memberships ==='
+SELECT m.member::regrole::text AS member,
+       m.roleid::regrole::text AS granted_role,
+       m.grantor::regrole::text AS grantor,
+       m.admin_option, m.set_option, m.inherit_option
+FROM pg_auth_members m
+WHERE m.member = 'valtriox_evidence_ro'::regrole
+ORDER BY granted_role;
+
+\echo ''
+\echo '=== NL Section 7.2: Direct inbound memberships ==='
+SELECT m.member::regrole::text AS member,
+       m.roleid::regrole::text AS granted_role,
+       m.grantor::regrole::text AS grantor,
+       m.admin_option, m.set_option, m.inherit_option
+FROM pg_auth_members m
+WHERE m.roleid = 'valtriox_evidence_ro'::regrole
+ORDER BY member;
+
+\echo ''
+\echo '=== NL Section 7.3: Transitive SET ==='
+WITH RECURSIVE set_chain AS (
+  SELECT m.member::regrole::text AS role_name,
+         m.roleid::regrole::text AS reached_role,
+         m.set_option, 1 AS depth,
+         ARRAY[m.member::regrole::text] AS path
+  FROM pg_auth_members m
+  WHERE m.roleid = 'valtriox_evidence_ro'::regrole
+    AND m.set_option = true
+  UNION ALL
+  SELECT m.member::regrole::text, m.roleid::regrole::text,
+         m.set_option, sc.depth + 1, sc.path || m.member::regrole::text
+  FROM pg_auth_members m
+  JOIN set_chain sc ON m.roleid::regrole::text = sc.role_name
+  WHERE m.set_option = true AND sc.depth < 5
+)
+SELECT role_name, reached_role, depth, path
+FROM set_chain ORDER BY depth, role_name;
+
+\echo ''
+\echo '=== NL Section 7.4: Independent SET/USE paths ==='
+SELECT r.rolname AS role_name,
+       pg_has_role(r.rolname, 'valtriox_evidence_ro', 'SET') AS can_set,
+       pg_has_role(r.rolname, 'valtriox_evidence_ro', 'USAGE') AS can_use
+FROM pg_roles r
+WHERE r.rolname NOT LIKE 'pg\_%'
+  AND r.rolname != 'valtriox_evidence_ro'
+  AND (pg_has_role(r.rolname, 'valtriox_evidence_ro', 'SET') = true
+       OR pg_has_role(r.rolname, 'valtriox_evidence_ro', 'USAGE') = true)
+ORDER BY r.rolname;
+
+\echo ''
+\echo '=== NL Section 7.5: Login roles with SET ==='
+SELECT r.rolname AS login_role,
+       pg_has_role(r.rolname, 'valtriox_evidence_ro', 'SET') AS can_set
+FROM pg_roles r
+WHERE r.rolcanlogin = true
+  AND r.rolname NOT LIKE 'pg\_%'
+  AND r.rolname != 'valtriox_evidence_ro'
+ORDER BY r.rolname;
+
+\echo ''
+\echo '=== NL Section 8.1: Relations owned ==='
+SELECT n.nspname, c.relname, c.relkind
+FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+WHERE pg_get_userbyid(c.relowner) = 'valtriox_evidence_ro';
+
+\echo ''
+\echo '=== NL Section 8.2: Schemas owned ==='
+SELECT nspname FROM pg_namespace
+WHERE pg_get_userbyid(nspowner) = 'valtriox_evidence_ro';
+
+\echo ''
+\echo '=== NL Section 8.3: Functions owned ==='
+SELECT n.nspname, p.proname, p.prokind
+FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+WHERE pg_get_userbyid(p.proowner) = 'valtriox_evidence_ro';
+
+\echo ''
+\echo '=== NL Section 8.4: Types owned ==='
+SELECT n.nspname, t.typname, t.typtype
+FROM pg_type t JOIN pg_namespace n ON n.oid = t.typnamespace
+WHERE pg_get_userbyid(t.typowner) = 'valtriox_evidence_ro';
+
+\echo ''
+\echo '=== NL Section 8.5: Operators owned ==='
+SELECT n.nspname, o.oprname
+FROM pg_operator o JOIN pg_namespace n ON n.oid = o.oprnamespace
+WHERE pg_get_userbyid(o.oprowner) = 'valtriox_evidence_ro';
+
+\echo ''
+\echo '=== NL Section 8.6: Conversions owned ==='
+SELECT n.nspname, c.conname
+FROM pg_conversion c JOIN pg_namespace n ON n.oid = c.connamespace
+WHERE pg_get_userbyid(c.conowner) = 'valtriox_evidence_ro';
+
+\echo ''
+\echo '=== NL Section 8.7: Collations owned ==='
+SELECT n.nspname, c.collname
+FROM pg_collation c JOIN pg_namespace n ON n.oid = c.collnamespace
+WHERE pg_get_userbyid(c.collowner) = 'valtriox_evidence_ro';
+
+\echo ''
+\echo '=== NL Section 8.8: Text search dicts/configs ==='
+SELECT n.nspname, d.dictname AS object_name, 'dictionary' AS object_type
+FROM pg_ts_dict d JOIN pg_namespace n ON n.oid = d.dictnamespace
+WHERE pg_get_userbyid(d.dictowner) = 'valtriox_evidence_ro'
+UNION ALL
+SELECT n.nspname, c.cfgname, 'configuration'
+FROM pg_ts_config c JOIN pg_namespace n ON n.oid = c.cfgnamespace
+WHERE pg_get_userbyid(c.cfgowner) = 'valtriox_evidence_ro';
+
+\echo ''
+\echo '=== NL Section 8.9: Shared dependencies (replaces pg_cast.castowner) ==='
+SELECT classid::regclass::text AS catalog,
+       objid::text AS object_id,
+       objsubid::int AS sub_id,
+       refclassid::regclass::text AS ref_catalog,
+       refobjid::text AS ref_object_id,
+       deptype
+FROM pg_shdepend
+WHERE refclassid = 'pg_authid'::regclass
+  AND refobjid = (SELECT oid FROM pg_roles WHERE rolname = 'valtriox_evidence_ro');
+
+\echo ''
+\echo '=== NL Section 9.1: Functions referencing role (prokind=f) ==='
+SELECT n.nspname AS schema_name,
+       p.proname AS function_name,
+       p.prokind AS kind,
+       (p.prokind IN ('f','p')
+         AND pg_get_functiondef(p.oid) ~* 'valtriox_evidence_ro') AS references_role
+FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+WHERE p.prokind = 'f'
+ORDER BY schema_name, function_name;
+
+\echo ''
+\echo '=== NL Section 9.2: SECURITY DEFINER functions ==='
+SELECT n.nspname AS schema_name,
+       p.proname AS function_name,
+       pg_get_userbyid(p.proowner) AS owner,
+       p.proconfig AS config
+FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+WHERE p.prosecdef = true AND p.prokind = 'f'
+ORDER BY schema_name, function_name;
+
+\echo ''
+\echo '=== NL Section 10: Pre-mutation role state ==='
+SELECT rolname, rolcanlogin, rolsuper, rolcreaterole, rolcreatedb,
+       rolreplication, rolbypassrls, rolconnlimit, rolvaliduntil, rolconfig
+FROM pg_roles WHERE rolname = 'valtriox_evidence_ro';
+
+\echo ''
+\echo '=== NL Section 10: Zero active sessions check ==='
+SELECT pid, usename, application_name, state, backend_start
+FROM pg_stat_activity
+WHERE usename = 'valtriox_evidence_ro';.Length chars
+
+--- POST-APPLY FILE SHAs ---
+jit-checklist-v6.md:                  55FB4196DC58CDA1688DFAF7C083CBCDF2A6CBD36AB2CBE3099D35E98F8429BA
+nologin-revalidation-checklist-v4.md: 1CAAF406B103F3E01A92E3C874E808F579B3790F32B0AC7656641D64DEDA6132
+nl-test-queries.sql:                  C748E6C16C47E5C843E349055D8A5D6B7CACF3581E024D09FB73C54DA03F149E
+
+--- NON-ASCII DELTA TRACKING ---
+jit:     pre=47 post=42 expected=42
+nologin: pre=39 post=39 expected=39
+sql:     pre=19 post=19 expected=19
+
+--- FILE EOL PROFILES ---
+jit:                 CRLF-only (preserved)
+nologin:             CRLF-only (preserved)
+nl-test-queries.sql: CRLF (preserved)
+
+--- SCOPE ---
+Edit targets:   jit-checklist-v6.md Section 1.3 + L626
+                nologin-revalidation-checklist-v4.md Section 4 + 8.9
+                nl-test-queries.sql (historical header prepend)
+Preserved:      phase-a-containment-v3.sql, phase-a-rollback-v2.sql,
+                post-verification-v6.md (all unchanged)
+Not in scope:   PR #17 comments (Cycle 2), manifest v8 (separate)
+Production:     HOLD (no mutation)
+NOLOGIN:        HOLD (no mutation)
+
+--- END ---

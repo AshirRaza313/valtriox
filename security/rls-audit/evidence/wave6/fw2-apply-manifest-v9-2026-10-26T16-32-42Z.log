@@ -1,0 +1,33 @@
+FW-2 APPLY EVIDENCE - manifest v8 to v9 (post Cycle A)
+UTC: 2026-10-26T16-32-42Z
+Pre-apply HEAD: f12dd22f150bba94a98f912dbed990d90d2a3791
+Branch: security/rls-audit-containment-v1
+
+--- PRE-APPLY ---
+v8 SHA256: 8BC49EE2E0D0474D368B57047C51C3742C8C2043C95F537CD6EB84EA00A53742
+v8 size/lines: 13115 / 139
+v8 non-ASCII: 1
+
+--- EDITS ---
+Header: (85 files) -> (87 files)
+Version L2/L4/L138: v8 -> v9
+jit in-place: 26310/55FB4196 -> 29815/A40D8FE7
+nologin in-place: 22492/1CAAF406 -> 23847/C167E339
+Insertion: 2 new entries between L93/L94
+
+--- DELTA ---
+Total: +269 B (13115 -> 13384)
+Lines: 139 -> 141
+LoneLF: 138 -> 140
+
+--- POST-WRITE ---
+v9 SHA256: 45BFB41700613383BCFE42E57EC1EA7DBA829161BCFC07B8F8C7536BB7C8E2BD
+v9 size/lines: 13384 / 141
+v9 entries: 87
+v9 non-ASCII: 1 (em-dash L2 preserved)
+v9 BOM: None
+
+--- SCOPE ---
+Rename: bundle-manifest-v8.txt -> bundle-manifest-v9.txt
+Production: HOLD. NOLOGIN: HOLD.
+--- END ---

@@ -1,0 +1,38 @@
+# do-block-probe runner log
+# Generated UTC: 2026-10-20T19-42-15Z
+# Mode:          pre
+# Database:      pg17test2
+# SQL source:    C:\Users\Aashir\Projects\valtriox-trackb\security\rls-audit\evidence\wave6\_temp-bad-table-2026-10-20T19-42-12Z.sql
+# Invocation:    per-block sudo -u postgres psql -d pg17test2 -v ON_ERROR_STOP=1 -f <block>
+# Expectations:  exit=3, errors=1, notices=0 (fail-succeeded; exit 3 + 1 ERROR + SELECT-SUCCEEDED pattern)
+
+
+=== DO probe 1/3: Subscription ===
+psql:/mnt/c/Users/Aashir/AppData/Local/Temp/b3-blocks-2026-10-20T19-42-15Z/block-1-subscription.sql:24: ERROR:  Subscription: unexpected SQLSTATE=42P01 MSG=relation "public.NonExistentTableXYZ123" does not exist -- FAIL; cleanup_user=postgres
+CONTEXT:  PL/pgSQL function inline_code_block line 18 at RAISE
+# Per-block exit_code:   3  (expected 3)
+# Per-block sql_errors:  1  (expected 1)
+# Per-block notices:     0  (expected 0)
+# Per-block verdict:     FAIL
+
+
+=== DO probe 2/3: Notification ===
+psql:/mnt/c/Users/Aashir/AppData/Local/Temp/b3-blocks-2026-10-20T19-42-15Z/block-2-notification.sql:24: ERROR:  Notification: SELECT SUCCEEDED with count=0 -- FAIL (SELECT privilege still active); cleanup_user=postgres
+CONTEXT:  PL/pgSQL function inline_code_block line 22 at RAISE
+# Per-block exit_code:   3  (expected 3)
+# Per-block sql_errors:  1  (expected 1)
+# Per-block notices:     0  (expected 0)
+# Per-block verdict:     PASS
+
+
+=== DO probe 3/3: PaymentProof ===
+psql:/mnt/c/Users/Aashir/AppData/Local/Temp/b3-blocks-2026-10-20T19-42-15Z/block-3-paymentproof.sql:24: ERROR:  PaymentProof: SELECT SUCCEEDED with count=0 -- FAIL (SELECT privilege still active); cleanup_user=postgres
+CONTEXT:  PL/pgSQL function inline_code_block line 22 at RAISE
+# Per-block exit_code:   3  (expected 3)
+# Per-block sql_errors:  1  (expected 1)
+# Per-block notices:     0  (expected 0)
+# Per-block verdict:     PASS
+
+=== DO-block probe COMPLETE ===
+# Runner verdict: FAIL
+# Runner exit:    1

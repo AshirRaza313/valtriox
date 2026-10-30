@@ -1,0 +1,69 @@
+DO
+psql:/mnt/c/Users/Aashir/Projects/evidence-phase1/phase11-corrections/wave6-test-evidence/fixtures-v2-copy.sql:54: NOTICE:  role "postgres" has already been granted membership in role "anon" by role "postgres"
+GRANT ROLE
+psql:/mnt/c/Users/Aashir/Projects/evidence-phase1/phase11-corrections/wave6-test-evidence/fixtures-v2-copy.sql:55: NOTICE:  role "postgres" has already been granted membership in role "authenticated" by role "postgres"
+GRANT ROLE
+psql:/mnt/c/Users/Aashir/Projects/evidence-phase1/phase11-corrections/wave6-test-evidence/fixtures-v2-copy.sql:59: NOTICE:  role "postgres" has already been granted membership in role "service_role" by role "postgres"
+GRANT ROLE
+psql:/mnt/c/Users/Aashir/Projects/evidence-phase1/phase11-corrections/wave6-test-evidence/fixtures-v2-copy.sql:60: NOTICE:  role "postgres" has already been granted membership in role "valtriox_evidence_ro" by role "postgres"
+GRANT ROLE
+psql:/mnt/c/Users/Aashir/Projects/evidence-phase1/phase11-corrections/wave6-test-evidence/fixtures-v2-copy.sql:70: NOTICE:  role "valtriox_evidence_ro" has already been granted membership in role "pg_read_all_data" by role "postgres"
+DO
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+CREATE POLICY
+CREATE POLICY
+CREATE POLICY
+CREATE POLICY
+CREATE POLICY
+CREATE POLICY
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+GRANT
+INSERT 0 2
+INSERT 0 21
+
+=== Fixtures base content loaded ===
+
+=== ACL count per (table, role) — from relacl ===
+  table_name  |    grantee     | priv_count 
+--------------+----------------+------------
+ Notification | anon           |          8
+ Notification | audit_readonly |          1
+ Notification | authenticated  |          8
+ Notification | postgres       |          8
+ Notification | service_role   |          8
+ PaymentProof | anon           |          8
+ PaymentProof | audit_readonly |          1
+ PaymentProof | authenticated  |          8
+ PaymentProof | postgres       |          8
+ PaymentProof | service_role   |          8
+ Subscription | anon           |          8
+ Subscription | audit_readonly |          1
+ Subscription | authenticated  |          8
+ Subscription | postgres       |          8
+ Subscription | service_role   |          8
+(15 rows)
+
+
+=== Self-check assertion (fail-closed) ===
+psql:/mnt/c/Users/Aashir/Projects/evidence-phase1/phase11-corrections/wave6-test-evidence/fixtures-v2-copy.sql:236: NOTICE:  SELF-CHECK PASSED: all 15 (table, role) combos match expected counts (anon=8, authenticated=8, service_role=8, postgres=8, audit_readonly=1 per table)
+DO
+
+Fixtures v2 loaded successfully.

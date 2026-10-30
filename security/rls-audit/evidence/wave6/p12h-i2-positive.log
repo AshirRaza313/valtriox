@@ -1,0 +1,14 @@
+# Test p12h-i2-positive
+# Extracted full B block; vercel shadowed by local mock; currentDep at index [2] (NOT [0])
+# Both OK strings + correct SHA (bebd61f4 from [2]) + [0] SHA (1111...) ABSENT prove currentDep filtering
+# +    [0] URL/newest list item NOT used
+# +    [0] SHA (1111111111111111111111111111111111111111) NOT in output
+# +    correct SHA (bebd61f4...) IS in output
+# +    both OK prints reachable
+# NO throw; both OK strings present; [0]-not-used proved
+# UTC: 2026-10-29T21:03:03Z
+# Branch: security/rls-audit-containment-v1
+# THROW_FIRED: no
+# MATCH: N/A (positive test)
+# ASSERTION: PASS (currentDep at [2] resolved; both OK strings; [0]-not-used proved)
+

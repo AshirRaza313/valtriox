@@ -1,0 +1,10 @@
+# Test p12h-i2-project-id-mismatch
+# Extracted full B block from live jit (function Get-JsonBody -> final OK); vercel shadowed by local mock
+# UTC: 2026-10-29T21:03:01Z
+# Branch: security/rls-audit-containment-v1
+# MUTATION: valtriox exists but id=prj_WRONGID (expected prj_fritS4Net6BtpkfG7ryf5zSLAOii)
+# THROW_FIRED: yes
+# THROW_MSG: BINDING 2 PROJECT-ID -- STOP (trusted projectId 'prj_fritS4Net6BtpkfG7ryf5zSLAOii' != actual 'prj_WRONGID')
+# MATCH: PROJECT-ID -- STOP
+# ASSERTION: PASS
+

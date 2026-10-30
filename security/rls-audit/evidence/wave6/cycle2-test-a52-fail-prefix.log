@@ -1,0 +1,13 @@
+# Test A5-2-FAIL-PREFIX
+# Bug #17: vercel CLI prepends progress line before JSON on Windows
+# Fixture on disk NEVER modified (m3)
+# Fixtures recon-time (2026-10-27 UTC). Execution authoritative (C2)
+# PG17 prelude for hygiene only; PS-logic, not SQL (E7)
+# UTC: 2026-10-28T17:45:44Z
+# Branch: security/rls-audit-containment-v1
+# MUTATION: raw = 'Fetching deployment ...' (no JSON opener)
+# THROW_FIRED: yes
+# THROW_MSG: BINDING 2 INSPECT -- STOP (no JSON opener '{' or '[' in raw output)
+# MATCH: PREFIX-STRIP
+# ASSERTION: PASS (Get-JsonBody strips or throws on prefix without JSON)
+

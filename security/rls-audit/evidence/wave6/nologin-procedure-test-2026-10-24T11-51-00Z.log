@@ -1,0 +1,27 @@
+C3 PROCEDURE TEST EVIDENCE - nologin-revalidation-checklist-v4.md 3b
+Timestamp (UTC): 2026-10-24T11-51-00Z
+Pre-apply HEAD:  285fa45b1c4c46841542f0144185a29d00906623
+Database:        pg17test2 (WSL2, PostgreSQL 17.11, disposable - E7)
+
+--- CREATE PROCEDURE ---
+SQL:    CREATE OR REPLACE PROCEDURE public.test_proc_c3_verify() LANGUAGE plpgsql AS 'BEGIN NULL; END;'
+Exit:   0
+
+--- Section 9.1 AUTHORITATIVE QUERY (post-edit) ---
+SQL includes: p.proconfig IS NOT NULL AS has_proconfig (post-edit 3a-1)
+             prokind IN ('f', 'p') (functions AND procedures)
+Exit:        0
+Verdict:     PASS (procedure row found with prokind='p')
+Row:         public|test_proc_c3_verify|p|f|f|f
+
+--- DROP PROCEDURE ---
+SQL:    DROP PROCEDURE IF EXISTS public.test_proc_c3_verify()
+Exit:   0
+Verify: post-drop count = 0 (expected 0)
+
+--- VERDICT ---
+PASS: Section 9.1 query correctly captures prokind='p' rows.
+Reconciles prior nologin-routine-scan-2026-10-22T19-06-25Z.log
+(which had zero procedures because pg17test2 had none at scan time).
+
+--- END ---

@@ -1,0 +1,75 @@
+# Cycle 2 Apply Log - Post-Execution Verification
+# Phase 12G - A5-2 (JIT Section 1.3 Binding 2 authoritative)
+# Captured (UTC): 2026-10-28T17:45:30Z
+# Branch: security/rls-audit-containment-v1
+# Pre-commit HEAD: f1e1fb187f9e0cc04726ae6a3af9ee365db6c128
+#
+# Scope: 1 markdown file modified + 3 fixture JSON files added.
+# No SQL executed. No DB touched. No CLI invocation at apply time.
+# No Phase A or NOLOGIN production mutation. Both HOLD.
+#
+## jit post-apply
+jit-SHA:  62F0E9D0240C030F36FDC9B958EF133BCBA6D66128D348CDE73C9B3AE7FF00DE
+jit-size: 34029 B
+jit-pre:  22AFF9F73536AE7733E12114B2AD6ED5F3F65C3EE0F7B4599FAE6EF1316C0D2D
+jit-pre-size: 30106 B
+#
+## Fixtures (recon-time snapshots, execution-window is authoritative per C2)
+fixture-vercel-ls-prod.json       SHA: 013188D31FC54E5034DA58637747699112339CB5AEE02128E6BD3CADA2508485
+fixture-vercel-inspect-prod.json  SHA: 9C94E2600ECBB81A96640E376C8BFA3DAC5A34BD5B94208A408C75B1CAC5EF5D   (includes Bug #17 prefix)
+fixture-github-commit.json        SHA: 9EDC20989D08DE6169CFAECF29872460AC6D865F1E5DE308345E8F8E2B5DA8B4
+#
+## Structural markers verified PRESENT (15)
+  - Get-JsonBody
+  - BINDING 2 LS -- STOP
+  - BINDING 2 INSPECT -- STOP
+  - BINDING 2 URL-MATCH -- STOP
+  - BINDING 2 TARGET -- STOP
+  - BINDING 2 STATE -- STOP
+  - BINDING 2 ALIAS -- STOP
+  - BINDING 2 CROSS-CHECK -- STOP
+  - BINDING 2 SHA FORMAT -- STOP
+  - current-live -- OK
+  - C' limitation (disclosed)
+  - redeploy note (Reviewer M1)
+  - SHA coincidence (Reviewer M3)
+  - Fixtures staleness (Reviewer C2)
+  - DEFERRAL (expert verbatim intent)
+#
+## Structural markers verified ABSENT (3)
+  - capture ALL 5 fields from Vercel Production Dashboard
+  - gh deployments cross-check is informative only
+  - throw "PRODUCTION SHA FORMAT -- STOP (need 40-char lowercase hex)"
+#
+## Bug #17 disclosure
+vercel CLI prepends progress lines (e.g., 'Fetching deployment ...') before
+JSON on Windows. Get-JsonBody strips via earliest '{' or '[' index. Not
+wording-dependent. Applied to vercel ls, vercel inspect, gh api defensively.
+#
+## C' cross-check limitation (Reviewer approved)
+C' verifies (a) prod SHA exists on GitHub, (b) commit message matches Vercel
+metadata. Does NOT prove GitHub saw Vercel deploy. Current-live proof is B
+(URL-match + alias-match). C' is consistency check, not current-live proof.
+#
+## GH deployments (broken) substitution
+GitHub Deployments API for this repo stale (latest 2026-06-06, no match for
+2026-09-11 production deploy). C' (commit-level) substituted per Reviewer.
+#
+## redeploy note (M1)
+meta.action == 'redeploy' captured as informational field; NOT asserted.
+#
+## SHA coincidence (M3)
+prod SHA == main SHA == base SHA is incidental. Assertions do NOT rely on
+any equality between prod SHA and main/HEAD.
+#
+## Fixtures staleness (C2)
+Fixtures represent recon-time schema (2026-10-27 UTC). Actual execution-window
+verification is authoritative. Schema drift caught at execution, not pre-verified.
+#
+## DEFERRAL (expert verbatim intent)
+Actual CLI + gh invocation happens at execution window only. Fixtures are for
+test determinism - NOT execution evidence.
+#
+## Attestation
+No Phase A or NOLOGIN production mutation. Both HOLD.
+

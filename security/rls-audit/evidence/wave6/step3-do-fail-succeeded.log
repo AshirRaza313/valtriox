@@ -1,0 +1,38 @@
+# do-block-probe runner log
+# Generated UTC: 2026-10-18T20-54-56Z
+# Mode:          pre
+# Database:      pg17test2
+# SQL source:    C:\Users\Aashir\Projects\valtriox-trackb\security\rls-audit\evidence\wave6\do-block-probe.sql
+# Invocation:    per-block sudo -u postgres psql -d pg17test2 -v ON_ERROR_STOP=1 -f <block>
+# Expectations:  exit=3, errors=1, notices=0 (fail-succeeded (SELECT granted); exit 3 (psql: script error w/ ON_ERROR_STOP=1) + 1 ERROR per block)
+
+
+=== DO probe 1/3: Subscription ===
+psql:/mnt/c/Users/Aashir/AppData/Local/Temp/b3-blocks-2026-10-18T20-54-56Z/block-1-subscription.sql:24: ERROR:  Subscription: SELECT SUCCEEDED with count=0 -- FAIL (SELECT privilege still active); cleanup_user=postgres
+CONTEXT:  PL/pgSQL function inline_code_block line 22 at RAISE
+# Per-block exit_code:   3  (expected 3)
+# Per-block sql_errors:  1  (expected 1)
+# Per-block notices:     0  (expected 0)
+# Per-block verdict:     PASS
+
+
+=== DO probe 2/3: Notification ===
+psql:/mnt/c/Users/Aashir/AppData/Local/Temp/b3-blocks-2026-10-18T20-54-56Z/block-2-notification.sql:24: ERROR:  Notification: SELECT SUCCEEDED with count=0 -- FAIL (SELECT privilege still active); cleanup_user=postgres
+CONTEXT:  PL/pgSQL function inline_code_block line 22 at RAISE
+# Per-block exit_code:   3  (expected 3)
+# Per-block sql_errors:  1  (expected 1)
+# Per-block notices:     0  (expected 0)
+# Per-block verdict:     PASS
+
+
+=== DO probe 3/3: PaymentProof ===
+psql:/mnt/c/Users/Aashir/AppData/Local/Temp/b3-blocks-2026-10-18T20-54-56Z/block-3-paymentproof.sql:24: ERROR:  PaymentProof: SELECT SUCCEEDED with count=0 -- FAIL (SELECT privilege still active); cleanup_user=postgres
+CONTEXT:  PL/pgSQL function inline_code_block line 22 at RAISE
+# Per-block exit_code:   3  (expected 3)
+# Per-block sql_errors:  1  (expected 1)
+# Per-block notices:     0  (expected 0)
+# Per-block verdict:     PASS
+
+=== DO-block probe COMPLETE ===
+# Runner verdict: PASS
+# Runner exit:    0

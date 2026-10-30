@@ -1,0 +1,49 @@
+FW-1b APPLY EVIDENCE - manifest v7 to v8 (post Phase 12E Cycle 1)
+Timestamp (UTC): 2026-10-25T20-09-04Z
+Pre-apply HEAD:  a7833b74b4f5926375e94e0fc48ebe72a147a0a8
+Branch:          security/rls-audit-containment-v1
+
+--- PRE-APPLY ---
+v7 SHA256:       26E375711F295100E7762E7F04BBFA400FBA2E35242485FBB743B56AB12BB0ED
+v7 size/lines:   12704 / 136
+v7 loneLF:       135 (LF-only)
+v7 non-ASCII:    1 (em-dash L2)
+
+--- EDITS ---
+Header:          (82 files) -> (85 files) [0 B delta]
+Version L2:      FINAL BUNDLE MANIFEST v7 -> v8 [0 B delta]
+Version L4:      Manifest version: v7 -> v8 [0 B delta]
+Version L127:    END OF BUNDLE MANIFEST v7 -> v8 [0 B delta]
+jit SHA update:  23543/7C5466FD -> 26310/55FB4196 [0 B delta]
+nologin SHA:     20038/3D0510B2 -> 22492/1CAAF406 [0 B delta]
+sql SHA:         6258/3EAE2AEE -> 7897/C748E6C1 [0 B delta]
+Insertion:       3 new entries between v7 L92 and L93 [newBlock=410 B]
+
+--- DELTA ---
+Total delta:     +411 B (newBlock + 1 LF)
+Target size:     13115 B
+Target lines:    139
+Target loneLF:   138
+
+--- POST-WRITE ---
+v8 SHA256:       8BC49EE2E0D0474D368B57047C51C3742C8C2043C95F537CD6EB84EA00A53742
+v8 size/lines:   13115 / 139
+v8 loneLF:       138
+v8 CRLF:         0
+v8 trailingNL:   False
+v8 entries:      85
+v8 non-ASCII:    1 (em-dash L2 preserved)
+v8 BOM:          None
+
+--- SCOPE ---
+Rename:          bundle-manifest-v7.txt -> bundle-manifest-v8.txt
+Committed files (5):
+  D security/rls-audit/bundle-manifest-v7.txt
+  A security/rls-audit/bundle-manifest-v8.txt
+  A security/rls-audit/evidence/wave6/fw1b-rt1-recon-2026-10-25T20-00-02Z.log
+  A security/rls-audit/evidence/wave6/fw1b-apply-manifest-v8-2026-10-25T20-09-04Z.log
+  A security/rls-audit/evidence/wave6/fw1b-apply-manifest-v8-2026-10-25T20-09-04Z.log.sha256
+Production:      HOLD (no mutation)
+NOLOGIN:         HOLD (no mutation)
+
+--- END ---

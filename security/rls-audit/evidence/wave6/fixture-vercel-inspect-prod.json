@@ -1,0 +1,16 @@
+Fetching deployment "valtriox.com" in ashirraza313s-projects
+{
+    "id":  "dpl_REDACTED",
+    "name":  "valtriox",
+    "url":  "valtriox-REDACTED-ashirraza313s-projects.vercel.app",
+    "target":  "production",
+    "readyState":  "READY",
+    "createdAt":  1789143053053,
+    "contextName":  "ashirraza313s-projects",
+    "aliases":  [
+                    "valtriox.com",
+                    "www.valtriox.com",
+                    "valtriox-REDACTED.vercel.app",
+                    "valtriox-git-main-REDACTED.vercel.app"
+                ]
+}
