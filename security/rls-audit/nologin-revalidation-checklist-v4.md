@@ -450,11 +450,13 @@ WHERE refclassid = 'pg_authid'::regclass
 
 Any rows → investigate (means some object depends on the role).
 
-**Decision rule:** If Section 8.9 returns ANY rows referencing
-`valtriox_evidence_ro` (any deptype), NOLOGIN is BLOCKED until
-resolved. If Section 8.9 returns zero rows AND Section 5 finds no
-active external secret, NOLOGIN may proceed (written expert approval
-per E6 still required).
+**Decision rule (unified STOP rule; same as STOP rule below):** NOLOGIN is BLOCKED if Section 8.9 returns
+ANY rows referencing `valtriox_evidence_ro` (any deptype). Zero rows in Section 8.9 alone is NOT sufficient -
+approval requires ALL THREE checks clear in the SAME approved execution window: (1) Section 8.9 zero rows
+(catalog scope), (2) Section 10.2 zero active sessions (live-connection scope), (3) Custodian NO per Section 4.2
+from ALL sources (external-secret scope). Any UNKNOWN, non-zero, missing, or unverifiable check: UNKNOWN = STOP.
+No exceptions. Written expert approval per E6 is required before any execution. Recorded fields below must
+be filled with actual execution-window evidence - template defaults do NOT constitute a completed check.
 
 **Scope of Section 8.9 evidence (Phase 12E, 2026-10-25):**
 
