@@ -1,0 +1,9 @@
+# Test p12h-i3-scope-note-present
+# Static check on bundle-manifest-v11.txt
+# UTC: 2026-10-30T19:58:40Z
+# Branch: security/rls-audit-containment-v1
+# v11 SHA (pre==post): 29DED97E10F94382235F18316CEE068EE21FA496754FBFB2068E7E975D37EB2B
+# LABEL: SCOPE NOTE present disclosing 42-file exclusion
+# RESULT: present=True
+# ASSERTION: PASS
+

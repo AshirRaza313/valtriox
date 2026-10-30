@@ -1,0 +1,9 @@
+# Test p12h-i3-sort-and-emdash
+# Static check on bundle-manifest-v11.txt
+# UTC: 2026-10-30T19:58:40Z
+# Branch: security/rls-audit-containment-v1
+# v11 SHA (pre==post): 29DED97E10F94382235F18316CEE068EE21FA496754FBFB2068E7E975D37EB2B
+# LABEL: 1 em-dash preserved (sort inversions informational only)
+# RESULT: emdashCount=1 (sort: pre-existing v10 inversions preserved per Rule 24, informational)
+# ASSERTION: PASS
+

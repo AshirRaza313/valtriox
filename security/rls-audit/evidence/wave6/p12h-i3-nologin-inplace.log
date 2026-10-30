@@ -1,0 +1,9 @@
+# Test p12h-i3-nologin-inplace
+# Static check on bundle-manifest-v11.txt
+# UTC: 2026-10-30T19:58:40Z
+# Branch: security/rls-audit-containment-v1
+# v11 SHA (pre==post): 29DED97E10F94382235F18316CEE068EE21FA496754FBFB2068E7E975D37EB2B
+# LABEL: nologin entry updated to B05292F7.../24454
+# RESULT: sha=B05292F7E1D8247FB3864B4A2B627DE738BE663A1728F158587C3661D2DF7085 size=24454
+# ASSERTION: PASS
+

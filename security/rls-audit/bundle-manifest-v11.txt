@@ -1,7 +1,7 @@
 ================================================================
-VALTRIOX PHASE 11 — FINAL BUNDLE MANIFEST v10
+VALTRIOX PHASE 11 — FINAL BUNDLE MANIFEST v11
 ================================================================
-Manifest version:  v10
+Manifest version:  v11
 Generated UTC:     2026-10-17T11:53:52Z
 Prepared by:       Ashir Raza
 PR:                #17 (dedicated security)
@@ -16,7 +16,15 @@ Phase 11 final submission. All Wave 1-6 corrections addressed.
 Canonical approval location: this PR (#17). NOLOGIN approval is
 a SEPARATE track (see evidence/nologin/).
 
-FILE INVENTORY (116 files)
+FILE INVENTORY (124 files)
+
+SCOPE NOTE (Phase 12H Item 3, 2026-10-30):
+This manifest covers 124 files = 116 from v10 + 8 expert-flagged fw1/fw1b/fw2
+historical evidence files now indexed. Phase 12H evidence files from Items 1,
+2, 4 (42 files with prefixes cycle-*, p12h-i1-*, p12h-i2-*, p12h-i4-*) are
+intentionally NOT indexed here per Reviewer scope-lock. A follow-up manifest
+(v12) at Wave 7.7d final closure will index them. For complete inventory as
+of HEAD 6be1be5, run: git ls-files security/rls-audit/
 ----------------------------------------------------------------
 
 NOTE: This manifest describes the FINAL PR state after Wave 7
@@ -112,6 +120,14 @@ evidence/wave6/fixture-github-commit.json | 524 | 9EDC20989D08DE6169CFAECF298724
 evidence/wave6/fixture-vercel-inspect-prod.json | 557 | 9C94E2600ECBB81A96640E376C8BFA3DAC5A34BD5B94208A408C75B1CAC5EF5D
 evidence/wave6/fixture-vercel-ls-prod.json | 1216 | 013188D31FC54E5034DA58637747699112339CB5AEE02128E6BD3CADA2508485
 evidence/wave6/fixtures-v2-copy.sql | 10968 | A4559613070718D118030611022497E2E27AD2443062ED76E20751B9C2D95006
+evidence/wave6/fw1-apply-manifest-v7-2026-10-24T16-36-24Z.log | 553 | 852EE78EE0FB048ECBB2A6BBFDA9AE423C3DDB61982F6EC5D34A7F3D8E7FEDB1
+evidence/wave6/fw1-apply-manifest-v7-2026-10-24T16-36-24Z.log.sha256 | 113 | 2D3C8C40D9538282EDE34C9A74A362CA76FF9169C7150827E685B71AC9DF59CF
+evidence/wave6/fw1b-apply-manifest-v8-2026-10-25T20-09-04Z.log | 1845 | 75C6720E27579FE23D368D7E9885E9C91535E8F333ECCB9E35282DE0A1825BB8
+evidence/wave6/fw1b-apply-manifest-v8-2026-10-25T20-09-04Z.log.sha256 | 114 | 919BC26CDA295BF10877C53B9478AD053BD2239735B99124B2597789B0DFA9DD
+evidence/wave6/fw1b-rt1-recon-2026-10-25T20-00-02Z.log | 13613 | 8E0BCC112C3B6291DF29B89EA3545BDC4B998BC64EA480DEC5BC793626078723
+evidence/wave6/fw2-apply-manifest-v9-2026-10-26T16-32-42Z.log | 923 | 6C6D89674E10548AA5CAC6CDD75CA47632CBF6DF240DB7F8A18716A8300F7279
+evidence/wave6/fw2-apply-manifest-v9-2026-10-26T16-32-42Z.log.sha256 | 113 | 390D9DDB8F4B3334F976E5464281318D3BD5920A1436DEF67674CFF0C4B4CC79
+evidence/wave6/fw2-recon-2026-10-26T16-09-32Z.log | 3146 | BEAE3CAABAE1AE3D697E6B5C3A9513B82E511B41A209D59D9F1A4AE2299DDBAA
 evidence/wave6/jit-baseline.sql | 9135 | 46C5303F6898041A7148737EBAE7D88FC82B695F69892037C8F38B8D156825F4
 evidence/wave6/jit-v7-pg_maintain-scan-2026-10-22T16-50-40Z.log | 744 | 57CAC966A77077DF783F16B8ABA8543134613130B53C37A3F8A9FFE7ABAFB5F8
 evidence/wave6/jit-v7-pg_maintain-scan-2026-10-22T16-50-40Z.sha256 | 115 | 52150B96861F8032FB3203CA736C6F9873B8EDAEBC729BDBB73505ECEE7C7336
@@ -132,9 +148,9 @@ evidence/wave6/step3-do-fail-succeeded.log | 1956 | 22B656B18EB389A198CBC6DA1650
 evidence/wave6/step4-containment.log | 84 | 5C2A5CDEC566B333F789C6F5F1684E3D53EEA3FCED33D5F1C0D8D019216E74F9
 evidence/wave6/step5-pv-verify.log | 2144 | DFDB4D693109367AA18E2E591612D06711F674683093C9E3C41EC2A1E363D14C
 evidence/wave6/step6-do-pass.log | 1997 | 689448635513B761C9E726ED04A775C5198C3A48C3170F119E82B563C5205608
-jit-checklist-v6.md | 34029 | 62F0E9D0240C030F36FDC9B958EF133BCBA6D66128D348CDE73C9B3AE7FF00DE
+jit-checklist-v6.md | 38015 | 83E9E408116D99B71739E12BBD01B3DBDB4BE952D8D07E2AB6AFE35F1EA65DE1
 maintain-pre-state-comparison.md | 3080 | 718BFE538295AA996705B365EF64602E6263689E8644BD60D6970A494289AD60
-nologin-revalidation-checklist-v4.md | 23977 | B1DCCF75A5B1A159CA887FD0E86E067EEBA1A72BB4DCB98BA9D27DE1E2BCF56F
+nologin-revalidation-checklist-v4.md | 24454 | B05292F7E1D8247FB3864B4A2B627DE738BE663A1728F158587C3661D2DF7085
 OUT-OF-SCOPE-FLAGS.md | 7373 | 43EFC86890E08A7F3BC596B657D78F06D421CAA5439CF50A43C45E0940B3B4B3
 pg-version-proof.txt | 424 | B81039187686A1EE8CDB95A9E67D2DB0611D03325992AA78DD88FDCBC19EC995
 pg17-fixtures-v2.sql | 10968 | A4559613070718D118030611022497E2E27AD2443062ED76E20751B9C2D95006
@@ -166,5 +182,5 @@ PR #17: https://github.com/AshirRaza313/valtriox/pull/17
 PR #13 (historical): https://github.com/AshirRaza313/valtriox/pull/13
 
 ================================================================
-END OF BUNDLE MANIFEST v10
+END OF BUNDLE MANIFEST v11
 ================================================================
