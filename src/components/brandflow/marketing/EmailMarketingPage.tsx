@@ -105,7 +105,7 @@ export function EmailMarketingPage() {
       "You're invited: Early access to our new collection",
     ];
     setComposeSubject(suggestions[Math.floor(Math.random() * suggestions.length)]);
-    toast.success("AI generated a subject line!");
+    toast.success("Suggestion applied");
   };
 
   const handleSchedule = () => {
