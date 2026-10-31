@@ -81,7 +81,7 @@ const actionCategories: ActionCategory[] = [
         hoverText: "hover:text-white",
       },
       {
-        label: "AI Assistant",
+        label: "AI Assistant (Coming Soon)",
         icon: Brain,
         section: "ai-assistant",
         iconBg: "bg-gradient-to-br from-amber-100 to-orange-50",

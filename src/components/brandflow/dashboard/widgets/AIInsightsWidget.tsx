@@ -16,31 +16,6 @@ interface AIInsight {
   impact: "high" | "medium" | "low";
 }
 
-// Graceful fallback insights when AI API is unavailable
-const FALLBACK_INSIGHTS: AIInsight[] = [
-  {
-    id: "1",
-    icon: "mail",
-    title: "Boost Email Revenue",
-    description: "Customers who receive weekly emails spend 3x more. Start an email campaign to re-engage dormant customers.",
-    impact: "high",
-  },
-  {
-    id: "2",
-    icon: "trending",
-    title: "Optimize Pricing",
-    description: "Your top 5 products have room for a 5-10% price increase based on order velocity patterns.",
-    impact: "medium",
-  },
-  {
-    id: "3",
-    icon: "users",
-    title: "Loyalty Opportunity",
-    description: "15 customers are close to VIP tier. A targeted offer could increase their lifetime value by 40%.",
-    impact: "high",
-  },
-];
-
 export function AIInsightsWidget() {
   const { organization, appTheme } = useValtrioxStore();
   const t = useTranslation();
@@ -49,46 +24,26 @@ export function AIInsightsWidget() {
 
   const [insights, setInsights] = useState<AIInsight[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isAIGenerated, setIsAIGenerated] = useState(false);
 
   const fetchInsights = useCallback(async () => {
     const orgId = organization?.id;
     if (!orgId) {
-      setInsights(FALLBACK_INSIGHTS);
+      setInsights([]);
       setLoading(false);
       return;
     }
     setLoading(true);
     try {
-      // Try the AI insights API endpoint
       const res = await fetchWithAuth(`/api/dashboard/stats?orgId=${encodeURIComponent(orgId)}`);
       if (res.ok) {
         const data = await res.json();
-        // If we have real stats, we can generate contextual insights
-        // But for now, try to call AI endpoint
-        try {
-          const aiRes = await fetchWithAuth(`/api/ai/insights?orgId=${encodeURIComponent(orgId)}`);
-          if (aiRes.ok) {
-            const aiData = await aiRes.json();
-            if (Array.isArray(aiData.insights) && aiData.insights.length > 0) {
-              setInsights(aiData.insights);
-              setIsAIGenerated(true);
-              setLoading(false);
-              return;
-            }
-          }
-        } catch {
-          // AI endpoint not available - graceful fallback
-        }
-
-        // Generate context-aware insights from dashboard stats
         const contextual = generateContextualInsights(data);
-        setInsights(contextual.length > 0 ? contextual : FALLBACK_INSIGHTS);
+        setInsights(contextual);
       } else {
-        setInsights(FALLBACK_INSIGHTS);
+        setInsights([]);
       }
     } catch {
-      setInsights(FALLBACK_INSIGHTS);
+      setInsights([]);
     } finally {
       setLoading(false);
     }
@@ -105,7 +60,6 @@ export function AIInsightsWidget() {
     : "bg-white border-slate-200";
 
   const textPrimary = isDark ? "text-white" : "text-slate-900";
-  const textSecondary = isDark ? "text-slate-400" : "text-slate-500";
   const textMuted = isDark ? "text-slate-400" : "text-muted-foreground";
   const accentColor = isGold ? "text-amber-400" : "text-amber-500";
   const accentBg = isGold ? "bg-amber-500/10" : "bg-amber-100";
@@ -143,7 +97,7 @@ export function AIInsightsWidget() {
         <CardContent className="flex items-center justify-center p-6">
           <div className="flex items-center gap-2">
             <Sparkles className={cn("h-4 w-4 animate-pulse", accentColor)} />
-            <span className={cn("text-xs", textMuted)}>{t("aiGenerating")}</span>
+            <span className={cn("text-xs", textMuted)}>{t("insightsLoading")}</span>
           </div>
         </CardContent>
       </Card>
@@ -153,17 +107,13 @@ export function AIInsightsWidget() {
   return (
     <Card className={cn("transition-all duration-300", cardClass)}>
       <CardContent className="p-4 space-y-3">
-        {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className={cn("h-8 w-8 rounded-lg flex items-center justify-center", accentBg)}>
               <Sparkles className={cn("h-4 w-4", accentColor)} />
             </div>
             <div>
-              <p className={cn("text-xs font-semibold", textPrimary)}>{t("aiInsights")}</p>
-              {isAIGenerated && (
-                <p className={cn("text-[10px]", textMuted)}>AI Powered</p>
-              )}
+              <p className={cn("text-xs font-semibold", textPrimary)}>{t("insightsTitle")}</p>
             </div>
           </div>
           <button
@@ -174,40 +124,41 @@ export function AIInsightsWidget() {
           </button>
         </div>
 
-        {/* Insights list */}
-        <div className="space-y-2 max-h-48 overflow-y-auto">
-          {insights.map((insight) => {
-            const Icon = getIconForType(insight.icon);
-            return (
-              <div
-                key={insight.id}
-                className={cn("p-2.5 rounded-lg flex gap-2.5", isDark ? "bg-white/[0.02] border border-white/[0.04]" : "bg-slate-50")}
-              >
-                <div className={cn("h-7 w-7 rounded-lg flex items-center justify-center flex-shrink-0", accentBg)}>
-                  <Icon className={cn("h-3.5 w-3.5", accentColor)} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5 mb-0.5">
-                    <p className={cn("text-xs font-medium", textPrimary)}>{insight.title}</p>
-                    <span className={cn(
-                      "text-[9px] px-1.5 py-px rounded-full border font-medium capitalize",
-                      getImpactStyle(insight.impact)
-                    )}>
-                      {insight.impact}
-                    </span>
+        {insights.length === 0 ? (
+          <p className={cn("text-xs text-center py-4", textMuted)}>{t("aiUnavailableMessage")}</p>
+        ) : (
+          <div className="space-y-2 max-h-48 overflow-y-auto">
+            {insights.map((insight) => {
+              const Icon = getIconForType(insight.icon);
+              return (
+                <div
+                  key={insight.id}
+                  className={cn("p-2.5 rounded-lg flex gap-2.5", isDark ? "bg-white/[0.02] border border-white/[0.04]" : "bg-slate-50")}
+                >
+                  <div className={cn("h-7 w-7 rounded-lg flex items-center justify-center flex-shrink-0", accentBg)}>
+                    <Icon className={cn("h-3.5 w-3.5", accentColor)} />
                   </div>
-                  <p className={cn("text-[10px] leading-relaxed", textMuted)}>{insight.description}</p>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <p className={cn("text-xs font-medium", textPrimary)}>{insight.title}</p>
+                      <span className={cn(
+                        "text-[9px] px-1.5 py-px rounded-full border font-medium capitalize",
+                        getImpactStyle(insight.impact)
+                      )}>
+                        {insight.impact}
+                      </span>
+                    </div>
+                    <p className={cn("text-[10px] leading-relaxed", textMuted)}>{insight.description}</p>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
 }
-
-// ── Contextual insight generation from dashboard stats ──────────────────────
 
 function generateContextualInsights(stats: any): AIInsight[] {
   const insights: AIInsight[] = [];

@@ -142,7 +142,7 @@ const DEFAULT_GUIDE: GuideData = { tabs: [
   { id: "connections", label: "Connections", icon: "Globe", items: [
     { id: "co1", title: "Third-Party Integrations", content: "Go to Connections in the sidebar to connect external services. The platform integrates with WooCommerce, Daraz, Shopify, Stripe, JazzCash, EasyPaisa, and courier services (TCS, Leopards, M&P). Each integration has a setup wizard. Once connected, data flows automatically between the platform and the external service." },
     { id: "co2", title: "WhatsApp Business", content: "The WhatsApp Business integration under Connections lets you connect your WhatsApp Business API account. Configure message templates for order confirmations, shipping updates, delivery notifications, and promotional messages. Send product catalogs directly via WhatsApp. Essential for Pakistani businesses where WhatsApp is the primary communication channel." },
-    { id: "co3", title: "AI Tools", content: "The AI Tools section under Connections provides AI-powered features to boost productivity. Use AI to generate product descriptions, marketing copy, email subject lines, and social media captions. The AI can also analyze customer feedback, suggest pricing strategies, and help forecast demand. AI tools save hours of manual work and improve content quality." },
+    { id: "co3", title: "AI Tools", content: "The AI Tools section is planned for a future release. It is not yet available in this version." },
   ]},
 
   // ── 11. PLANS & BILLING ────────────────────────────────────────────
