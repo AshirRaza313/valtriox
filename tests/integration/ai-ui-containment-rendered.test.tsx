@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, fireEvent, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import React from 'react';
 
 const localeState = vi.hoisted(() => ({ value: 'en' as 'en' | 'ur' }));
@@ -99,8 +100,9 @@ const AIInsightsWidget: React.ComponentType = (AIInsightsModule as any).default 
 const QuickActions: React.ComponentType = (QuickActionsModule as any).default ?? (QuickActionsModule as any).QuickActions;
 
 
-// Helper: activate Compose tab (Radix Tabs responds to mousedown, not click)
-function renderEmailCompose() {
+// Helper: activate Compose tab via userEvent (full pointer+mouse+click sequence for Radix Tabs v2)
+async function renderEmailCompose() {
+  const user = userEvent.setup();
   const result = render(React.createElement(EmailMarketingPage));
   const tabTriggers = Array.from(result.container.querySelectorAll('button[role="tab"]'));
   const composeTrigger = tabTriggers.find((b) => /compose/i.test(b.textContent || '')) as HTMLElement | undefined;
@@ -108,7 +110,7 @@ function renderEmailCompose() {
     const available = tabTriggers.map(b => (b.textContent || '').trim()).join(' | ') || '(none)';
     throw new Error(`Compose tab trigger not found. Available tabs: ${available}`);
   }
-  fireEvent.mouseDown(composeTrigger, { button: 0 });
+  await user.click(composeTrigger);
   return result;
 }
 
@@ -129,13 +131,13 @@ describe('EmailMarketingPage - rendered AI containment', () => {
     expect(container.textContent).not.toMatch(/AI generated/i);
   });
 
-  it('renders "Use sample subject" button label via t()', () => {
-    const { container } = renderEmailCompose();
+  it('renders "Use sample subject" button label via t()', async () => {
+    const { container } = await renderEmailCompose();
     expect(container.textContent).toMatch(/Use sample subject/i);
   });
 
-  it('error message for empty body does not say "AI"', () => {
-    const { container } = renderEmailCompose();
+  it('error message for empty body does not say "AI"', async () => {
+    const { container } = await renderEmailCompose();
     const buttons = Array.from(container.querySelectorAll('button'));
     const suggestBtn = buttons.find((b) => /use sample subject|ai suggest subject/i.test(b.textContent || ''));
     if (!suggestBtn) {
