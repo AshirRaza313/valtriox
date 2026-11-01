@@ -99,15 +99,16 @@ const AIInsightsWidget: React.ComponentType = (AIInsightsModule as any).default 
 const QuickActions: React.ComponentType = (QuickActionsModule as any).default ?? (QuickActionsModule as any).QuickActions;
 
 
-// Helper: activate Compose tab so button is rendered
+// Helper: activate Compose tab (Radix Tabs responds to mousedown, not click)
 function renderEmailCompose() {
   const result = render(React.createElement(EmailMarketingPage));
-  const tabs = result.container.querySelectorAll('[role="tab"], [role="tab"] button, button[role="tab"]');
-  const candidates = Array.from(result.container.querySelectorAll('button')).filter((b) => /compose/i.test(b.textContent || ''));
-  const composeTrigger = candidates[0] || Array.from(tabs).find((t) => /compose/i.test(t.textContent || ''));
-  if (composeTrigger) {
-    fireEvent.click(composeTrigger);
+  const tabTriggers = Array.from(result.container.querySelectorAll('button[role="tab"]'));
+  const composeTrigger = tabTriggers.find((b) => /compose/i.test(b.textContent || '')) as HTMLElement | undefined;
+  if (!composeTrigger) {
+    const available = tabTriggers.map(b => (b.textContent || '').trim()).join(' | ') || '(none)';
+    throw new Error(`Compose tab trigger not found. Available tabs: ${available}`);
   }
+  fireEvent.mouseDown(composeTrigger, { button: 0 });
   return result;
 }
 
