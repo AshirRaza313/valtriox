@@ -98,6 +98,19 @@ const EmailMarketingPage: React.ComponentType = (EmailMarketingModule as any).de
 const AIInsightsWidget: React.ComponentType = (AIInsightsModule as any).default ?? (AIInsightsModule as any).AIInsightsWidget;
 const QuickActions: React.ComponentType = (QuickActionsModule as any).default ?? (QuickActionsModule as any).QuickActions;
 
+
+// Helper: activate Compose tab so button is rendered
+function renderEmailCompose() {
+  const result = render(React.createElement(EmailMarketingPage));
+  const tabs = result.container.querySelectorAll('[role="tab"], [role="tab"] button, button[role="tab"]');
+  const candidates = Array.from(result.container.querySelectorAll('button')).filter((b) => /compose/i.test(b.textContent || ''));
+  const composeTrigger = candidates[0] || Array.from(tabs).find((t) => /compose/i.test(t.textContent || ''));
+  if (composeTrigger) {
+    fireEvent.click(composeTrigger);
+  }
+  return result;
+}
+
 beforeEach(() => {
   localeState.value = 'en';
   toastErrorMock.mockClear();
@@ -116,12 +129,12 @@ describe('EmailMarketingPage - rendered AI containment', () => {
   });
 
   it('renders "Use sample subject" button label via t()', () => {
-    const { container } = render(React.createElement(EmailMarketingPage));
+    const { container } = renderEmailCompose();
     expect(container.textContent).toMatch(/Use sample subject/i);
   });
 
   it('error message for empty body does not say "AI"', () => {
-    const { container } = render(React.createElement(EmailMarketingPage));
+    const { container } = renderEmailCompose();
     const buttons = Array.from(container.querySelectorAll('button'));
     const suggestBtn = buttons.find((b) => /use sample subject|ai suggest subject/i.test(b.textContent || ''));
     if (!suggestBtn) {
