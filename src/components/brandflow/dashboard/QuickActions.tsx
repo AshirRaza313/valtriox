@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ShoppingCart, Plus, FileBarChart, Brain, Users, Settings, Zap } from "lucide-react";
 import { useValtrioxStore } from "@/store/brandflow-store";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 
 interface ActionCategory {
   label: string;
@@ -81,7 +82,8 @@ const actionCategories: ActionCategory[] = [
         hoverText: "hover:text-white",
       },
       {
-        label: "AI Assistant (Coming Soon)",
+        label: "AI Assistant",
+        comingSoon: true,
         icon: Brain,
         section: "ai-assistant",
         iconBg: "bg-gradient-to-br from-amber-100 to-orange-50",
@@ -94,6 +96,7 @@ const actionCategories: ActionCategory[] = [
 ];
 
 export function QuickActions() {
+  const t = useTranslation();
   const { setActiveSection, appTheme } = useValtrioxStore();
   const isDark = appTheme === "dark" || appTheme === "premium-dark";
   const isGold = appTheme === "premium-dark";
@@ -164,6 +167,7 @@ export function QuickActions() {
                       </div>
                       <span className={cn("text-xs font-medium", isDark ? "text-slate-300" : "text-slate-700")}>
                         {action.label}
+                        {action.comingSoon ? " (" + t("comingSoonLabel") + ")" : ""}
                       </span>
                     </Button>
                   </motion.div>
