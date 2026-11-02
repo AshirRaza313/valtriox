@@ -19,6 +19,7 @@ interface ActionCategory {
     iconColor: string;
     hoverBg: string;
     hoverText: string;
+    comingSoon?: boolean;
   }[];
 }
 

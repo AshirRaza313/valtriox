@@ -156,6 +156,8 @@ describe('i18n.ts - new keys present in EN + UR blocks', () => {
       'comingSoonLabel',
       'predictionsSubtitle',
       'productDescriptionsTitle',
+      'templateSuggestError',
+      'emailSampleButton',
     ];
     for (const key of NEW_KEYS) {
       const matches = content.match(new RegExp(key + '\\s*:', 'g'));
