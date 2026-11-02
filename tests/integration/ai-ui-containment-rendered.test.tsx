@@ -121,13 +121,15 @@ beforeEach(() => {
 });
 
 describe('EmailMarketingPage - rendered AI containment', () => {
-  it('does not contain "AI Suggest Subject" text', () => {
-    const { container } = render(React.createElement(EmailMarketingPage));
+  it('Compose tab does not contain "AI Suggest Subject" text', async () => {
+    const { container } = await renderEmailCompose();
+    expect(container.textContent).toMatch(/Use sample subject/i);
     expect(container.textContent).not.toMatch(/AI Suggest Subject/i);
   });
 
-  it('does not contain "AI generated" text', () => {
-    const { container } = render(React.createElement(EmailMarketingPage));
+  it('Compose tab does not contain "AI generated" text', async () => {
+    const { container } = await renderEmailCompose();
+    expect(container.textContent).toMatch(/Use sample subject/i);
     expect(container.textContent).not.toMatch(/AI generated/i);
   });
 
@@ -147,6 +149,42 @@ describe('EmailMarketingPage - rendered AI containment', () => {
     const errorArg = String(toastErrorMock.mock.calls[0]?.[0] ?? '');
     expect(errorArg).not.toMatch(/AI suggest/i);
     expect(errorArg).toMatch(/template suggest/i);
+  });
+
+  it('fills body, applies sample subject, shows success toast', async () => {
+    const user = userEvent.setup();
+    const { container } = await renderEmailCompose();
+
+    const bodyArea = container.querySelector('textarea') as HTMLTextAreaElement;
+    expect(bodyArea).toBeTruthy();
+    await user.type(bodyArea, 'Test email body content for success path');
+
+    const subjectInput = container.querySelector(
+      'input[placeholder*="email subject" i]'
+    ) as HTMLInputElement;
+    expect(subjectInput).toBeTruthy();
+
+    const buttons = Array.from(container.querySelectorAll('button'));
+    const sampleBtn = buttons.find((b) =>
+      /use sample subject/i.test(b.textContent || '')
+    ) as HTMLButtonElement | undefined;
+    expect(sampleBtn).toBeTruthy();
+    await user.click(sampleBtn!);
+
+    const SAMPLES = [
+      "Don't miss out - exclusive deals inside!",
+      'Your special offer is waiting for you',
+      'Limited time: Save big on your favorites',
+      'Something exciting just dropped for you',
+      "You're invited: Early access to our new collection",
+    ];
+    expect(SAMPLES).toContain(subjectInput.value);
+
+    expect(toastSuccessMock).toHaveBeenCalledTimes(1);
+    const okArg = String(toastSuccessMock.mock.calls[0]?.[0] ?? '');
+    expect(okArg).toMatch(/Suggestion applied/i);
+
+    expect(toastErrorMock).not.toHaveBeenCalled();
   });
 });
 
