@@ -2,13 +2,15 @@
 
 import { useValtrioxStore } from "@/store/brandflow-store";
 import { Card, CardContent } from "@/components/ui/card";
-import { BrainCircuit, CalendarDays } from "lucide-react";
+import { BrainCircuit } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 
 export function PredictiveAnalyticsWidget() {
   const { appTheme } = useValtrioxStore();
   const isGold = appTheme === "premium-dark";
   const isDark = appTheme === "dark" || isGold;
+  const t = useTranslation();
 
   const cardClass = isGold ? "bg-white/[0.03] border-white/[0.06]" : isDark ? "bg-white/[0.03] border-white/[0.06]" : "bg-white border-slate-200";
   const textPrimary = isDark ? "text-white" : "text-slate-900";
@@ -25,16 +27,12 @@ export function PredictiveAnalyticsWidget() {
           </div>
           <div>
             <p className={cn("text-xs font-semibold", textPrimary)}>Predictions</p>
-            <p className={cn("text-[10px]", textMuted)}>AI-powered forecasts</p>
+            <p className={cn("text-[10px]", textMuted)}>{t("predictionsSubtitle")}</p>
           </div>
         </div>
-        {/* Empty state */}
         <div className="flex flex-col items-center justify-center py-8 text-center">
           <BrainCircuit className={cn("h-8 w-8 mb-2", textMuted)} style={{ opacity: 0.3 }} />
-          <p className={cn("text-xs", textMuted)}>AI predictions require at least 30 days of activity data</p>
-          <p className={cn("text-[10px] mt-1", textMuted)} style={{ opacity: 0.6 }}>
-            Predictions will appear once enough data is collected
-          </p>
+          <p className={cn("text-xs", textMuted)}>{t("aiUnavailableMessage")}</p>
         </div>
       </CardContent>
     </Card>

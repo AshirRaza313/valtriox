@@ -16,6 +16,7 @@ import {
 import { EmptyState } from "@/components/brandflow/shared/EmptyState";
 import { toast } from "sonner";
 import { useValtrioxStore } from "@/store/brandflow-store";
+import { useTranslation } from "@/lib/i18n";
 
 interface EmailCampaign {
   id: number;
@@ -42,6 +43,7 @@ interface EmailTemplate {
 }
 
 export function EmailMarketingPage() {
+  const t = useTranslation();
   const { appTheme } = useValtrioxStore();
   const isDark = appTheme !== "light";
   const isGold = appTheme === "premium-dark";
@@ -94,7 +96,7 @@ export function EmailMarketingPage() {
 
   const handleAiSuggest = () => {
     if (!composeBody.trim()) {
-      toast.error("Write some email content first to get AI suggestions");
+      toast.error(t("templateSuggestError"));
       return;
     }
     const suggestions = [
@@ -105,7 +107,7 @@ export function EmailMarketingPage() {
       "You're invited: Early access to our new collection",
     ];
     setComposeSubject(suggestions[Math.floor(Math.random() * suggestions.length)]);
-    toast.success("AI generated a subject line!");
+    toast.success(t("suggestionApplied"));
   };
 
   const handleSchedule = () => {
@@ -264,7 +266,7 @@ export function EmailMarketingPage() {
                 <Input value={composeSubject} onChange={(e) => setComposeSubject(e.target.value)} placeholder="Enter email subject..." className={`text-sm ${inputCls}`} />
                 <div className="flex items-center gap-3">
                   <Button size="sm" variant="ghost" className="text-xs text-amber-600 h-7" onClick={handleAiSuggest}>
-                    <Sparkles className="mr-1 h-3 w-3" /> AI Suggest Subject
+                    <Sparkles className="mr-1 h-3 w-3" /> {t("emailSampleButton")}
                   </Button>
                 </div>
               </div>
