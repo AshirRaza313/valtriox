@@ -31,6 +31,8 @@ const mocks = vi.hoisted(() => ({
   orgMemberCreate: vi.fn(),
   orgMemberUpdate: vi.fn(),
   orgMemberCount: vi.fn(),
+  orgMemberUpdateMany: vi.fn(),
+  userUpdate: vi.fn(),
   orgFindUnique: vi.fn(),
   orgFindFirst: vi.fn(),
   roleFindUnique: vi.fn(),
@@ -97,7 +99,7 @@ vi.mock('@/lib/db', () => ({
     user: { findUnique: mocks.userFindUnique, findFirst: mocks.userFindFirst, findMany: mocks.userFindMany, create: mocks.userCreate, update: mocks.userUpdate, updateMany: mocks.userUpdateMany },
     valtrioxTeamInvitation: { findFirst: mocks.vtInviteFindFirst, create: mocks.vtInviteCreate, update: mocks.vtInviteUpdate },
     valtrioxTeamMember: { findFirst: mocks.vtMemberFindFirst, create: mocks.vtMemberCreate },
-    organizationMember: { findUnique: mocks.orgMemberFindUnique, findFirst: mocks.orgMemberFindFirst, findMany: mocks.orgMemberFindMany, create: mocks.orgMemberCreate, update: mocks.orgMemberUpdate, count: mocks.orgMemberCount },
+    organizationMember: { findUnique: mocks.orgMemberFindUnique, findFirst: mocks.orgMemberFindFirst, findMany: mocks.orgMemberFindMany, create: mocks.orgMemberCreate, update: mocks.orgMemberUpdate, updateMany: mocks.orgMemberUpdateMany, count: mocks.orgMemberCount },
     organization: { findUnique: mocks.orgFindUnique, findFirst: mocks.orgFindFirst },
     role: { findUnique: mocks.roleFindUnique },
     teamInvitation: { findFirst: mocks.teamInviteFindFirst, create: mocks.teamInviteCreate, count: mocks.teamInviteCount },
@@ -203,6 +205,8 @@ beforeEach(() => {
   mocks.userUpdateMany.mockResolvedValue({ count: 0 });
   mocks.orgMemberCount.mockResolvedValue(0);
   mocks.platformSettingsFindFirst.mockResolvedValue(null);
+  mocks.orgMemberUpdateMany.mockResolvedValue({ count: 0 });
+  mocks.userUpdate.mockResolvedValue({ id: "updated-user" });
 });
 
 // ===============================================================
