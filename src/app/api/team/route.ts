@@ -248,8 +248,8 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
 
     const inviterRole = inviterUser.role.toLowerCase();
     const inviterLevel = ROLE_LEVELS[inviterRole] ?? 0;
-    const adminEmail = getAdminEmail();
-    const isPlatformOwner = adminEmail && inviterUser.email.toLowerCase() === adminEmail;
+    const adminEmailV5 = getAdminEmail();
+    const isPlatformOwner = adminEmailV5 && inviterUser.email.toLowerCase() === adminEmailV5;
 
     if (!isPlatformOwner) {
       if (targetLevel >= inviterLevel) {
