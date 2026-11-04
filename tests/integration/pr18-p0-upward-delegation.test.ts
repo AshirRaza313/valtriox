@@ -213,12 +213,12 @@ describe('V1: admin/valtriox-team POST', () => {
   const baseBody = (role: string) => ({ name: 'X', email: 'x@test.local', role, department: 'Engineering' });
 
   it('platform_admin -> platform_owner: expect 403', async () => {
-    const res = await adminVtRoute.POST(req('platform_admin', 'admin@test.local', { url, body: baseBody('platform_owner') }));
+    const res = await adminVtRoute.POST(req('platform_admin', 'pm@test.local', { url, body: baseBody('platform_owner') }));
     expect(res.status).toBe(403);
   });
 
   it('platform_admin -> platform_admin: expect 403', async () => {
-    const res = await adminVtRoute.POST(req('platform_admin', 'admin@test.local', { url, body: baseBody('platform_admin') }));
+    const res = await adminVtRoute.POST(req('platform_admin', 'pm@test.local', { url, body: baseBody('platform_admin') }));
     expect(res.status).toBe(403);
   });
 
@@ -267,7 +267,7 @@ describe('V2: valtriox-join accept', () => {
   it('inviter=platform_admin, role=platform_owner: expect 403', async () => {
     mockInvitation('uid-admin', 'platform_owner');
     mocks.userFindUnique.mockImplementation(({ where }: any) => {
-      if (where.id === 'uid-admin') return Promise.resolve({ id: 'uid-admin', email: 'admin@test.local', role: 'platform_admin' });
+      if (where.id === 'uid-admin') return Promise.resolve({ id: 'uid-admin', email: 'pm@test.local', role: 'platform_admin' });
       if (where.email === 'new@test.local') return Promise.resolve(null);
       return Promise.resolve(null);
     });
@@ -278,7 +278,7 @@ describe('V2: valtriox-join accept', () => {
   it('inviter=platform_admin, role=platform_admin: expect 403', async () => {
     mockInvitation('uid-admin', 'platform_admin');
     mocks.userFindUnique.mockImplementation(({ where }: any) => {
-      if (where.id === 'uid-admin') return Promise.resolve({ id: 'uid-admin', email: 'admin@test.local', role: 'platform_admin' });
+      if (where.id === 'uid-admin') return Promise.resolve({ id: 'uid-admin', email: 'pm@test.local', role: 'platform_admin' });
       if (where.email === 'new@test.local') return Promise.resolve(null);
       return Promise.resolve(null);
     });
@@ -289,7 +289,7 @@ describe('V2: valtriox-join accept', () => {
   it('inviter=platform_admin, role=platform_engineer: expect 200', async () => {
     mockInvitation('uid-admin', 'platform_engineer');
     mocks.userFindUnique.mockImplementation(({ where }: any) => {
-      if (where.id === 'uid-admin') return Promise.resolve({ id: 'uid-admin', email: 'admin@test.local', role: 'platform_admin' });
+      if (where.id === 'uid-admin') return Promise.resolve({ id: 'uid-admin', email: 'pm@test.local', role: 'platform_admin' });
       if (where.email === 'new@test.local') return Promise.resolve(null);
       return Promise.resolve(null);
     });
@@ -377,13 +377,13 @@ describe('V4: org/members/[id]/role PUT', () => {
 
   it('platform_admin -> roleId(platform_owner): expect 403', async () => {
     mocks.roleFindUnique.mockResolvedValue({ id: 'role-po', name: 'platform_owner' });
-    const res = await orgMemberRoleRoute.PUT(req('platform_admin', 'admin@test.local', { method: 'PUT', url, body: { roleId: 'role-po' }, orgId: 'org-test' }), ctxFor('member-1'));
+    const res = await orgMemberRoleRoute.PUT(req('platform_admin', 'pm@test.local', { method: 'PUT', url, body: { roleId: 'role-po' }, orgId: 'org-test' }), ctxFor('member-1'));
     expect(res.status).toBe(403);
   });
 
   it('platform_admin -> roleId(platform_admin): expect 403', async () => {
     mocks.roleFindUnique.mockResolvedValue({ id: 'role-pa', name: 'platform_admin' });
-    const res = await orgMemberRoleRoute.PUT(req('platform_admin', 'admin@test.local', { method: 'PUT', url, body: { roleId: 'role-pa' }, orgId: 'org-test' }), ctxFor('member-1'));
+    const res = await orgMemberRoleRoute.PUT(req('platform_admin', 'pm@test.local', { method: 'PUT', url, body: { roleId: 'role-pa' }, orgId: 'org-test' }), ctxFor('member-1'));
     expect(res.status).toBe(403);
   });
 
@@ -424,7 +424,7 @@ describe('V5: team POST', () => {
 
   it('invitedBy=platform_admin, target=platform_owner: expect 403', async () => {
     mocks.userFindUnique.mockImplementation(({ where }: any) => {
-      if (where.id === 'uid-admin') return Promise.resolve({ id: 'uid-admin', email: 'admin@test.local', role: 'platform_admin' });
+      if (where.id === 'uid-admin') return Promise.resolve({ id: 'uid-admin', email: 'pm@test.local', role: 'platform_admin' });
       if (where.email === 'invitee@test.local') return Promise.resolve(null);
       return Promise.resolve(null);
     });
@@ -434,7 +434,7 @@ describe('V5: team POST', () => {
 
   it('invitedBy=platform_admin, target=brand_owner: expect 201', async () => {
     mocks.userFindUnique.mockImplementation(({ where }: any) => {
-      if (where.id === 'uid-admin') return Promise.resolve({ id: 'uid-admin', email: 'admin@test.local', role: 'platform_admin' });
+      if (where.id === 'uid-admin') return Promise.resolve({ id: 'uid-admin', email: 'pm@test.local', role: 'platform_admin' });
       if (where.email === 'invitee@test.local') return Promise.resolve(null);
       return Promise.resolve(null);
     });
@@ -489,7 +489,7 @@ describe('Chain: invite -> accept -> session', () => {
     mocks.vtInviteFindFirst.mockResolvedValue(null);
     mocks.vtMemberFindFirst.mockResolvedValue(null);
 
-    const v1Res = await adminVtRoute.POST(req('platform_admin', 'admin@test.local', {
+    const v1Res = await adminVtRoute.POST(req('platform_admin', 'pm@test.local', {
       url: 'http://localhost/api/admin/valtriox-team',
       body: { name: 'Attacker', email: 'atk@test.local', role: 'platform_owner', department: 'Engineering' },
     }));
