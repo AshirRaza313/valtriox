@@ -231,41 +231,47 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
       }, { status: 403 });
     }
 
-    if (invitedBy) {
-      const inviterUser = await db.user.findUnique({
-        where: { id: invitedBy },
-        select: { email: true, role: true },
-      });
+    // P0 fix V5: fail-closed ceiling. Resolve inviter always,
+    // fallback to authCtx.userId when invitedBy missing.
+    const inviterId = invitedBy || authCtx.userId;
+    const inviterUser = await db.user.findUnique({
+      where: { id: inviterId },
+      select: { email: true, role: true },
+    });
 
-      if (inviterUser) {
-        const inviterRole = inviterUser.role.toLowerCase();
-        const inviterLevel = ROLE_LEVELS[inviterRole] ?? 0;
-        const adminEmail = getAdminEmail();
-        const isPlatformOwner = adminEmail && inviterUser.email.toLowerCase() === adminEmail;
+    if (!inviterUser) {
+      return NextResponse.json({
+        error: "Inviter identity required for role validation",
+        code: "INVITER_REQUIRED",
+      }, { status: 403 });
+    }
 
-        if (!isPlatformOwner) {
-          if (targetLevel >= inviterLevel) {
-            return NextResponse.json({
-              error: `Access denied. You cannot assign a role (${targetRole}) equal to or higher than your own (${inviterRole}).`,
-              code: "ROLE_HIERARCHY_VIOLATION",
-            }, { status: 403 });
-          }
-          if (inviterRole === "brand_owner" || inviterRole === "owner" || inviterRole === "ceo") {
-            if (targetLevel >= BRAND_OWNER_MAX_LEVEL) {
-              return NextResponse.json({
-                error: `Access denied. Brand owners can only assign team member roles. Cannot assign ${targetRole}.`,
-                code: "BRAND_OWNER_ROLE_LIMIT",
-              }, { status: 403 });
-            }
-          }
-          if (inviterRole === "brand_admin" || inviterRole === "admin") {
-            if (targetLevel >= BRAND_ADMIN_MAX_LEVEL) {
-              return NextResponse.json({
-                error: `Access denied. Brand admins can only assign roles below their level. Cannot assign ${targetRole}.`,
-                code: "BRAND_ADMIN_ROLE_LIMIT",
-              }, { status: 403 });
-            }
-          }
+    const inviterRole = inviterUser.role.toLowerCase();
+    const inviterLevel = ROLE_LEVELS[inviterRole] ?? 0;
+    const adminEmail = getAdminEmail();
+    const isPlatformOwner = adminEmail && inviterUser.email.toLowerCase() === adminEmail;
+
+    if (!isPlatformOwner) {
+      if (targetLevel >= inviterLevel) {
+        return NextResponse.json({
+          error: `Access denied. You cannot assign a role (${targetRole}) equal to or higher than your own (${inviterRole}).`,
+          code: "ROLE_HIERARCHY_VIOLATION",
+        }, { status: 403 });
+      }
+      if (inviterRole === "brand_owner" || inviterRole === "owner" || inviterRole === "ceo") {
+        if (targetLevel >= BRAND_OWNER_MAX_LEVEL) {
+          return NextResponse.json({
+            error: `Access denied. Brand owners can only assign team member roles. Cannot assign ${targetRole}.`,
+            code: "BRAND_OWNER_ROLE_LIMIT",
+          }, { status: 403 });
+        }
+      }
+      if (inviterRole === "brand_admin" || inviterRole === "admin") {
+        if (targetLevel >= BRAND_ADMIN_MAX_LEVEL) {
+          return NextResponse.json({
+            error: `Access denied. Brand admins can only assign roles below their level. Cannot assign ${targetRole}.`,
+            code: "BRAND_ADMIN_ROLE_LIMIT",
+          }, { status: 403 });
         }
       }
     }
