@@ -40,7 +40,10 @@ import { db } from "@/lib/db";
 
 const mockGetServerSession = vi.mocked(getServerSession);
 
-const PREFIX = "test-s1-";
+const rawWorkerId = process.env.VITEST_WORKER_ID ?? "0";
+const safeWorkerId = /^\d+$/.test(rawWorkerId) ? rawWorkerId : "0";
+const RUN_ID = `${Date.now()}-${process.pid}-${safeWorkerId}`;
+const PREFIX = `test-s1-${RUN_ID}-`;
 
 // --- Fixture IDs (unique per run, prefix-safe) ---
 const orgA = `${PREFIX}org-a`;
