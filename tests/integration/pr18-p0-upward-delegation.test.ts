@@ -32,7 +32,6 @@ const mocks = vi.hoisted(() => ({
   orgMemberUpdate: vi.fn(),
   orgMemberCount: vi.fn(),
   orgMemberUpdateMany: vi.fn(),
-  userUpdate: vi.fn(),
   orgFindUnique: vi.fn(),
   orgFindFirst: vi.fn(),
   roleFindUnique: vi.fn(),
@@ -164,21 +163,20 @@ const ADMIN_EMAIL = 'admin@test.local';
 beforeAll(() => {
   process.env.NEXTAUTH_SECRET = 'test-secret-32-chars-for-pr18-p0-xyz';
   process.env.ADMIN_EMAIL = ADMIN_EMAIL;
-  process.env.NODE_ENV = 'test';
 });
 
 const ORIG = {
   ADMIN_EMAIL: process.env.ADMIN_EMAIL,
-  NODE_ENV: process.env.NODE_ENV,
 };
 
 afterEach(() => {
+  vi.unstubAllEnvs();
   process.env.ADMIN_EMAIL = ORIG.ADMIN_EMAIL;
-  process.env.NODE_ENV = ORIG.NODE_ENV;
 });
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.stubEnv('NODE_ENV', 'test');
   mocks.userFindUnique.mockResolvedValue(null);
   mocks.userFindFirst.mockResolvedValue(null);
   mocks.userCreate.mockResolvedValue({ id: 'new-user', name: 'T', email: 'x@t', role: 'brand_owner' });
@@ -370,7 +368,7 @@ describe('V3: fix-old-roles', () => {
   });
 
   it('NODE_ENV=production: expect 404', async () => {
-    process.env.NODE_ENV = 'production';
+    vi.stubEnv('NODE_ENV', 'production');
     const res = await fixRolesRoute.POST(req('platform_admin', 'admin@test.local', { url, body: {} }));
     expect(res.status).toBe(404);
   });
