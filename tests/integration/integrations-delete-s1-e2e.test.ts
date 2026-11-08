@@ -90,6 +90,66 @@ async function cleanup() {
   });
 }
 
+// ---------------------------------------------------------------------------
+// FIXTURE ISOLATION CONTRACT (PR #16 fix)
+// ---------------------------------------------------------------------------
+// The comments at lines 11-12 and 45 already promise this behavior:
+//   - "unique test-s1-* prefix per run avoids collisions" (line 12)
+//   - "unique per run, prefix-safe" (line 45)
+// This sub-suite PROVES the code now matches that documented contract.
+// ---------------------------------------------------------------------------
+describe("Fixture isolation contract", () => {
+  it("C1. PREFIX is run-scoped, not static (contract for line 12 promise)", () => {
+    expect(PREFIX).toMatch(/^test-s1-\d+-\d+-\d+-$/);
+  });
+
+  it.skipIf(!connectionString)(
+    "C2. cleanup() is scoped by PREFIX, never wipes sibling runs",
+    async () => {
+      const siblingPrefix = "test-s1-9999999999-99999-9-";
+      const siblingOrg = `${siblingPrefix}org`;
+      const siblingUser = `${siblingPrefix}user`;
+      const siblingInt = `${siblingPrefix}int`;
+
+      await db.organization.create({
+        data: { id: siblingOrg, name: "Sibling Org", slug: siblingOrg },
+      });
+      await db.user.create({
+        data: {
+          id: siblingUser,
+          name: "Sibling User",
+          email: `${siblingUser}@example.test`,
+        },
+      });
+      await db.organizationMember.create({
+        data: { organizationId: siblingOrg, userId: siblingUser, role: "owner" },
+      });
+      await db.integrationConnection.create({
+        data: {
+          id: siblingInt,
+          organizationId: siblingOrg,
+          type: "stripe",
+          provider: "payments",
+          name: "Sibling Integration",
+        },
+      });
+
+      try {
+        await cleanup();
+        const stillThere = await db.integrationConnection.findUnique({
+          where: { id: siblingInt },
+        });
+        expect(stillThere).not.toBeNull();
+      } finally {
+        await db.integrationConnection.deleteMany({ where: { id: { startsWith: siblingPrefix } } });
+        await db.organizationMember.deleteMany({ where: { organizationId: { startsWith: siblingPrefix } } });
+        await db.user.deleteMany({ where: { id: { startsWith: siblingPrefix } } });
+        await db.organization.deleteMany({ where: { id: { startsWith: siblingPrefix } } });
+      }
+    },
+  );
+});
+
 describe.skipIf(!connectionString)(
   "S1 E2E - two-tenant DELETE (real DB)",
   () => {
