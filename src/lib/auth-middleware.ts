@@ -198,6 +198,14 @@ export function withAuth(
   };
 }
 
+// ---------------------------------------------------------------------------
+// TODO (future round -- NOT in S1 scope):
+// src/lib/roles.ts also exports isPlatformRole() with a broader definition
+// including owner/admin/valtriox_team. This causes inconsistent behavior
+// between middleware auth checks and UI section visibility. Consolidation
+// tracked for a dedicated refactor round.
+// ---------------------------------------------------------------------------
+
 /**
  * Utility to check if the user has a platform-level role
  * Phase 7: Removed "owner" and "admin" — those are org-level roles, not platform.

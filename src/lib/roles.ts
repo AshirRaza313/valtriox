@@ -611,3 +611,22 @@ export const VALTRIOX_TEAM_RESTRICTED_PAGES = new Set([
 export function isValtrioxTeamRestrictedPage(pageId: string, roleName: string): boolean {
   return roleName === "valtriox_team" && VALTRIOX_TEAM_RESTRICTED_PAGES.has(pageId);
 }
+
+// ============================================================================
+// Canonical role policies for destructive mutations
+// ============================================================================
+// Default-deny: roles not listed here are rejected by handlers that
+// reference this set. Legacy owner/admin retained for backward compat
+// (no DB migration confirmed for owner -> brand_owner, admin -> brand_admin).
+// valtriox_team explicitly excluded (platform-side team, not tenant member).
+// viewer excluded (read-only role).
+// ============================================================================
+
+export const INTEGRATIONS_DELETE_ROLES = new Set<string>([
+  "platform_owner",
+  "platform_admin",
+  "brand_owner",
+  "brand_admin",
+  "owner",
+  "admin",
+]);
