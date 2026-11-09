@@ -91,3 +91,5 @@ backups/
 
 # CI-generated catalog comparison (recreated each run)
 docs/baseline-repair/catalog-comparison.txt
+# AI UI containment preview screenshots (never committed)
+preview-screenshots/
