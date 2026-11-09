@@ -65,6 +65,21 @@ export const PUT = withRateLimit(withAuth(async (
       if (!roleExists) {
         return NextResponse.json({ error: "Role not found" }, { status: 404 });
       }
+
+      // P0 fix V4: apply canAssignRole ceiling to roleId branch (was bypassed)
+      const adminEmailV4 = getAdminEmail();
+      const roleCheckV4 = canAssignRole(
+        authCtx.role,
+        authCtx.email,
+        roleExists.name.toLowerCase(),
+        adminEmailV4
+      );
+      if (!roleCheckV4.allowed) {
+        return NextResponse.json(
+          { error: roleCheckV4.reason || "Insufficient permissions to assign this role", code: roleCheckV4.code },
+          { status: 403 }
+        );
+      }
       updateData.roleId = roleId;
       // Also update the role string for consistency
       if (roleExists.name) updateData.role = roleExists.name;

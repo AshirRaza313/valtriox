@@ -34,20 +34,21 @@ export const POST = withRateLimit(withAuth(async (req: NextRequest, authCtx) => 
       body = await req.json();
     } catch {}
 
-    const adminEmail = (
-      (body as { adminEmail?: string })?.adminEmail ||
-      process.env.ADMIN_EMAIL ||
-      ""
-    ).toLowerCase().trim();
+    // P0 fix V3: reject body.adminEmail (body override not allowed)
+    if ((body as { adminEmail?: string })?.adminEmail !== undefined) {
+      return NextResponse.json(
+        { error: "adminEmail in request body is not accepted. Use env var only.", code: "BODY_OVERRIDE_REJECTED" },
+        { status: 400 }
+      );
+    }
+
+    // P0 fix V3: env-only adminEmail. Body fallback removed.
+    const adminEmail = (process.env.ADMIN_EMAIL || "").toLowerCase().trim();
 
     if (!adminEmail) {
       return NextResponse.json(
-        {
-          error:
-            "No admin email provided. Either set ADMIN_EMAIL environment variable or pass { adminEmail: '...' } in request body.",
-          hint: "Example: POST with { \"adminEmail\": \"your@email.com\" }",
-        },
-        { status: 400 }
+        { error: "ADMIN_EMAIL env var not configured. Endpoint disabled.", code: "ADMIN_EMAIL_MISSING" },
+        { status: 500 }
       );
     }
 
