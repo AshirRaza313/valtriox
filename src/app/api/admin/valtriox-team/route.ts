@@ -5,6 +5,7 @@ import { sendEmail, isEmailConfigured, SUPPORT_EMAIL, SUPPORT_FROM, SUPPORT_REPL
 import { getValtrioxInvitationHtml, generateWhatsAppInviteLink, generateInvitationPlainText } from "@/lib/email-templates";
 import { withRateLimit } from "@/lib/rate-limit";
 import logger from "@/lib/logger";
+import { getAdminEmail } from "@/lib/roles";
 
 const DEPARTMENTS = ["Engineering", "Sales", "Marketing", "Support", "Operations", "Finance", "Design", "Management"];
 
@@ -65,6 +66,31 @@ export const POST = withRateLimit(withAuth(async (req, authCtx) => {
     const selectedRole = role || "platform_admin";
     if (!validRoles.includes(selectedRole)) {
       return NextResponse.json({ error: `Invalid role. Must be one of: ${validRoles.join(", ")}` }, { status: 400 });
+    }
+
+    // P0 fix V1: explicit role ceiling for platform-tier invites.
+    // platform_admin can assign operational sub-roles but NOT
+    // platform_owner or platform_admin. Only the founder
+    // (ADMIN_EMAIL) can assign platform-tier roles.
+    const isPlatformOwnerForAssign =
+      !!authCtx.email &&
+      !!getAdminEmail() &&
+      authCtx.email.toLowerCase() === getAdminEmail().toLowerCase();
+
+    if (!isPlatformOwnerForAssign) {
+      if (selectedRole === "platform_owner" || selectedRole === "platform_admin") {
+        return NextResponse.json(
+          { error: "Only the Valtriox owner can assign platform-tier roles", code: "PLATFORM_TIER_BLOCKED" },
+          { status: 403 }
+        );
+      }
+      const ASSIGNABLE_BY_PLATFORM_ADMIN = ["platform_engineer", "platform_support", "platform_sales", "platform_marketing"];
+      if (!ASSIGNABLE_BY_PLATFORM_ADMIN.includes(selectedRole)) {
+        return NextResponse.json(
+          { error: "Role not assignable by your access level", code: "ROLE_NOT_ASSIGNABLE" },
+          { status: 403 }
+        );
+      }
     }
 
     // Check if already a member

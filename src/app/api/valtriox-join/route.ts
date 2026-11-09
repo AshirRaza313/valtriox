@@ -6,6 +6,7 @@ import { withRateLimit } from "@/lib/rate-limit";
 import { sanitizeObject, sanitizeEmail } from "@/lib/sanitize";
 import { z } from "zod";
 import logger from "@/lib/logger";
+import { getAdminEmail } from "@/lib/roles";
 
 // ── Input validation schemas ──
 const verifySchema = z.object({
@@ -119,6 +120,45 @@ export const POST = withRateLimit(async (req: NextRequest) => {
         );
       }
 
+    // P0 fail-closed: validate invitation role against
+    // inviter authority. If inviter cannot be determined
+    // AND role is platform-tier, block before any write.
+    let inviter: { email: string; role: string } | null = null;
+
+    if (invitation.invitedBy) {
+      inviter = await withRetry(async () => {
+        return await db.user.findUnique({
+          where: { id: invitation.invitedBy },
+          select: { email: true, role: true },
+        });
+      }, 2, 500);
+
+      if (!inviter) {
+        return NextResponse.json(
+          { error: "Invitation invalid - inviter record missing",
+            code: "INVITER_MISSING" },
+          { status: 403 }
+        );
+      }
+    }
+
+    const isPlatformOwnerInviter =
+      inviter !== null &&
+      !!inviter.email &&
+      !!getAdminEmail() &&
+      inviter.email.toLowerCase() ===
+        getAdminEmail().toLowerCase();
+
+    if (!isPlatformOwnerInviter) {
+      if (invitation.role === "platform_owner" ||
+          invitation.role === "platform_admin") {
+        return NextResponse.json(
+          { error: "Invitation cannot be accepted - role escalation detected",
+            code: "UPWARD_DELEGATION_BLOCKED" },
+          { status: 403 }
+        );
+      }
+    }
       const existingUser = await withRetry(async () => {
         return await db.user.findUnique({
         where: { email: sanitizeEmail(email).toLowerCase() },
